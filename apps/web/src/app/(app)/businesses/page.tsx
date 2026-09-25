@@ -9,7 +9,7 @@ import { listBusinessSummaries, type BusinessSummary } from '@/lib/repo/business
 export const dynamic = 'force-dynamic';
 
 /**
- * A10 â€” Businesses Hub.
+ * A10 — Businesses Hub.
  *
  * Contract: "Create/manage business contexts; scratch/clone/template; no
  * lead/history cloning."
@@ -41,13 +41,13 @@ export default async function BusinessesPage(): Promise<ReactNode> {
         </div>
       ),
     },
-    { key: 'focus', header: 'Focus', cell: (business) => business.focus ?? 'â€”' },
+    { key: 'focus', header: 'Focus', cell: (business) => business.focus ?? '—' },
     {
       key: 'regions',
       header: 'Regions',
       cell: (business) =>
         business.regions.length === 0 ? (
-          <span className="nx-hint">â€”</span>
+          <span className="nx-hint">—</span>
         ) : (
           <div className="nx-row nx-row--wrap">
             {business.regions.map((region) => (

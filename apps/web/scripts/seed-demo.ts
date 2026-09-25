@@ -3,7 +3,7 @@
  *
  * **Why this exists.** Every screen in this app branches on data: the business-scoped
  * layout shows "No businesses yet" and the individual screens behind it never render. So
- * a deployment with an empty database cannot be visually reviewed at all â€” the UI looks
+ * a deployment with an empty database cannot be visually reviewed at all — the UI looks
  * like a blank shell regardless of how complete it is. This script puts the database into
  * a state where every visual state a screen can render is reachable.
  *

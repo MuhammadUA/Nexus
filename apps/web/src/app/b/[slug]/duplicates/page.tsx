@@ -42,7 +42,7 @@ function parseStatus(value: string | undefined): CandidateStatus {
 }
 
 /**
- * A07 â€” Duplicate Review.
+ * A07 — Duplicate Review.
  *
  * Contract: "Compare imported candidate with existing person/lead; merge, keep
  * separate, skip."
@@ -91,7 +91,7 @@ export default async function DuplicatesPage({
         <Stack size="sm">
           <strong>{candidate.incoming?.fullName ?? 'missing record'}</strong>
           <span className="nx-hint">
-            {candidate.incoming?.jobTitle ?? 'no job title'} Â· {candidate.incoming?.companyName ?? 'no company'}
+            {candidate.incoming?.jobTitle ?? 'no job title'} · {candidate.incoming?.companyName ?? 'no company'}
           </span>
           <span className="nx-hint">
             {candidate.incoming?.normalizedLinkedinUrl ?? 'no LinkedIn URL'}
@@ -106,7 +106,7 @@ export default async function DuplicatesPage({
         <Stack size="sm">
           <strong>{candidate.existing?.fullName ?? 'missing record'}</strong>
           <span className="nx-hint">
-            {candidate.existing?.jobTitle ?? 'no job title'} Â· {candidate.existing?.companyName ?? 'no company'}
+            {candidate.existing?.jobTitle ?? 'no job title'} · {candidate.existing?.companyName ?? 'no company'}
           </span>
           <span className="nx-hint">
             {candidate.existing?.normalizedLinkedinUrl ?? 'no LinkedIn URL'}
@@ -129,7 +129,7 @@ export default async function DuplicatesPage({
       numeric: true,
       cell: (candidate) =>
         candidate.confidence === null ? (
-          <span className="nx-hint">â€”</span>
+          <span className="nx-hint">—</span>
         ) : (
           <Chip
             accent={candidate.confidence >= 0.85 ? 'green' : candidate.confidence >= 0.6 ? 'amber' : 'red'}
@@ -169,7 +169,7 @@ export default async function DuplicatesPage({
           </a>
         ) : (
           <span className="nx-hint">
-            {candidate.resolvedAt === null ? 'â€”' : `${candidate.resolution ?? 'resolved'} ${candidate.resolvedAt.slice(0, 10)}`}
+            {candidate.resolvedAt === null ? '—' : `${candidate.resolution ?? 'resolved'} ${candidate.resolvedAt.slice(0, 10)}`}
           </span>
         ),
     },
@@ -178,7 +178,7 @@ export default async function DuplicatesPage({
   return (
     <>
       <PageHead
-        subtitle={`Imported candidates that look like an existing person in ${business.name}. Merge, keep separate, or skip â€” each decision is audited.`}
+        subtitle={`Imported candidates that look like an existing person in ${business.name}. Merge, keep separate, or skip — each decision is audited.`}
         actions={
           <Row wrap>
             <a className="nx-btn nx-btn--secondary" href={`/b/${business.key}/lead-sources`}>
@@ -251,7 +251,7 @@ export default async function DuplicatesPage({
             empty={
               <EmptyState
                 title={status === 'open' ? 'No duplicates waiting' : `Nothing is ${status.replace(/_/g, ' ')}`}
-                body="Imports raise a candidate when a row matches an existing person weakly â€” by name, or by name plus company. Exact LinkedIn URL or email matches merge automatically."
+                body="Imports raise a candidate when a row matches an existing person weakly — by name, or by name plus company. Exact LinkedIn URL or email matches merge automatically."
                 action={
                   <a className="nx-btn nx-btn--secondary" href={`/b/${business.key}/lead-sources`}>
                     Import leads

@@ -37,7 +37,7 @@ import { listSequenceOptions } from '@/lib/repo/sequences';
 export const dynamic = 'force-dynamic';
 
 /**
- * A12 â€” ICP Manager.
+ * A12 — ICP Manager.
  *
  * Contract: "Company types, markets, buyers, signals, scoring, exclusions, primary ICP
  * rule, default sequence, routing."
@@ -105,7 +105,7 @@ export default async function IcpManagerPage({
     },
     {
       key: 'criteria',
-      header: 'Company types Â· markets',
+      header: 'Company types · markets',
       cell: (icp) => (
         <Stack size="sm">
           <span>{summarize(icp.criteria.companyTypes)}</span>
@@ -166,7 +166,7 @@ export default async function IcpManagerPage({
             {icp.routing.ownerUserId == null
               ? 'no owner'
               : (ownerLabels.get(icp.routing.ownerUserId) ?? 'owner')}
-            {icp.routing.autoEnroll ? ' Â· auto-enroll' : ' Â· manual enroll'}
+            {icp.routing.autoEnroll ? ' · auto-enroll' : ' · manual enroll'}
           </span>
         </Stack>
       ),
@@ -212,7 +212,7 @@ export default async function IcpManagerPage({
     {
       key: 'label',
       header: 'Label',
-      cell: (rule) => rule.label ?? <span className="nx-hint">â€”</span>,
+      cell: (rule) => rule.label ?? <span className="nx-hint">—</span>,
     },
     {
       key: 'active',
@@ -238,7 +238,7 @@ export default async function IcpManagerPage({
   return (
     <>
       <PageHead
-        subtitle={`${business.name} Â· company types, markets, buyers, signals, scoring and routing`}
+        subtitle={`${business.name} · company types, markets, buyers, signals, scoring and routing`}
         actions={
           <Row wrap>
             <Chip accent="indigo">configuration</Chip>
@@ -252,7 +252,7 @@ export default async function IcpManagerPage({
       <Alert accent="indigo" title="Primary ICP rules">
         A lead has exactly one Primary ICP. A person may match several ICPs in the same business, but a
         secondary match never creates a duplicate lead. Changing a lead&apos;s Primary ICP is an
-        audited state change, not a new lead. The numbers on this screen are configuration â€” scores
+        audited state change, not a new lead. The numbers on this screen are configuration — scores
         are not hard-coded product constants.
       </Alert>
 
@@ -261,7 +261,7 @@ export default async function IcpManagerPage({
       <Grid cols={4}>
         <Stat value={icps.length} label="ICPs configured" meta={`${String(activeIcps)} active`} />
         <Stat
-          value={defaultIcp === null ? 'â€”' : defaultIcp.name}
+          value={defaultIcp === null ? '—' : defaultIcp.name}
           label="Business default ICP"
           meta={defaultIcp === null ? 'none set: new leads match by score only' : 'one default per business'}
         />
@@ -357,7 +357,7 @@ export default async function IcpManagerPage({
               <p className="nx-hint">
                 Company types and markets describe the shape of the account. Buyer titles describe who
                 is worth contacting inside it. Signals are the evidence kinds that make a prospect
-                worth contacting now â€” the same vocabulary the scoring rules below score.
+                worth contacting now — the same vocabulary the scoring rules below score.
               </p>
               <p className="nx-hint">
                 Known signal kinds: {SIGNAL_KINDS.join(', ')}.
@@ -445,7 +445,7 @@ export default async function IcpManagerPage({
                 business, or to a single ICP.
               </p>
               <p className="nx-hint">
-                An ICP&apos;s own score overrides are a delta on top of these rules â€” useful for the
+                An ICP&apos;s own score overrides are a delta on top of these rules — useful for the
                 one signal that matters more for that segment, without changing it everywhere.
               </p>
               <p className="nx-hint">

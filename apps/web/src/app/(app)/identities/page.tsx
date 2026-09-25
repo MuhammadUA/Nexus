@@ -16,7 +16,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 /**
- * A17 (index) â€” Outreach Identities.
+ * A17 (index) — Outreach Identities.
  *
  * There is no A-number of its own in the spec's `screen_inventory`; it is the
  * navigable list that A17 sits under (`ADMIN_NAV`: "Outreach Identities"). It exists
@@ -121,7 +121,7 @@ export default async function IdentitiesPage(): Promise<ReactNode> {
     {
       key: 'created',
       header: 'Created',
-      cell: (identity) => <span className="nx-table__mono">{identity.createdAt?.slice(0, 10) ?? 'â€”'}</span>,
+      cell: (identity) => <span className="nx-table__mono">{identity.createdAt?.slice(0, 10) ?? '—'}</span>,
     },
   ];
 

@@ -3,7 +3,7 @@
  *
  * `seed-demo.ts` puts the *configuration* in place (businesses, users, ICPs, sequences,
  * identities, knowledge). That is enough to render setup screens, but every operational
- * screen Ã¢â‚¬â€ My Day, Leads, Lead Detail, Profile Queue, Lead Sources, Duplicates, Insights Ã¢â‚¬â€
+ * screen — My Day, Leads, Lead Detail, Profile Queue, Lead Sources, Duplicates, Insights —
  * branches on rows. With none, they render their empty state and cannot be visually
  * reviewed at all, which is exactly the failure mode the UI fidelity pass has to avoid.
  *
@@ -222,12 +222,12 @@ const REPLIES: readonly {
   readonly terminal: boolean;
   readonly text: string;
 }[] = [
-  { person: 10, outcome: 'Interested', terminal: false, text: "Thanks for reaching out Ã¢â‚¬â€ we're actually looking for extra editing capacity for Q3. Can you send rates and a sample?" },
+  { person: 10, outcome: 'Interested', terminal: false, text: "Thanks for reaching out — we're actually looking for extra editing capacity for Q3. Can you send rates and a sample?" },
   { person: 11, outcome: 'Positive / needs info', terminal: false, text: 'Interesting. What does onboarding look like, and how fast can you turn around a 12-minute episode?' },
-  { person: 23, outcome: 'Maybe later', terminal: false, text: 'Not right now Ã¢â‚¬â€ we are mid-tender. Ping me again in a couple of months and I will have a clearer picture.' },
+  { person: 23, outcome: 'Maybe later', terminal: false, text: 'Not right now — we are mid-tender. Ping me again in a couple of months and I will have a clearer picture.' },
   { person: 30, outcome: 'Interested', terminal: false, text: 'Send a short deck. If the integration scope is realistic we can put a call in next week.' },
   { person: 31, outcome: 'No current need', terminal: false, text: 'We already have a partner for this, so no need at the moment. Thanks for thinking of us.' },
-  { person: 32, outcome: 'Wrong person', terminal: true, text: 'I am not the right contact for this Ã¢â‚¬â€ procurement owns it. Try Rashid in IT.' },
+  { person: 32, outcome: 'Wrong person', terminal: true, text: 'I am not the right contact for this — procurement owns it. Try Rashid in IT.' },
   { person: 17, outcome: 'Do not contact', terminal: true, text: 'Please remove me from your list and do not contact me again.' },
   { person: 13, outcome: 'Already has supplier', terminal: false, text: 'We are locked into a supplier until the end of the year.' },
 ];
@@ -287,7 +287,7 @@ export async function seedOperational(
         company.employees,
         company.country,
         `https://www.linkedin.com/company/${company.domain.split('.')[0] ?? 'company'}`,
-        `${company.name} Ã¢â‚¬â€ ${company.industry} in ${company.country}.`,
+        `${company.name} — ${company.industry} in ${company.country}.`,
         ids.adminId,
       ],
     );
@@ -598,7 +598,7 @@ export async function seedOperational(
         [
           OP_IDS.messageVersion(conversationCount),
           messageId,
-          `${PEOPLE[lead.person - 1]?.name.split(' ')[0] ?? 'there'} Ã¢â‚¬â€ saw ${COMPANIES[PEOPLE[lead.person - 1]?.company ?? 1]?.name ?? 'your team'} is scaling output. We run overflow editing under your brand, so your team keeps the client relationship. Worth a short call?`,
+          `${PEOPLE[lead.person - 1]?.name.split(' ')[0] ?? 'there'} — saw ${COMPANIES[PEOPLE[lead.person - 1]?.company ?? 1]?.name ?? 'your team'} is scaling output. We run overflow editing under your brand, so your team keeps the client relationship. Worth a short call?`,
           owners[lead.owner],
         ],
       );

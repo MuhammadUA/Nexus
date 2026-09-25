@@ -1,5 +1,5 @@
 /**
- * POST /api/v1/companion/add ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â manual LinkedIn capture from the Companion.
+ * POST /api/v1/companion/add — manual LinkedIn capture from the Companion.
  *
  * spec `companion_extension.add_to_crm.process`:
  *   parse profile -> identify canonical person/company -> dedupe -> create/update
@@ -310,7 +310,7 @@ function contentHashOf(url: string, content: string): string {
 /**
  * Auto-match the Primary ICP using the configured criteria.
  *
- * Scores come from configuration (`icps.criteria`) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â never from product constants ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â
+ * Scores come from configuration (`icps.criteria`) — never from product constants —
  * and a Lead still ends up with exactly one Primary ICP.
  */
 async function autoMatchIcp(

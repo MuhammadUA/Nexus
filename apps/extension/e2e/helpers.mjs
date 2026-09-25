@@ -1,8 +1,8 @@
 /**
  * Panel-driving helpers shared by the extension E2E specs.
  *
- * Everything here talks to the panel the way an operator does ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â filling the real inputs and
- * dispatching the events a keystroke dispatches ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â because the design system listens on `input`
+ * Everything here talks to the panel the way an operator does — filling the real inputs and
+ * dispatching the events a keystroke dispatches — because the design system listens on `input`
  * rather than `change`, and a test that sets a value without that event would be testing a
  * component that does not exist.
  */
@@ -22,7 +22,7 @@ export async function waitForShell(page) {
  * Fills a controlled input the way React sees a keystroke.
  *
  * `fill()` alone sets the value through the native setter and fires `input`, which is exactly what
- * the design system listens for ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â so this is a thin wrapper whose value is the assertion that the
+ * the design system listens for — so this is a thin wrapper whose value is the assertion that the
  * field exists at all.
  */
 export async function fill(page, selector, value) {
@@ -47,7 +47,7 @@ export async function fill(page, selector, value) {
  * Chooses an option in a controlled design-system `Select`.
  *
  * `selectOption` alone is not enough here. The design system listens on the DOM `input` event, and
- * a programmatic selection through the native setter does not produce one on every path ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â so the
+ * a programmatic selection through the native setter does not produce one on every path — so the
  * value is set through the prototype setter and the event is dispatched explicitly, which is the
  * same thing a keystroke does. Without this the panel keeps its previous selection and reports
  * "Choose the identity this browser profile uses."
@@ -94,7 +94,7 @@ export async function signIn(page, email = ADMIN_EMAIL, password = ADMIN_PASSWOR
  *
  * The search and the click both run in the panel's DOM. A disabled button is waited for rather than
  * clicked: the design system disables a control while its own request is in flight, and a click on a
- * disabled button is a silent no-op â€” which looks exactly like a broken screen.
+ * disabled button is a silent no-op — which looks exactly like a broken screen.
  */
 export async function clickButton(page, pattern) {
   const source = pattern.source;
@@ -209,7 +209,7 @@ export async function bind(page, { identityId, businessId, transfer = false } = 
 export async function signInAndBind(page, { transfer = true } = {}) {
   await signIn(page);
 
-  // The browser profile may already be bound ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the same profile is reused across the specs ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â in
+  // The browser profile may already be bound — the same profile is reused across the specs — in
   // which case the panel opens straight into the CRM View and there is nothing left to bind.
   const alreadyBound = await isCrmView(page);
   if (alreadyBound) return { identityId: null, businessId: null, warned: false };
@@ -261,7 +261,7 @@ export async function signInAndBind(page, { transfer = true } = {}) {
  *
  * Polls the panel's own DOM rather than using a `Locator`. Playwright resolves locators by injecting
  * a script into the page, and inside this `chrome-extension://` document that resolution was
- * observed not to find elements that `document.querySelector` returns immediately Ã¢â‚¬â€ including
+ * observed not to find elements that `document.querySelector` returns immediately — including
  * `getByRole`, which reported nothing for a tab strip that was on screen. Selecting through
  * `waitForFunction` uses the same path as the rest of these helpers and is reliable here.
  */
@@ -289,7 +289,7 @@ export async function leadRows(page) {
   );
 }
 
-/** Reads the panel's own storage ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â the real `chrome.storage`, not a stand-in. */
+/** Reads the panel's own storage — the real `chrome.storage`, not a stand-in. */
 /** Whether an element matching `selector` is in the panel's DOM right now. */
 export async function hasDom(page, selector) {
   return page.evaluate((target) => document.querySelector(target) !== null, selector);

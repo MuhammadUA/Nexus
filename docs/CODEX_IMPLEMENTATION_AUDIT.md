@@ -114,7 +114,7 @@ packages/core ───────────┼──── pure contracts, n
 - **Severity:** high
 - **Affected area:** visual/content fidelity across web and Companion
 - **Expected behavior:** bullets, em dashes, arrows, ellipses, and multiplication/close glyphs render correctly.
-- **Actual behavior:** 247 source matches were found for mojibake patterns; at least 116 are likely runtime strings. Live screenshots show text such as `Studio Â· ...`. Loading labels, DNC copy, table empty values, sequence arrows, and Companion back controls are affected.
+- **Actual behavior:** 247 source matches were found for mojibake patterns; at least 116 are likely runtime strings. Live screenshots show text such as `Studio · ...`. Loading labels, DNC copy, table empty values, sequence arrows, and Companion back controls are affected.
 - **Evidence:** `packages/ui/src/primitives.tsx:475,617`; `packages/ui/src/domain.tsx:110,136`; `apps/web/src/app/b/[slug]/overview/page.tsx:57`; `apps/extension/src/sidepanel.tsx:278,1081`; screenshot `E:/CRM/ui-audit/shots/biz-overview.png`.
 - **Recommended fix:** normalize affected source files to UTF-8, replace corrupted literals, add an automated mojibake scan, and recapture every Figma screen.
 

@@ -1,7 +1,7 @@
 ﻿'use server';
 
 /**
- * A23 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Add Business Wizard mutations.
+ * A23 — Add Business Wizard mutations.
  *
  * spec `business_units.clone_behavior` is the rule this file exists to honour:
  *
@@ -41,8 +41,8 @@ const notSignedIn: ActionResult = { ok: false, error: 'Your session has expired.
  *
  * Duplicated from the wizard component on purpose: the client uses it to help the
  * operator, and the server uses it as the authoritative fallback. Deriving the key here
- * means a submission whose key field never arrived ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a programmatic fill, a password
- * manager, a browser extension ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â still produces a valid business instead of a
+ * means a submission whose key field never arrived — a programmatic fill, a password
+ * manager, a browser extension — still produces a valid business instead of a
  * validation error the operator cannot act on.
  *
  * `businesses.key` has a CHECK constraint (`^[a-z0-9][a-z0-9-]*$`); validating the same
@@ -71,7 +71,7 @@ const keySchema = z
  * `.nullish()`, not `.nullish()`: a blank optional input submits as `null` (see
  * `formStringOrNull`), and `z.string().nullish()` accepts `undefined` but rejects
  * `null`. With `.nullish()` every submission that left an optional field blank failed
- * validation with "Expected string, received null" Ã¢â‚¬â€ which is to say, every normal
+ * validation with "Expected string, received null" — which is to say, every normal
  * first attempt.
  */
 const optionalText = (max: number): z.ZodType<string | null | undefined> =>
@@ -189,7 +189,7 @@ export async function createBusinessAction(
 
   // "Offer" is step 2 of the wizard. It is written after the business exists, and a
   // failure here is reported as a warning because the business itself is already
-  // created and usable ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â hiding that would be worse than admitting the partial step.
+  // created and usable — hiding that would be worse than admitting the partial step.
   let warning: string | undefined;
   const offerName = emptyToNull(data.offerName ?? undefined);
   if (offerName !== null) {

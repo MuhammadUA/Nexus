@@ -52,17 +52,17 @@ interface BusinessGrantView {
 }
 
 /**
- * A16 â€” User Permissions.
+ * A16 — User Permissions.
  *
  * Contract: "Business visibility, lead scope, permitted actions, managed
  * identities."
  *
  * The screen shows three things side by side, and the distinction matters:
  *
- *   1. the **role default** from `@nexus/core` â€” read-only reference, because a role
+ *   1. the **role default** from `@nexus/core` — read-only reference, because a role
  *      is a property of the account, not of one business;
  *   2. the **per-business grant** actually stored in `user_business_access` and
- *      `user_lead_scope` â€” the editable part;
+ *      `user_lead_scope` — the editable part;
  *   3. the **effective set**, which is the role default after those grants are
  *      applied and after `ADMIN_ONLY_PERMISSIONS` have been removed for a
  *      non-admin. That last step is why a mis-typed override can never escalate a
@@ -240,7 +240,7 @@ export default async function UserPermissionsPage({
         subtitle={
           <>
             {user.email}
-            {user.fullName === null ? '' : ' Â· '}
+            {user.fullName === null ? '' : ' · '}
             {user.fullName ?? ''}
           </>
         }
@@ -334,7 +334,7 @@ export default async function UserPermissionsPage({
 
         <Stack size="lg">
           <Card
-            title={`Role defaults â€” ${user.role}`}
+            title={`Role defaults — ${user.role}`}
             actions={<Chip accent="neutral">read-only reference</Chip>}
           >
             <Stack size="sm">

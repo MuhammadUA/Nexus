@@ -124,7 +124,7 @@ test('Today lists the work that is actually due', async () => {
   await openModule(page, 'Today');
 
   const body = await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' '));
-  // Either there is due work, or the empty state says so â€” both are legitimate, and the empty state
+  // Either there is due work, or the empty state says so — both are legitimate, and the empty state
   // must not be a blank panel.
   expect(body.length).toBeGreaterThan(80);
 });

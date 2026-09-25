@@ -23,15 +23,15 @@ interface SearchParams {
 }
 
 /**
- * A22 â€” Settings.
+ * A22 — Settings.
  *
  * Contract: "Security, retention, soft-delete, DNC suppression, uniqueness defaults,
  * reply pause, dormant defaults."
  *
  * Two layers, exactly as the table models them: global rows (`business_id IS NULL`)
  * are the platform defaults, and a business row overrides the default for that
- * business only. Every value is edited through a typed control â€” a checkbox, a number
- * field or a days list â€” never a raw JSON textarea, because a hand-edited blob is how
+ * business only. Every value is edited through a typed control — a checkbox, a number
+ * field or a days list — never a raw JSON textarea, because a hand-edited blob is how
  * a boolean silently becomes the string "false".
  */
 export default async function SettingsPage({
@@ -122,7 +122,7 @@ export default async function SettingsPage({
 
       <div style={{ height: 'var(--nx-space-xl)' }} />
 
-      <Card title="Security Â· local credential path" actions={<Chip accent="amber">read-only</Chip>}>
+      <Card title="Security · local credential path" actions={<Chip accent="amber">read-only</Chip>}>
         <Stack size="sm">
           <Row between>
             <span className="nx-hint">security.local_auth_enabled</span>

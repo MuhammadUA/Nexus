@@ -1,19 +1,19 @@
 ﻿'use server';
 
 /**
- * A30 â€” Admin Â· Business Domains mutations.
+ * A30 — Admin · Business Domains mutations.
  *
  * spec `admin_self_assignment_and_domains.business_domains`:
  *   "Associate owned/official domains with a Nexus business for scoping, matching and
- *    admin defaults â€¦ One primary business context per registered domain. Explicit
+ *    admin defaults … One primary business context per registered domain. Explicit
  *    aliases are allowed. Never auto-merge leads across businesses because of a
  *    related/parent domain."
  *
  * The database does the enforcing and this file only validates shape:
- *   - `business_domains_normalized_unique (normalized_domain)` â€” a normalized domain
+ *   - `business_domains_normalized_unique (normalized_domain)` — a normalized domain
  *     exists once, under exactly one business;
- *   - `business_domains_default_primary_key` â€” at most one default primary per business;
- *   - `trg_business_domains_normalize` â€” lowercases and strips scheme/www/path before
+ *   - `business_domains_default_primary_key` — at most one default primary per business;
+ *   - `trg_business_domains_normalize` — lowercases and strips scheme/www/path before
  *     the uniqueness check, so `https://www.Example.com/x` and `example.com` collide.
  *
  * There is deliberately no merge action here: no domain operation touches leads.

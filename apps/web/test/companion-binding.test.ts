@@ -9,7 +9,7 @@
  *
  * The handlers are called directly with a `Request` carrying a real bearer token. That exercises
  * credential resolution, body validation, the concurrency decision, the transfer, the constraint
- * and the audit entry ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â everything except the HTTP transport.
+ * and the audit entry — everything except the HTTP transport.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -110,7 +110,7 @@ afterAll(async () => {
  * Every case starts from no live sessions.
  *
  * A leftover binding from a previous case would hold the identity under test, which the
- * one-active-session-per-identity index then turns into a unique violation ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the same failure a
+ * one-active-session-per-identity index then turns into a unique violation — the same failure a
  * real operator sees, arrived at for an unrelated reason. Each case seeds exactly the sessions it
  * is about.
  */

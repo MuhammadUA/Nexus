@@ -17,7 +17,7 @@ const STATUS_OPTIONS = ['active', 'invited', 'suspended', 'disabled'] as const;
 export const dynamic = 'force-dynamic';
 
 /**
- * A15 â€” Team & Accounts.
+ * A15 — Team & Accounts.
  *
  * Contract: "Users, roles, business access, lead access, managed LinkedIn
  * identities, daily counts/targets."
@@ -94,7 +94,7 @@ export default async function TeamPage(): Promise<ReactNode> {
     {
       key: 'created',
       header: 'Created',
-      cell: (user) => <span className="nx-table__mono">{user.createdAt?.slice(0, 10) ?? 'â€”'}</span>,
+      cell: (user) => <span className="nx-table__mono">{user.createdAt?.slice(0, 10) ?? '—'}</span>,
     },
     {
       key: 'actions',
@@ -166,7 +166,7 @@ export default async function TeamPage(): Promise<ReactNode> {
       )}
 
       <p className="nx-hint" style={{ marginTop: 'var(--nx-space-md)' }}>
-        Roles in use: admin Â· manager Â· user. Lead access is refined per business on each user&rsquo;s permissions
+        Roles in use: admin · manager · user. Lead access is refined per business on each user&rsquo;s permissions
         screen.
       </p>
     </>

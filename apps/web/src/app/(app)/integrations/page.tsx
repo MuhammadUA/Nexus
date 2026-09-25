@@ -16,7 +16,7 @@ import { ApiClientForm, RevokeTokenButton } from '@/components/integration-forms
 export const dynamic = 'force-dynamic';
 
 /**
- * A18 â€” Integrations Gateway.
+ * A18 — Integrations Gateway.
  *
  * Contract: "MCP, ingest API, webhooks, optional Google Sheets adapter; scoped auth;
  * no direct DB credentials."
@@ -46,7 +46,7 @@ export default async function IntegrationsPage(): Promise<ReactNode> {
         <div className="nx-stack nx-stack--sm">
           <strong>{client.name}</strong>
           {/* The token itself is unrecoverable, so only its prefix can be shown. */}
-          <span className="nx-table__mono">{client.tokenPrefix}â€¦</span>
+          <span className="nx-table__mono">{client.tokenPrefix}…</span>
         </div>
       ),
     },
@@ -70,7 +70,7 @@ export default async function IntegrationsPage(): Promise<ReactNode> {
       numeric: true,
       // An empty allow-list means the token can reach nothing, not everything.
       cell: (client) =>
-        client.businessIds.length === 0 ? <Chip accent="amber">none â€” token can do nothing</Chip> : client.businessIds.length,
+        client.businessIds.length === 0 ? <Chip accent="amber">none — token can do nothing</Chip> : client.businessIds.length,
     },
     {
       key: 'used',
@@ -159,7 +159,7 @@ export default async function IntegrationsPage(): Promise<ReactNode> {
               empty={
                 <EmptyState
                   title="No tokens yet"
-                  body="Issue a token for an agent, then copy it immediately â€” it cannot be shown again."
+                  body="Issue a token for an agent, then copy it immediately — it cannot be shown again."
                 />
               }
             />

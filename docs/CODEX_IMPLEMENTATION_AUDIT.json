@@ -98,7 +98,7 @@
       "type": "visual",
       "screen_or_module": "shared text and glyph rendering",
       "expected": "Punctuation and interface glyphs render correctly.",
-      "actual": "There are 247 source matches for mojibake patterns, with at least 116 likely runtime strings; browser evidence visibly includes strings such as Studio Â·.",
+      "actual": "There are 247 source matches for mojibake patterns, with at least 116 likely runtime strings; browser evidence visibly includes strings such as Studio ·.",
       "evidence": ["packages/ui/src/primitives.tsx:475", "packages/ui/src/primitives.tsx:617", "packages/ui/src/domain.tsx:110", "apps/web/src/app/b/[slug]/overview/page.tsx:57", "E:/CRM/ui-audit/shots/biz-overview.png"],
       "recommended_fix": "Normalize affected files to UTF-8, replace corrupted literals, add a mojibake scan, and recapture every reference screen.",
       "production_blocker": false

@@ -1,7 +1,7 @@
 ﻿'use server';
 
 /**
- * Outreach identity mutations â€” A17 (`/identities/[id]`).
+ * Outreach identity mutations — A17 (`/identities/[id]`).
  *
  * The interesting action here is `assignIdentityManagerAction`. spec
  * `admin_self_assignment_and_domains.admin_self_assignment` allows an admin to

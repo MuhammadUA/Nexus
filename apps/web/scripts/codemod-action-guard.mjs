@@ -6,8 +6,8 @@
  * nothing for the action. This inserts a permission check at the top of each admin action, before
  * any parsing or repository call.
  *
- * The check is inserted after the `_previous: ActionResult, formData: FormData,` parameter block â€”
- * i.e. as the first statement of the body â€” so it cannot be skipped by an early return.
+ * The check is inserted after the `_previous: ActionResult, formData: FormData,` parameter block —
+ * i.e. as the first statement of the body — so it cannot be skipped by an early return.
  *
  * Idempotent: running it twice changes nothing.
  */

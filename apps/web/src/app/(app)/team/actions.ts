@@ -1,11 +1,11 @@
 ﻿'use server';
 
 /**
- * Team & accounts mutations â€” A15 (`/team`) and A16 (`/team/[id]`).
+ * Team & accounts mutations — A15 (`/team`) and A16 (`/team/[id]`).
  *
  * Every action resolves the viewer from the signed session cookie; a `userId`,
  * `role` or `password` a caller might send is validated as *input*, never trusted
- * as identity. Each write ends up inside `withActor(viewer.actor, â€¦)`, where RLS
+ * as identity. Each write ends up inside `withActor(viewer.actor, …)`, where RLS
  * on `public.users`, `public.user_business_access`, `public.user_lead_scope` and
  * the `public.require_admin` call inside `public.set_user_credential` are the
  * authorization boundary.
@@ -199,7 +199,7 @@ const setPasswordSchema = z.object({
  * Local credential path (`0015_local_credentials.sql`).
  *
  * `public.set_user_credential` is SECURITY DEFINER and calls
- * `public.require_admin`, so the signed-in admin's identity â€” set by `withActor` â€”
+ * `public.require_admin`, so the signed-in admin's identity — set by `withActor` —
  * is what authorises it. Nothing about the password is echoed back.
  */
 export async function setPasswordAction(

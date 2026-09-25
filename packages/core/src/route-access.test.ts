@@ -5,7 +5,7 @@
  * mistakes this pins down, both of which were real in this codebase:
  *
  *   * the route -> permission matrix was exported and read by nothing, so a standard user who typed
- *     an admin URL got a fully rendered page with the forms merely disabled â€” which also disclosed
+ *     an admin URL got a fully rendered page with the forms merely disabled — which also disclosed
  *     the platform's global settings;
  *   * permissions were accumulated across every business an operator can reach. That is right for
  *     the sidebar and wrong for a screen: a manager of one business holding `icp.manage` there would
@@ -192,7 +192,7 @@ describe('admin-only permissions cannot be widened', () => {
   });
 
   it('refuses a business-level admin on a global admin route that is not business-scoped', () => {
-    // A global route has no business to scope to, so it is judged against the union â€” and the union
+    // A global route has no business to scope to, so it is judged against the union — and the union
     // for a non-admin cannot contain an admin-only permission.
     const decision = routeAccessAllowed({
       actor: { kind: 'user', userId: 'bizadmin-1', role: 'user' },
