@@ -352,3 +352,53 @@ Legend: PASS = independently evidenced; PARTIAL = route/code exists but one or m
 2. Add production bundle budgets and reduce Companion bundle size.
 3. Add shared checkbox/radio/file primitives where repeated styling diverges.
 
+---
+
+## 13. Backend remediation status (branch `backend/remediation`)
+
+The items below are the backend's share of section 12, with what was actually done. Anything not
+listed here was **not** addressed by this pass, and the frontend and extension items are outside its
+scope. `docs/FRONTEND_CONTRACTS.md` is the companion document: it states each contract a screen
+depends on, including the parts of the spec that are deliberately not implemented.
+
+### MUST FIX
+
+| # | Item | Status | Evidence |
+| --- | --- | --- | --- |
+| 1 | Green root typecheck and tests; Playwright isolation | **Done** | `pnpm run typecheck`, `lint`, `test`, `db:verify`, `build` all exit 0; extension vitest excludes `e2e/**` |
+| 2 | Admin-only route access | **Done** | `lib/route-guard.ts`; 23 pages call `requireRouteAccess`, 19 actions call `authorizeAction`; `route-access.test.ts` (14 cases) |
+| 3 | Wire and harden DeepSeek | **Done** | `lib/ai/{config,types,deepseek,drafting}.ts`; 71 tests; used by profile capture and `draftMessageAction` |
+| 4 | MCP schemas/idempotency/batch | **Done** | `mcp/tool-schemas.ts`, migration `0020`; `mcp-gateway.test.ts` (16 cases) |
+| 5 | Remove visible mojibake | **Not addressed by this pass** | frontend-owned |
+| 6 | Complete real-extension flow | **Not addressed by this pass** | extension-owned; handled in the separate extension remediation |
+| 7 | Extension build in the root release gate | **Not addressed by this pass** | `build` still targets `@nexus/web` only (NX-009) |
+
+### SHOULD FIX
+
+| # | Item | Status |
+| --- | --- | --- |
+| 1 | Webhook delivery | **Explicitly deferred**, with the deferral documented in `FRONTEND_CONTRACTS.md` §6.1. The tables remain; no delivery mechanism was added. |
+| 2–6 | UI recapture, My Day structure, density, trash consolidation, matrix regeneration | Not addressed by this pass (frontend-owned) |
+
+### Additional defects found and fixed while doing the above
+
+These were not in the audit. Each was found by writing the test that had never been written, and each
+has regression coverage.
+
+| Defect | Consequence before the fix | Fix |
+| --- | --- | --- |
+| The percentage branch of the numeric-claim pattern ended in `\b`, which `%` can never satisfy | **Every percentage claim escaped the claim policy entirely** — `40%` is the most likely fabricated metric in outreach | `packages/core/src/messaging-rules.ts`; `messaging-rules.test.ts` |
+| Profile heuristics selected the *name* as the headline and split the headline non-greedily | `jobTitle` and `company` were null on every ordinary capture; "Head of Content at X" became "Head of" + "Content at X" | `heuristicProfileFields` |
+| The schema-retry budget was tested after retrying | a systematically wrong model spent its whole attempt budget on a failure retrying cannot fix | `lib/ai/deepseek.ts` |
+| A capture for an invisible lead reported an RLS policy name to the operator | leaked that the row exists, and a raw policy name; a model call was also spent first | visibility is settled before extraction |
+| `cloneBusiness` copied `sequences` without their versions or steps | **every cloned sequence was an empty shell that could never produce a message** | `repo/businesses.ts`; `business-lifecycle.test.ts` |
+| A `SENT` instance could hold an empty message version | SENT forever with nothing to display, and unrepairable because SENT content is immutable | migration `0021`; `sent-message-content.test.ts` |
+| Global `platform_settings` were readable by any authenticated user | the DNC rule, reply-pause rule and retention/security defaults were exposed platform-wide | migration `0022`; `platform-settings-scope.test.ts` |
+
+### Not covered by tests in this pass
+
+`nexus.get_today_queue` and the `nexus.search_*`/`check_duplicate` tools validate their arguments but
+their handlers are not exercised end-to-end; `submitResearch` and `finish_agent_run` likewise. The
+transport, validation and idempotency around them are tested.
+
+
