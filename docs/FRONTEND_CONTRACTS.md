@@ -98,6 +98,11 @@ They are shaped for `useActionState`. `error` is always a sentence written for t
 never reaches the UI, and a constraint `hint` is surfaced only where the migration authors wrote one
 deliberately (for example `permanentDeleteLead`'s confirmation phrase).
 
+**Lifecycle actions extend this with a stable `errorCode`.** Where a refusal is really a different
+screen state — "this has history, archive it instead" — the action returns a machine-readable code
+alongside the sentence, and the UI branches on the code. Matching on `error` text would break the moment
+a sentence is reworded. The lifecycle result shapes are in §6.2 (identities) and §6.3 (businesses).
+
 ### 2.2 The AI drafting action
 
 `draftMessageAction` (in `apps/web/src/app/b/[slug]/leads/[id]/actions.ts`) generates a draft for one
@@ -236,7 +241,9 @@ through `redactSecrets` before they are logged, and a returned failure carries a
 
 ## 6. Deliberately not implemented
 
-Stated here so a frontend team does not build against something that does not exist.
+Stated here so a frontend team does not build against something that does not exist. The lifecycle
+sections below replace an earlier note that said archiving and identity retirement were not exposed —
+both are now real actions with the contracts in §6.2 and §6.3.
 
 ### 6.1 Webhook delivery — deferred
 
@@ -257,23 +264,151 @@ Implementing it properly needs a signed delivery worker with retry and dead-lett
 outbox, a scheduler that is not the web process, and signature verification documented for the
 receiver. That is a feature, not a wiring fix, and it is out of scope for this remediation.
 
-### 6.2 Outreach identity retirement — partial
+### 6.2 Outreach identity lifecycle
 
-`outreach_identities.status` accepts `'retired'` and historical attribution is preserved: a sent
-message's identity is read from the `message_events` row recorded at send time
-(`mark_message_sent` writes `outreach_identity_id`), so retiring or renaming an identity does not
-change what history says about who sent something. `usableIdentities` and `canUseIdentity` keep a
-retired identity out of new sends.
+Implemented. Three actions beyond the existing transfer, all in
+`apps/web/src/app/(app)/identities/[id]/actions.ts`, all requiring `identity.manage` (admin-only), and
+each re-authorized independently because a Server Action is a public endpoint.
 
-There is no dedicated "retire" action; it is a status change through the existing update path, which
-is audited like any other identity mutation.
+Shared result shape:
 
-### 6.3 Business archival — not exposed
+```ts
+interface LifecycleActionResult {
+  ok: boolean;
+  error: string | null | undefined;   // operator sentence
+  message?: string;                   // success text
+  errorCode?: string;                 // stable identifier — branch on this, not on `error`
+  attribution?: Record<string, number>;  // identity only; present with identity_has_attribution
+}
+```
 
-`businesses.status` accepts `'archived'`, and `cloneBusiness` never copies leads, people,
-conversations, message history or source evidence. There is no archive action in the web app: a
-business is created, cloned or left active. Archiving is therefore not something a screen can offer
-yet, and no code path deletes a business's history.
+**`unassignIdentityAction`** — releases an identity without giving it to anyone.
+
+| Input | Required | Notes |
+| --- | --- | --- |
+| `identityId` | yes | uuid |
+| `note` | no | ≤ 2000 chars, recorded on the audit row |
+
+State change: `managed_by_user_id` becomes `null`. **No `identity_transfers` row is written** — that
+table names a recipient, and "nobody has this now" is not a transfer; recording it there would put a row
+in the transfer log that answers no question. The change is audited as `identity_unassign`.
+
+`errorCode`: `identity_not_found`, `identity_not_assigned`. Reversible: assign it again.
+
+**`archiveIdentityAction`** — the way to retire a sender account.
+
+| Input | Required | Notes |
+| --- | --- | --- |
+| `identityId` | yes | uuid |
+| `note` | no | ≤ 2000 chars |
+
+State changes, all in one transaction:
+
+- `status` becomes `'retired'`.
+- Every `browser_sessions` row with `status = 'active'` becomes `'revoked'` with `revoked_at` set. A
+  bound browser profile would otherwise keep sending as a closed identity.
+- Business bindings are **left in place** — they are configuration and part of the identity's history.
+  Use `revokeBusinessAction` if the binding itself should go.
+- An `identity_archive` audit row records the note and the revoked-session count.
+- The identity disappears from `listIdentityOptions`, `companionIdentities` and the assignment list. It
+  **stays visible on `/identities` marked `retired`**: archiving is not hiding.
+- `identity_usable_by_actor` returns false, so every send and bind path refuses it — **including for an
+  admin**, which it previously did not.
+
+**Archiving is terminal.** The database refuses `status` moving away from `'retired'`, because
+un-retiring would make the historical attribution of everything the identity sent ambiguous. Do not
+render a "reactivate" control. Create a new identity instead.
+
+`errorCode`: `identity_not_found`, `identity_already_archived` (idempotent retry).
+
+**`deleteIdentityAction`** — only for an identity that never sent anything.
+
+| Input | Required | Notes |
+| --- | --- | --- |
+| `identityId` | yes | uuid |
+| `confirmation` | yes | the identity's `displayName`, typed exactly |
+
+Returns `ok: false` with `errorCode: 'identity_has_attribution'` and the counts when history references
+the identity. **This is not a validation failure and must not be rendered as one**: the request was
+well-formed and the operation is genuinely unavailable. The UI is expected to offer Archive in that
+state, which is why `attribution` comes back with it.
+
+The underlying reason is worth knowing, because it is the one gap that was silently destructive: every
+foreign key pointing at `outreach_identities` is `on delete set null`, so deleting an identity that had
+sent messages **succeeded** and blanked the sender on all of them. The text survived with nobody
+attributed to it, and nothing reported the loss. A repository guard and a `BEFORE DELETE` trigger now
+refuse it.
+
+`errorCode`: `identity_has_attribution`, `confirmation_required`, `identity_not_found`.
+
+### 6.3 Business lifecycle
+
+Implemented. Three actions in `apps/web/src/app/(app)/businesses/[id]/actions.ts`, all requiring the
+route `/businesses` (`business.create`, admin-only).
+
+`LifecycleActionResult` as above, plus:
+
+```ts
+protectedHistory?: Record<string, number>;  // business only; with business_has_protected_history
+alreadyInState?: boolean;                   // the business was already archived
+```
+
+**`archiveBusinessAction`** — the safe way to close a business.
+
+| Input | Required | Notes |
+| --- | --- | --- |
+| `businessId` | yes | uuid |
+| `reason` | no | ≤ 2000 chars, recorded on the audit row |
+
+State changes:
+
+- `businesses.status` becomes `'archived'`, and the business leaves `listBusinesses()` — which is what
+  removes it from the sidebar, the admin switcher, the Companion selector and
+  `nexus.list_accessible_businesses`.
+- Active `sequence_enrollments` become `'paused'`.
+- Unsent `message_instances` are invalidated with `regeneration_reason = 'business_archived'`. **`SENT`
+  instances are untouched** — they are history.
+- A trigger then refuses any new lead, enrolment, message instance or import in the business, for every
+  caller including direct SQL.
+- An `archive_business` audit row records the reason.
+
+Nothing is deleted. Leads, people, companies, conversations, messages, replies, tasks, notes, evidence
+and audit rows are all preserved, and the business stays readable (an old `/b/<slug>/...` link resolves
+and reports `archived` rather than 404). Idempotent: a retried archive returns
+`alreadyInState: true`, not an error.
+
+`errorCode`: none beyond `ok: false` with a sentence for an unknown business; authorization refusals
+come back as the guard's generic message.
+
+**`restoreBusinessAction`** — reverses an archive.
+
+| Input | Required |
+| --- | --- |
+| `businessId` | yes |
+
+State change: `status` becomes `'active'` and the business returns to the selectors; new work is
+accepted again. Invalidated drafts are **not** resurrected — they are regenerated, the same path a
+sequence publish takes. Audited as `restore_business`. Idempotent on an active business.
+
+**`deleteBusinessAction`** — only for a business with no history at all.
+
+| Input | Required | Notes |
+| --- | --- | --- |
+| `businessId` | yes | uuid |
+| `confirmation` | yes | the business `key`, typed exactly |
+
+Returns `errorCode: 'business_has_protected_history'` with `protectedHistory` when anything would be
+destroyed, or `errorCode: 'confirmation_required'` when the typed key does not match. The first is a
+screen state, not a validation failure — offer Archive.
+
+`businesses` is the root of cascading foreign keys, so a delete destroys every lead, message version and
+event, reply, note, task and evidence row the business owned, and none of it is reconstructible. The
+guard therefore runs twice: in the repository before anything is attempted, and in a `BEFORE DELETE`
+trigger so a caller that does not come through the repository cannot cascade by mistake. The
+`security.hard_delete_requires_confirmation` setting does **not** unlock this — purging a trashed lead and
+destroying a tenant's entire history are different decisions.
+
+A business with no history (created by mistake, then deleted) still deletes normally.
 
 ---
 
@@ -290,5 +425,10 @@ yet, and no code path deletes a business's history.
 | AI configuration | `apps/web/src/lib/ai/config.ts` |
 | MCP transport | `apps/web/src/app/api/v1/mcp/route.ts` |
 | MCP argument schemas | `apps/web/src/app/api/v1/mcp/tool-schemas.ts` |
+| Business lifecycle actions | `apps/web/src/app/(app)/businesses/[id]/actions.ts` |
+| Business lifecycle repository | `apps/web/src/lib/repo/businesses.ts` |
+| Identity lifecycle actions | `apps/web/src/app/(app)/identities/[id]/actions.ts` |
+| Identity lifecycle repository | `apps/web/src/lib/repo/identities.ts` |
 | Messaging rules, claim policy | `packages/core/src/messaging-rules.ts` |
 | Schema, RLS, triggers, functions | `packages/db/migrations/` |
+| Encoding repair (run once, idempotent) | `scripts/repair-encoding.mjs` |

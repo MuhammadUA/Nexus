@@ -368,10 +368,27 @@ depends on, including the parts of the spec that are deliberately not implemente
 | 1 | Green root typecheck and tests; Playwright isolation | **Done** | `pnpm run typecheck`, `lint`, `test`, `db:verify`, `build` all exit 0; extension vitest excludes `e2e/**` |
 | 2 | Admin-only route access | **Done** | `lib/route-guard.ts`; 23 pages call `requireRouteAccess`, 19 actions call `authorizeAction`; `route-access.test.ts` (14 cases) |
 | 3 | Wire and harden DeepSeek | **Done** | `lib/ai/{config,types,deepseek,drafting}.ts`; 71 tests; used by profile capture and `draftMessageAction` |
-| 4 | MCP schemas/idempotency/batch | **Done** | `mcp/tool-schemas.ts`, migration `0020`; `mcp-gateway.test.ts` (16 cases) |
-| 5 | Remove visible mojibake | **Not addressed by this pass** | frontend-owned |
+| 4 | MCP schemas/idempotency/batch | **Done** | `mcp/tool-schemas.ts`, migration `0020`; `mcp-gateway.test.ts` (30 cases, including every handler) |
+| 5 | Remove visible mojibake | **Done** | `scripts/repair-encoding.mjs`; 28 files repaired, repository now scans clean |
 | 6 | Complete real-extension flow | **Not addressed by this pass** | extension-owned; handled in the separate extension remediation |
 | 7 | Extension build in the root release gate | **Not addressed by this pass** | `build` still targets `@nexus/web` only (NX-009) |
+
+### REQUIRED LIFECYCLE CONTRACTS
+
+Both were declared in the schema and unreachable from the application. Implemented in migrations
+`0023`–`0025`; documented in `FRONTEND_CONTRACTS.md` §6.2 and §6.3.
+
+| Contract | Status | Evidence |
+| --- | --- | --- |
+| Business archive / restore, Admin-only, audited | **Done** | `archive_business` / `restore_business`; `business-archive.test.ts` (16 cases) |
+| Archiving blocks new outreach, imports and automations | **Done** | `BEFORE INSERT` trigger on `leads`, `sequence_enrollments`, `message_instances`, `import_batches`; asserted by direct SQL in the tests |
+| Archiving preserves leads, messages, replies, tasks, audit | **Done** | asserted against the sent message text and identity attribution |
+| Permanent deletion refused when protected history exists | **Done** | `business_protected_history` + repository guard + `BEFORE DELETE` trigger |
+| Identity unassign / disable / safe delete | **Done** | `unassignIdentity`, `archiveIdentity`, `deleteIdentitySafely`; `identity-lifecycle.test.ts` (20 cases) |
+| Archived identities leave selectors and are blocked from outreach | **Done** | `identity_usable_by_actor`, `listIdentityOptions`, `companionIdentities`, assignment list |
+| Historical sent-message attribution intact after archive | **Done** | asserted on `message_events` after archiving |
+| Hard delete of an identity with history returns a typed rejection | **Done** | `errorCode: 'identity_has_attribution'` with counts |
+| MCP handlers exercised end to end | **Done** | 16 new cases covering `get_today_queue`, `search_*`, `check_duplicate`, `submit_research`, `finish_agent_run`, `submit_message_draft`, `create_task`, `add_note`, `submit_candidate` |
 
 ### SHOULD FIX
 
@@ -394,11 +411,24 @@ has regression coverage.
 | `cloneBusiness` copied `sequences` without their versions or steps | **every cloned sequence was an empty shell that could never produce a message** | `repo/businesses.ts`; `business-lifecycle.test.ts` |
 | A `SENT` instance could hold an empty message version | SENT forever with nothing to display, and unrepairable because SENT content is immutable | migration `0021`; `sent-message-content.test.ts` |
 | Global `platform_settings` were readable by any authenticated user | the DNC rule, reply-pause rule and retention/security defaults were exposed platform-wide | migration `0022`; `platform-settings-scope.test.ts` |
+| `nexus.submit_candidate` wrote `ingest_requests.status = 'processing'`, then `'completed'` | neither is in the check constraint, and the ledger row shares a transaction with the lead, so **every externally ingested candidate failed at the first write**. The path had no test. | `repo/ingest.ts`; `mcp-gateway.test.ts` |
+| `repo/ingest.ts` inserted `leads.source_type = 'api_ingest'` | not in `LEAD_SOURCE_TYPES`, so the lead insert was rejected — the same path, a second failure | now `external_ingest` |
+| `requireScope` was called with `businessId ?? ''` for every tool | `nexus.list_accessible_businesses` — the one non-business-scoped tool — answered "not scoped to that business" for a correct token, so **a client could never get past discovery** | `lib/gateway.ts`, `mcp/route.ts` |
+| All lifecycle-relevant code paths were untestable by construction: `identity_usable_by_actor` short-circuited on `is_admin()` | an admin bypassed a retired identity's state entirely, so "archive" would not have blocked anything for the one role that can send as anyone | migration `0025` |
+| 28 files carried double-encoded UTF-8 from a Windows-1252 round trip | runtime strings were corrupted, not only comments: table placeholders, domain-type labels, transfer arrows, seed message bodies | `scripts/repair-encoding.mjs` |
 
 ### Not covered by tests in this pass
 
-`nexus.get_today_queue` and the `nexus.search_*`/`check_duplicate` tools validate their arguments but
-their handlers are not exercised end-to-end; `submitResearch` and `finish_agent_run` likewise. The
-transport, validation and idempotency around them are tested.
+The MCP handler gap recorded here earlier is closed: every declared tool now has a case that asserts its
+*result* against seeded data, not merely that it was not refused — see `mcp-gateway.test.ts`.
+
+Still uncovered, and out of scope for a backend pass:
+
+- Companion/extension endpoints beyond `companion-binding.test.ts`: the Side Panel's own flows are
+  verified by the extension suite, which needs a real browser.
+- The PDF/DOCX knowledge extractors (`repo/knowledge.ts`) — they need fixture files and a running
+  extractor, and no behaviour was changed.
+- `nx-009`: the root `build` script still compiles `@nexus/web` only, so the extension is not part of
+  the release gate.
 
 
