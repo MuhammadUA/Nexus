@@ -73,6 +73,7 @@ export async function listIdentities(actor: Actor): Promise<readonly IdentityRow
          left join public.outreach_identity_business_access a on a.outreach_identity_id = i.id
          left join public.businesses b on b.id = a.business_id and b.deleted_at is null
         where i.deleted_at is null
+          and i.status <> 'retired'
         group by i.id, u.full_name, u.email
         order by i.display_name`,
     );

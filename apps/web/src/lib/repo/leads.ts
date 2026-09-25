@@ -854,14 +854,21 @@ export async function listIcpOptions(actor: Actor, businessId: string): Promise<
   });
 }
 
-/** Sender identities an operator may filter by in this business. */
+/**
+ * Sender identities an operator may filter by in this business.
+ *
+ * Archived (retired) identities are excluded: `business_is_open` and `identity_usable_by_actor` both
+ * refuse new work from them, so offering one as a filter would offer a filter that can never match a
+ * new message. Their history stays visible through the lead timeline, which reads `message_events`
+ * directly and is not filtered by status.
+ */
 export async function listIdentityOptions(actor: Actor, businessId: string): Promise<readonly Option[]> {
   return read(actor, async (sql) => {
     const result = await sql.query<Row>(
       `select i.id, i.display_name
          from public.outreach_identities i
          join public.outreach_identity_business_access a on a.outreach_identity_id = i.id
-        where a.business_id = $1 and i.deleted_at is null
+        where a.business_id = $1 and i.deleted_at is null and i.status <> 'retired'
         order by i.display_name`,
       [businessId],
     );

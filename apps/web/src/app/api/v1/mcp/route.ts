@@ -20,6 +20,7 @@ import { MCP_TOOLS, type McpToolName } from '@nexus/core';
 import { contentHash, sha256Hex } from '@nexus/core';
 
 import { withActor } from '@/lib/actor';
+import type { Db } from '@/lib/sql';
 import { requireScope, resolveCredential, type ServiceCredential, type UserCredential } from '@/lib/gateway';
 import { companionSearch } from '@/lib/repo/companion';
 import { listBusinesses } from '@/lib/repo/businesses';
@@ -59,6 +60,29 @@ function rpcError(id: unknown, error: JsonRpcError): Response {
 
 /** One entry per permitted tool. `never` for anything not in `MCP_TOOLS`. */
 type ToolArgs = Readonly<Record<string, unknown>>;
+
+/**
+ * Refuses new business-specific work in an archived business.
+ *
+ * spec `business_units`: archiving takes a business out of the active selectors and stops new work
+ * inside it, while preserving everything it already holds. An agent calling the gateway has to meet the
+ * same rule a person does — otherwise MCP becomes the way around a lifecycle decision an administrator
+ * made.
+ *
+ * The message names the state rather than the policy so the calling agent can act: an archived business
+ * is a "restore it first" situation, not a retryable failure.
+ */
+async function assertBusinessAcceptsNewWork(sql: Db, businessId: string): Promise<void> {
+  const result = await sql.query<{ open: boolean }>(
+    `select public.business_is_open($1) as open`,
+    [businessId],
+  );
+  if (result.rows[0]?.open !== true) {
+    throw new Error(
+      `Business ${businessId} is archived and does not accept new work. Restore it first; its existing leads, messages and history are unaffected.`,
+    );
+  }
+}
 
 function stringArg(args: ToolArgs, key: string): string | null {
   const value = args[key];
@@ -185,6 +209,11 @@ const TOOL_HANDLERS: Readonly<
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       return withActor(credential.actor, async (sql) => {
+        // A signal is new business-specific intelligence, so an archived business refuses it. The
+        // database gates leads, enrolments, message instances and imports with a trigger; `signals` is
+        // not one of the four, so the check is stated here rather than left implicit.
+        await assertBusinessAcceptsNewWork(sql, businessId);
+
         // No idempotency check here: the gateway owns it for every tool and has already replayed or
         // reserved this key before dispatch. Reading it from `args` would always fail, because the
         // envelope is stripped.
@@ -635,7 +664,14 @@ async function callTool(
   }
 
   const handler = TOOL_HANDLERS[toolName];
-  const scopeCheck = requireScope(credential, handler.scope, businessId ?? '');
+  // `nexus.list_accessible_businesses` is the one tool that is not business-scoped: its purpose is to
+  // discover which businesses the token reaches. Passing an absent `business_id` through to
+  // `requireScope` made it answer `-32003 "not scoped to that business"` for a token whose scope list
+  // was perfectly correct, so a client could never get past discovery.
+  const scopeCheck =
+    businessId === null
+      ? requireScope(credential, handler.scope)
+      : requireScope(credential, handler.scope, businessId);
   if (!scopeCheck.ok) {
     return fail(-32003, scopeCheck.error);
   }

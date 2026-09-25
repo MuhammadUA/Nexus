@@ -1,4 +1,4 @@
-﻿/**
+/**
  * API gateway authentication and scope enforcement.
  *
  * Two credential kinds reach `/api/v1`:
@@ -151,18 +151,22 @@ export function requireUser(credential: Credential): { ok: true; userId: string 
  * A service token must hold the specific scope AND list the business — the two terms
  * are both mandatory, which is what prevents a token from exceeding its grant even
  * if the SQL it triggers forgets a predicate.
+ *
+ * `businessId` may be omitted for a tool that is not business-scoped — discovery, which asks which
+ * businesses a token reaches and therefore has no business to be scoped to. Omitting it skips only the
+ * business membership test; the scope test still applies.
  */
 export function requireScope(
   credential: Credential,
   scope: string,
-  businessId: string,
+  businessId?: string,
 ): { ok: true } | { ok: false; error: string; status: number } {
   if (credential.kind === 'user') return { ok: true };
   if (credential.kind === 'anonymous') return { ok: false, error: 'Missing or invalid token.', status: 401 };
   if (!credential.scopes.includes(scope)) {
     return { ok: false, error: `This token does not have the ${scope} scope.`, status: 403 };
   }
-  if (!credential.businessIds.includes(businessId)) {
+  if (businessId !== undefined && !credential.businessIds.includes(businessId)) {
     return { ok: false, error: 'This token is not scoped to that business.', status: 403 };
   }
   return { ok: true };

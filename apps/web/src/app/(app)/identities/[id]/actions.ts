@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 /**
  * Outreach identity mutations — A17 (`/identities/[id]`).
@@ -22,10 +22,13 @@ import { formString, formStringOrNull } from '@/lib/form-data';
 import {
   IDENTITY_PLATFORMS,
   IDENTITY_STATUSES,
+  archiveIdentity,
   assignIdentityManager,
   createIdentity,
+  deleteIdentitySafely,
   grantIdentityBusiness,
   revokeIdentityBusiness,
+  unassignIdentity,
   updateIdentity,
 } from '@/lib/repo/identities';
 
@@ -252,5 +255,142 @@ export async function assignIdentityManagerAction(
     message: result.ok
       ? 'Manager updated. The change is recorded in the transfer history and the audit log.'
       : undefined,
+  };
+}
+
+/* ------------------------------------------------------- lifecycle actions -- */
+
+/**
+ * Lifecycle actions carry a stable `errorCode`.
+ *
+ * The lifecycle refusals are not all failures. "This identity has history, archive it instead" is a
+ * *different screen state*, not an error to display: the UI has to offer the archive control, which it
+ * cannot do from a sentence. Matching on message text would break the moment a sentence is reworded, so
+ * the code is part of the contract and the sentence is for the operator.
+ *
+ * Every action here requires `identity.manage` (admin-only), and each re-checks authorization because a
+ * Server Action is a public endpoint once its module has been rendered anywhere.
+ */
+export interface LifecycleActionResult extends ActionResult {
+  readonly errorCode?: string;
+  /** Present with `errorCode: 'identity_has_attribution'`: what archiving would preserve. */
+  readonly attribution?: Record<string, number>;
+}
+
+const identityOnlySchema = z.object({
+  identityId: uuid,
+  note: z.string().trim().max(2000).nullish(),
+});
+
+/** Releases an identity from its operator without transferring it to anyone. */
+export async function unassignIdentityAction(
+  _previous: LifecycleActionResult,
+  formData: FormData,
+): Promise<LifecycleActionResult> {
+  const refusal = await authorizeAction(null, { route: '/identities' });
+  if (refusal !== null) return refusal;
+
+  const note = formStringOrNull(formData, 'note');
+  const parsed = identityOnlySchema.safeParse({
+    identityId: formStringOrNull(formData, 'identityId'),
+    note: typeof note === 'string' ? note : undefined,
+  });
+  if (!parsed.success) return { ok: false, error: 'That identity could not be found.' };
+
+  const viewer = await currentViewer();
+  if (viewer === null) return NOT_SIGNED_IN;
+
+  const result = await unassignIdentity(
+    viewer,
+    parsed.data.identityId,
+    parsed.data.note == null || parsed.data.note.length === 0 ? null : parsed.data.note,
+  );
+  if (result.ok) revalidatePath('/identities');
+
+  return {
+    ok: result.ok,
+    error: result.error ?? null,
+    message: result.ok ? result.message : undefined,
+    ...(result.errorCode === undefined ? {} : { errorCode: result.errorCode }),
+  };
+}
+
+/**
+ * Archives an identity: `status` becomes `retired`, live browser sessions are revoked, and it leaves
+ * every sender and binding selector. Terminal — an archived identity cannot be reactivated.
+ */
+export async function archiveIdentityAction(
+  _previous: LifecycleActionResult,
+  formData: FormData,
+): Promise<LifecycleActionResult> {
+  const refusal = await authorizeAction(null, { route: '/identities' });
+  if (refusal !== null) return refusal;
+
+  const note = formStringOrNull(formData, 'note');
+  const parsed = identityOnlySchema.safeParse({
+    identityId: formStringOrNull(formData, 'identityId'),
+    note: typeof note === 'string' ? note : undefined,
+  });
+  if (!parsed.success) return { ok: false, error: 'That identity could not be found.' };
+
+  const viewer = await currentViewer();
+  if (viewer === null) return NOT_SIGNED_IN;
+
+  const result = await archiveIdentity(
+    viewer,
+    parsed.data.identityId,
+    parsed.data.note == null || parsed.data.note.length === 0 ? null : parsed.data.note,
+  );
+  if (result.ok) {
+    revalidatePath(`/identities/${parsed.data.identityId}`);
+    revalidatePath('/identities');
+    revalidatePath('/team');
+  }
+
+  return {
+    ok: result.ok,
+    error: result.error ?? null,
+    message: result.ok ? result.message : undefined,
+    ...(result.errorCode === undefined ? {} : { errorCode: result.errorCode }),
+  };
+}
+
+const deleteIdentitySchema = z.object({
+  identityId: uuid,
+  confirmation: z.string().trim().max(200),
+});
+
+/**
+ * Deletes an identity — only one that never sent anything and carries no attribution.
+ *
+ * Returns `errorCode: 'identity_has_attribution'` with the counts when history references it, which is
+ * the signal for the UI to offer Archive instead. It is not a validation failure: the request was
+ * well-formed and the operation is genuinely unavailable.
+ */
+export async function deleteIdentityAction(
+  _previous: LifecycleActionResult,
+  formData: FormData,
+): Promise<LifecycleActionResult> {
+  const refusal = await authorizeAction(null, { route: '/identities' });
+  if (refusal !== null) return refusal;
+
+  const parsed = deleteIdentitySchema.safeParse({
+    identityId: formStringOrNull(formData, 'identityId'),
+    confirmation: formString(formData, 'confirmation', ''),
+  });
+  if (!parsed.success) return { ok: false, error: 'That identity could not be found.' };
+
+  const viewer = await currentViewer();
+  if (viewer === null) return NOT_SIGNED_IN;
+
+  const result = await deleteIdentitySafely(viewer, parsed.data.identityId, parsed.data.confirmation);
+  if (result.ok) revalidatePath('/identities');
+
+  return {
+    ok: result.ok,
+    error: result.error ?? null,
+    message: result.ok ? result.message : undefined,
+    ...(result.errorCode === undefined ? {} : { errorCode: result.errorCode }),
+    ...(result.attribution === undefined ? {} : { attribution: { ...result.attribution } }),
   };
 }

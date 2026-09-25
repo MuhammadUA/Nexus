@@ -83,24 +83,39 @@ function mapBusiness(row: Row): Business {
 /**
  * Businesses the viewer may see.
  *
- * RLS decides this: the query has no business filter of its own, so an admin sees
- * every business and a user sees exactly the ones granted to them. Adding a
- * client-side filter here would be redundant and, worse, could disagree with the
- * database.
+ * Archived businesses are excluded by default. This is the query behind the sidebar,
+ * the admin business switcher, the Companion's business selector and the MCP
+ * `list_accessible_businesses` tool, and spec `business_units` requires an archived
+ * business to leave the active selectors. Its data stays readable — the exclusion is
+ * about being offered as a working context, not about being hidden from a report, which
+ * is why `includeArchived` exists.
+ *
+ * RLS decides *visibility*: the query carries no business filter of its own, so an admin
+ * sees every business and a user sees exactly the ones granted to them. The status
+ * filter here is a lifecycle rule, and the two must not be conflated — see the note on
+ * `business_is_open` in migration 0023.
  */
-export async function listBusinesses(actor: Actor): Promise<readonly Business[]> {
+export async function listBusinesses(
+  actor: Actor,
+  options: { readonly includeArchived?: boolean } = {},
+): Promise<readonly Business[]> {
   return read(actor, async (sql) => {
     const result = await sql.query<Row>(
       `select id, key, name, focus, regions, status, is_template, notes, created_at, updated_at
          from public.businesses
         where deleted_at is null
+          and ($1::boolean or status <> 'archived')
         order by name`,
+      [options.includeArchived === true],
     );
     return result.rows.map(mapBusiness);
   });
 }
 
-export async function listBusinessSummaries(actor: Actor): Promise<readonly BusinessSummary[]> {
+export async function listBusinessSummaries(
+  actor: Actor,
+  options: { readonly includeArchived?: boolean } = {},
+): Promise<readonly BusinessSummary[]> {
   return read(actor, async (sql) => {
     const result = await sql.query<Row>(
       `select b.id, b.key, b.name, b.focus, b.regions, b.status, b.is_template, b.notes,
@@ -115,7 +130,9 @@ export async function listBusinessSummaries(actor: Actor): Promise<readonly Busi
                 where d.business_id = b.id) as domain_count
          from public.businesses b
         where b.deleted_at is null
+          and ($1::boolean or b.status <> 'archived')
         order by b.name`,
+      [options.includeArchived === true],
     );
 
     return result.rows.map((row: Row) => ({
@@ -166,6 +183,8 @@ export interface MutationResult {
   readonly ok: boolean;
   readonly id?: string;
   readonly error?: string;
+  /** Operator-facing success text. Present only when there is something to say. */
+  readonly message?: string;
 }
 
 export async function createBusiness(viewer: Viewer, input: BusinessInput): Promise<MutationResult> {
@@ -342,6 +361,273 @@ export async function cloneBusiness(
 
       return { ok: true, id: newId };
     });
+  } catch (error) {
+    return { ok: false, error: describeDbError(error) };
+  }
+}
+
+/* ------------------------------------------------------ lifecycle: archive -- */
+
+/**
+ * What a business holds that cannot be reconstructed.
+ *
+ * Every field is a count of records of something that happened: who was contacted, what was said to
+ * them, what they answered, and what was decided. `auditEvents` is included because the audit trail of
+ * a deleted business would go with it — `audit_events.business_id` is `on delete set null`, so the
+ * rows would survive as orphans naming no business, which is worse than useless.
+ */
+export interface BusinessProtectedHistory {
+  readonly leads: number;
+  readonly peopleLinked: number;
+  readonly companiesLinked: number;
+  readonly messageInstances: number;
+  readonly sentMessages: number;
+  readonly messageEvents: number;
+  readonly conversations: number;
+  readonly replies: number;
+  readonly interactions: number;
+  readonly notes: number;
+  readonly tasks: number;
+  readonly sourceEvidence: number;
+  readonly importBatches: number;
+  readonly auditEvents: number;
+  readonly agentRuns: number;
+  readonly researchSnapshots: number;
+}
+
+const EMPTY_HISTORY: BusinessProtectedHistory = {
+  leads: 0,
+  peopleLinked: 0,
+  companiesLinked: 0,
+  messageInstances: 0,
+  sentMessages: 0,
+  messageEvents: 0,
+  conversations: 0,
+  replies: 0,
+  interactions: 0,
+  notes: 0,
+  tasks: 0,
+  sourceEvidence: 0,
+  importBatches: 0,
+  auditEvents: 0,
+  agentRuns: 0,
+  researchSnapshots: 0,
+};
+
+function mapHistory(value: unknown): BusinessProtectedHistory {
+  if (typeof value !== 'object' || value === null) return EMPTY_HISTORY;
+  const row = value as Record<string, unknown>;
+  const count = (key: string): number => asNumber(row[key]);
+  return {
+    leads: count('leads'),
+    peopleLinked: count('people_linked'),
+    companiesLinked: count('companies_linked'),
+    messageInstances: count('message_instances'),
+    sentMessages: count('sent_messages'),
+    messageEvents: count('message_events'),
+    conversations: count('conversations'),
+    replies: count('replies'),
+    interactions: count('interactions'),
+    notes: count('notes'),
+    tasks: count('tasks'),
+    sourceEvidence: count('source_evidence'),
+    importBatches: count('import_batches'),
+    auditEvents: count('audit_events'),
+    agentRuns: count('agent_runs'),
+    researchSnapshots: count('research_snapshots'),
+  };
+}
+
+/** Total protected records, and a human-readable breakdown for the refusal message. */
+export function summariseProtectedHistory(history: BusinessProtectedHistory): {
+  readonly total: number;
+  readonly parts: readonly string[];
+} {
+  const labels: readonly (readonly [keyof BusinessProtectedHistory, string])[] = [
+    ['leads', 'leads'],
+    ['sentMessages', 'sent messages'],
+    ['messageEvents', 'message events'],
+    ['conversations', 'conversations'],
+    ['replies', 'replies'],
+    ['interactions', 'interactions'],
+    ['notes', 'notes'],
+    ['tasks', 'tasks'],
+    ['sourceEvidence', 'source evidence'],
+    ['importBatches', 'import batches'],
+    ['auditEvents', 'audit events'],
+    ['agentRuns', 'agent runs'],
+    ['researchSnapshots', 'research snapshots'],
+  ];
+
+  const parts: string[] = [];
+  let total = 0;
+  for (const [key, label] of labels) {
+    const value = history[key];
+    if (value > 0) {
+      parts.push(`${String(value)} ${label}`);
+      total += value;
+    }
+  }
+  return { total, parts };
+}
+
+/** Reads the protected-history census. Used by the UI before it offers anything destructive. */
+export async function getBusinessProtectedHistory(
+  actor: Actor,
+  businessId: string,
+): Promise<BusinessProtectedHistory> {
+  return read(actor, async (sql) => {
+    const result = await sql.query<{ history: unknown }>(
+      `select public.business_protected_history($1) as history`,
+      [businessId],
+    );
+    return mapHistory(result.rows[0]?.history);
+  });
+}
+
+export interface ArchiveBusinessResult extends MutationResult {
+  /** Present on success: what the business held when it was archived. */
+  readonly history?: BusinessProtectedHistory;
+  /** True when it was already archived, so a retried request is not reported as a failure. */
+  readonly alreadyArchived?: boolean;
+}
+
+/**
+ * Archives a business.
+ *
+ * spec `business_units`: archiving takes the business out of the active selectors and stops new
+ * business-specific work, while preserving every lead, message, reply, task and audit row. It is
+ * therefore the safe alternative to deletion, and the refusal from `deleteBusinessPermanently` points
+ * here.
+ *
+ * Admin-only, and the database enforces it twice: `businesses_update` requires `is_admin()`, and the
+ * RPC calls `require_admin`. The check is not duplicated in TypeScript — the action layer's route
+ * guard is what stops a non-admin reaching this at all, and the database is what makes that true even
+ * if a future caller forgets.
+ *
+ * What the RPC does beyond setting the status, and why: unsent scheduled outreach is invalidated and
+ * active enrolments are paused, so a message cannot fall due inside a business that has been closed.
+ * SENT messages are untouched — they are history.
+ */
+export async function archiveBusiness(
+  viewer: Viewer,
+  businessId: string,
+  reason?: string | null,
+): Promise<ArchiveBusinessResult> {
+  try {
+    const outcome = await withActor(viewer.actor, async (sql) => {
+      const result = await sql.query<{
+        outcome: {
+          business_id: string;
+          status: string;
+          already_archived: boolean;
+          leads: number;
+          unsent_messages_invalidated: number;
+        };
+      }>(`select public.archive_business($1, $2, $3) as outcome`, [
+        businessId,
+        viewer.userId,
+        reason ?? null,
+      ]);
+      return result.rows[0]?.outcome;
+    });
+
+    if (outcome === undefined) return { ok: false, error: 'The business was not archived.' };
+
+    // Read back after the RPC so the caller sees what was preserved, not what was counted
+    // beforehand. The count is of the whole business, including soft-deleted leads, which is what a
+    // permanent delete would actually destroy.
+    const history = await getBusinessProtectedHistory(viewer.actor, businessId);
+
+    return {
+      ok: true,
+      id: businessId,
+      history,
+      alreadyArchived: outcome.already_archived,
+      message: outcome.already_archived
+        ? 'That business was already archived.'
+        : `Archived. ${String(history.leads)} leads, ${String(history.sentMessages)} sent messages and ${String(history.tasks)} tasks are preserved.`,
+    };
+  } catch (error) {
+    return { ok: false, error: describeDbError(error) };
+  }
+}
+
+/** Reverses an archive. Admin-only and audited. Invalidated drafts are not resurrected. */
+export async function restoreBusiness(viewer: Viewer, businessId: string): Promise<MutationResult> {
+  try {
+    const outcome = await withActor(viewer.actor, async (sql) => {
+      const result = await sql.query<{ outcome: { status: string; already_active: boolean } }>(
+        `select public.restore_business($1, $2) as outcome`,
+        [businessId, viewer.userId],
+      );
+      return result.rows[0]?.outcome;
+    });
+
+    if (outcome === undefined) return { ok: false, error: 'The business was not restored.' };
+
+    return {
+      ok: true,
+      id: businessId,
+      message: outcome.already_active ? 'That business is not archived.' : 'Restored. It appears in the selectors again.',
+    };
+  } catch (error) {
+    return { ok: false, error: describeDbError(error) };
+  }
+}
+
+/**
+ * Permanently deletes a business — but only one with no history.
+ *
+ * This is not "delete with a scary confirmation". `businesses` is the root of cascading foreign keys,
+ * so deleting a row destroys every lead, conversation, message version and event, interaction, note,
+ * task and evidence row it owned, and no part of that is reconstructible. A reply is evidence that
+ * someone answered; a message version is the exact text they were sent.
+ *
+ * So the rule is: a business with protected history may be archived, never deleted. The refusal is
+ * raised here *before* anything is attempted, with the counts, and again by a `BEFORE DELETE` trigger
+ * so it holds for a caller that does not come through this function.
+ *
+ * `confirmation` must be the business key, typed by the operator. The database function does not take
+ * it — the guard is the history census — so this is the application's own gate, and it exists because
+ * the operation is irreversible rather than because the database needs it.
+ */
+export async function deleteBusinessPermanently(
+  viewer: Viewer,
+  businessId: string,
+  confirmation: string,
+): Promise<MutationResult> {
+  try {
+    const business = await getBusinessById(viewer.actor, businessId);
+    if (business === null) return { ok: false, error: 'That business could not be found.' };
+
+    if (confirmation.trim() !== business.key) {
+      return {
+        ok: false,
+        error: `Type the business key "${business.key}" exactly to confirm permanent deletion.`,
+      };
+    }
+
+    const history = await getBusinessProtectedHistory(viewer.actor, businessId);
+    const { total, parts } = summariseProtectedHistory(history);
+    if (total > 0) {
+      return {
+        ok: false,
+        error:
+          `This business has protected history (${parts.join(', ')}) and cannot be permanently deleted. ` +
+          'Archive it instead — archiving removes it from active selectors and new work while preserving everything.',
+      };
+    }
+
+    await withActor(viewer.actor, async (sql) => {
+      const deleted = await sql.query(
+        `delete from public.businesses where id = $1 and deleted_at is null`,
+        [businessId],
+      );
+      if (deleted.affectedRows === 0) throw new Error('That business no longer exists.');
+    });
+
+    return { ok: true, id: businessId, message: `Deleted ${business.name}.` };
   } catch (error) {
     return { ok: false, error: describeDbError(error) };
   }

@@ -94,7 +94,14 @@ export async function submitIngest(actor: Actor, input: IngestInput): Promise<In
     );
 
     const priorRow = existing.rows[0];
-    if (priorRow !== undefined && priorRow.status === 'completed' && typeof priorRow.result === 'object' && priorRow.result !== null) {
+    // `processed` and `duplicate` both mean "this key has already been fully applied"; `received` means
+    // a previous attempt died mid-pipeline, which must be retried rather than replayed.
+    if (
+      priorRow !== undefined &&
+      (priorRow.status === 'processed' || priorRow.status === 'duplicate') &&
+      typeof priorRow.result === 'object' &&
+      priorRow.result !== null
+    ) {
       const prior = priorRow.result as Record<string, unknown>;
       return {
         idempotent: true,
@@ -110,12 +117,16 @@ export async function submitIngest(actor: Actor, input: IngestInput): Promise<In
 
     // Record the request up front so a crash mid-pipeline leaves an auditable trace
     // rather than an unexplained missing row.
+    //
+    // `received` is the in-flight value. The status vocabulary is closed — `received`, `processed`,
+    // `failed`, `duplicate` — and an earlier version of this ledger wrote `processing`, which is not
+    // one of them, so the insert was rejected and the whole ingest failed before it started.
     await sql.query(
       `insert into public.ingest_requests
          (source_client, business_id, payload_type, idempotency_key, observed_at, payload, content_hash, status)
-       values ($1, $2, $3, $4, $5, $6::jsonb, $7, 'processing')
+       values ($1, $2, $3, $4, $5, $6::jsonb, $7, 'received')
        on conflict (source_client, business_id, idempotency_key) do update
-         set status = 'processing', payload = excluded.payload`,
+         set status = 'received', payload = excluded.payload`,
       [
         input.sourceClient,
         input.businessId,
@@ -249,9 +260,13 @@ export async function submitIngest(actor: Actor, input: IngestInput): Promise<In
       );
     } else {
       const inserted = await sql.query<{ id: string }>(
+        // `external_ingest` is the declared source type for this path
+        // (`LEAD_SOURCE_TYPES` in `@nexus/core`, and `leads_source_type_check`). The literal here used
+        // to be `api_ingest`, which is not in the vocabulary — so this insert was rejected and every
+        // externally ingested candidate failed. The filter bar offers a label, not a value.
         `insert into public.leads
            (business_id, person_id, company_id, status, source_type, source_url, needs_profile, last_activity_at)
-         values ($1, $2, $3, $4, 'api_ingest', $5, $6, now())
+         values ($1, $2, $3, $4, 'external_ingest', $5, $6, now())
          returning id`,
         [
           input.businessId,
@@ -294,8 +309,12 @@ export async function submitIngest(actor: Actor, input: IngestInput): Promise<In
     );
 
     await sql.query(
+      // `processed`, not `completed`: `ingest_requests_status_check` allows `received`, `processed`,
+      // `failed` and `duplicate`. This ledger used to write `completed`, and because the row is part of
+      // the same transaction as the lead it was rolled back with it — every `nexus.submit_candidate`
+      // call through the MCP gateway failed at the first write. The vocabulary is used verbatim.
       `update public.ingest_requests
-          set status = 'completed', result = $4::jsonb
+          set status = 'processed', result = $4::jsonb
         where source_client = $1 and business_id = $2 and idempotency_key = $3`,
       [
         input.sourceClient,

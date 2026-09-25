@@ -564,3 +564,356 @@ export async function assignIdentityManager(
     return { ok: false, error: describeDbError(error) };
   }
 }
+
+/* ------------------------------------------------------- lifecycle writes -- */
+
+/**
+ * What deleting this identity would orphan.
+ *
+ * `sentMessages` is the count that matters, and it is a count of `message_events` with
+ * `event_type = 'sent'`: `message_instances` carries no identity column, so the sent event is the only
+ * place the CRM records who actually reached a person. `message_events.outreach_identity_id` is
+ * `on delete set null`, so deleting the identity would not fail — it would blank that column and
+ * silently erase the attribution on every message the identity ever sent. The message text would
+ * survive with no sender, which is exactly the state the duplicate-outreach warning and the audit
+ * trail cannot work from.
+ */
+export interface IdentityAttribution {
+  readonly sentMessages: number;
+  readonly messageEvents: number;
+  readonly conversations: number;
+  readonly leads: number;
+  readonly interactions: number;
+  readonly browserSessions: number;
+  readonly transfers: number;
+}
+
+const EMPTY_ATTRIBUTION: IdentityAttribution = {
+  sentMessages: 0,
+  messageEvents: 0,
+  conversations: 0,
+  leads: 0,
+  interactions: 0,
+  browserSessions: 0,
+  transfers: 0,
+};
+
+function mapAttribution(value: unknown): IdentityAttribution {
+  if (typeof value !== 'object' || value === null) return EMPTY_ATTRIBUTION;
+  const row = value as Record<string, unknown>;
+  const count = (key: string): number => asNumber(row[key]);
+  return {
+    sentMessages: count('sent_messages'),
+    messageEvents: count('message_events'),
+    conversations: count('conversations'),
+    leads: count('leads'),
+    interactions: count('interactions'),
+    browserSessions: count('browser_sessions'),
+    transfers: count('transfers'),
+  };
+}
+
+/** Total attribution rows, and a breakdown for the refusal message. */
+export function summariseAttribution(attribution: IdentityAttribution): {
+  readonly total: number;
+  readonly parts: readonly string[];
+} {
+  const labels: readonly (readonly [keyof IdentityAttribution, string])[] = [
+    ['sentMessages', 'sent messages'],
+    ['messageEvents', 'message events'],
+    ['conversations', 'conversations'],
+    ['leads', 'leads'],
+    ['interactions', 'interactions'],
+    ['browserSessions', 'browser sessions'],
+    ['transfers', 'transfers'],
+  ];
+  const parts: string[] = [];
+  let total = 0;
+  for (const [key, label] of labels) {
+    const value = attribution[key];
+    if (value > 0) {
+      parts.push(`${String(value)} ${label}`);
+      total += value;
+    }
+  }
+  return { total, parts };
+}
+
+export async function getIdentityAttribution(
+  actor: Actor,
+  identityId: string,
+): Promise<IdentityAttribution> {
+  return read(actor, async (sql) => {
+    const result = await sql.query<{ attribution: unknown }>(
+      `select public.identity_attribution($1) as attribution`,
+      [identityId],
+    );
+    return mapAttribution(result.rows[0]?.attribution);
+  });
+}
+
+/**
+ * A mutation that decided the request was wrong, rather than one the database refused.
+ *
+ * `errorCode` is a stable identifier for the frontend to branch on. It exists because the alternative
+ * — matching on the message text — breaks the moment a sentence is reworded, and the UI needs to
+ * *offer the alternative action* rather than merely display an error: "this identity has history,
+ * archive it instead" is a different screen state from "that did not work".
+ */
+export interface LifecycleResult extends MutationResult {
+  readonly errorCode?: IdentityLifecycleErrorCode;
+  /** Present when `errorCode` is `identity_has_attribution`: what archive would preserve. */
+  readonly attribution?: IdentityAttribution;
+}
+
+export type IdentityLifecycleErrorCode =
+  | 'identity_has_attribution'
+  | 'identity_not_found'
+  | 'identity_already_archived'
+  | 'identity_not_archived'
+  | 'identity_not_assigned'
+  | 'confirmation_required';
+
+/**
+ * Releases an identity from its operator.
+ *
+ * This is the inverse of `assignIdentityManager`, and it deliberately does not go through it: an
+ * unassign is not a transfer. `identity_transfers` requires a `to_user_id` or a `from_user_id` and its
+ * CHECK constraint is about who is taking over, so recording "nobody has this now" as a transfer would
+ * put a row in the transfer log that names no recipient, and the log is meant to answer "who has it".
+ * The ownership change is audited in `audit_events` through the existing identity audit trigger, plus
+ * an explicit row naming the action.
+ *
+ * An identity with no manager is unusable rather than broken: it drops out of its owner's sender
+ * selector, records nothing new, and keeps every historical attribution.
+ */
+export async function unassignIdentity(
+  viewer: Viewer,
+  identityId: string,
+  note?: string | null,
+): Promise<LifecycleResult> {
+  try {
+    return await withActor(viewer.actor, async (sql) => {
+      const current = await sql.query<{
+        id: string;
+        managed_by_user_id: string | null;
+        status: string;
+        display_name: string;
+      }>(
+        `select id, managed_by_user_id, status, display_name
+           from public.outreach_identities
+          where id = $1 and deleted_at is null
+          for update`,
+        [identityId],
+      );
+      const row = current.rows[0];
+      if (row === undefined) {
+        return { ok: false, errorCode: 'identity_not_found', error: 'That identity could not be found.' };
+      }
+      if (row.managed_by_user_id === null) {
+        return {
+          ok: false,
+          errorCode: 'identity_not_assigned',
+          error: `${row.display_name} is not assigned to anyone.`,
+        };
+      }
+
+      await sql.query(
+        `update public.outreach_identities
+            set managed_by_user_id = null, updated_at = now()
+          where id = $1 and deleted_at is null`,
+        [identityId],
+      );
+
+      await sql.query(
+        `insert into public.audit_events
+           (actor_type, actor_id, entity_type, entity_id, action, before_json, after_json, source_client)
+         values ('user', $1, 'outreach_identities', $2, 'identity_unassign', $3::jsonb, $4::jsonb, 'web')`,
+        [
+          viewer.userId,
+          identityId,
+          JSON.stringify({ managed_by_user_id: row.managed_by_user_id }),
+          JSON.stringify({ managed_by_user_id: null, note: note ?? null }),
+        ],
+      );
+
+      return {
+        ok: true,
+        id: identityId,
+        message: `${row.display_name} is unassigned. It will not appear in any operator's sender list until it is assigned again.`,
+      };
+    });
+  } catch (error) {
+    return { ok: false, error: describeDbError(error) };
+  }
+}
+
+/**
+ * Archives an identity: `status = 'retired'`, plus the side effects that make it actually stop.
+ *
+ * Setting the status alone would be a lie in three places:
+ *
+ *   1. **Live browser sessions.** A bound browser profile would keep sending. Every active session is
+ *      revoked in the same transaction, so the extension's next request fails rather than silently
+ *      continuing as a retired identity. `browser_sessions_active_identity_key` (0010) makes a
+ *      concurrent bind fail loudly instead of racing the revocation.
+ *   2. **Business bindings.** They are left in place. They are configuration, not activity, and
+ *      removing them would lose the record of which businesses this identity served — which is part
+ *      of its history. Use `revokeIdentityBusiness` if the binding itself should go.
+ *   3. **New work.** `identity_usable_by_actor` now requires `status = 'active'` before any branch,
+ *      so the identity is refused by `assert_identity_usable` in every send and bind path — including
+ *      for an admin, which it previously was not.
+ *
+ * Archiving is terminal (migration 0025): an archived identity cannot be reactivated, because
+ * "who may send as this account" is a decision with a history and reversing it silently would make
+ * that history ambiguous. Create a new identity instead.
+ */
+export async function archiveIdentity(
+  viewer: Viewer,
+  identityId: string,
+  note?: string | null,
+): Promise<LifecycleResult> {
+  try {
+    return await withActor(viewer.actor, async (sql) => {
+      const current = await sql.query<{ id: string; status: string; display_name: string }>(
+        `select id, status, display_name
+           from public.outreach_identities
+          where id = $1 and deleted_at is null
+          for update`,
+        [identityId],
+      );
+      const row = current.rows[0];
+      if (row === undefined) {
+        return { ok: false, errorCode: 'identity_not_found', error: 'That identity could not be found.' };
+      }
+      if (row.status === 'retired') {
+        return {
+          ok: false,
+          errorCode: 'identity_already_archived',
+          error: `${row.display_name} is already archived.`,
+        };
+      }
+
+      const sessions = await sql.query<{ n: number }>(
+        `with revoked as (
+           update public.browser_sessions
+              set status = 'revoked', revoked_at = now()
+            where outreach_identity_id = $1 and status = 'active'
+            returning id
+         )
+         select count(*)::int as n from revoked`,
+        [identityId],
+      );
+      const revokedSessions = asNumber(sessions.rows[0]?.n);
+
+      await sql.query(
+        `update public.outreach_identities
+            set status = 'retired', updated_at = now()
+          where id = $1 and deleted_at is null`,
+        [identityId],
+      );
+
+      const attribution = await sql.query<{ attribution: unknown }>(
+        `select public.identity_attribution($1) as attribution`,
+        [identityId],
+      );
+
+      await sql.query(
+        `insert into public.audit_events
+           (actor_type, actor_id, entity_type, entity_id, action, before_json, after_json, source_client)
+         values ('user', $1, 'outreach_identities', $2, 'identity_archive', $3::jsonb, $4::jsonb, 'web')`,
+        [
+          viewer.userId,
+          identityId,
+          JSON.stringify({ status: row.status }),
+          JSON.stringify({ status: 'retired', revoked_sessions: revokedSessions, note: note ?? null }),
+        ],
+      );
+
+      return {
+        ok: true,
+        id: identityId,
+        attribution: mapAttribution(attribution.rows[0]?.attribution),
+        message:
+          `${row.display_name} is archived. It is out of every sender and binding selector, and its history is preserved` +
+          (revokedSessions > 0 ? `; ${String(revokedSessions)} live browser session(s) were revoked.` : '.'),
+      };
+    });
+  } catch (error) {
+    return { ok: false, error: describeDbError(error) };
+  }
+}
+
+/**
+ * Deletes an identity — but only one that never sent anything.
+ *
+ * The reason this returns a typed rejection rather than attempting the delete is that the delete would
+ * *succeed*. Every referencing foreign key is `on delete set null`, so removing an identity that sent
+ * a hundred messages quietly blanks the sender on all of them, and nothing reports it. There is no
+ * error to catch and no constraint to trust, which is why the census is read first and the trigger in
+ * migration 0025 repeats it.
+ *
+ * `confirmation` must be the identity's display name, typed by the operator: this is irreversible and
+ * the database cannot ask.
+ */
+export async function deleteIdentitySafely(
+  viewer: Viewer,
+  identityId: string,
+  confirmation: string,
+): Promise<LifecycleResult> {
+  try {
+    const identity = await getIdentity(viewer.actor, identityId);
+    if (identity === null) {
+      return { ok: false, errorCode: 'identity_not_found', error: 'That identity could not be found.' };
+    }
+
+    if (confirmation.trim() !== identity.displayName) {
+      return {
+        ok: false,
+        errorCode: 'confirmation_required',
+        error: `Type "${identity.displayName}" exactly to confirm deleting this identity.`,
+      };
+    }
+
+    const attribution = await getIdentityAttribution(viewer.actor, identityId);
+    const { total, parts } = summariseAttribution(attribution);
+    if (total > 0) {
+      return {
+        ok: false,
+        errorCode: 'identity_has_attribution',
+        attribution,
+        error:
+          `${identity.displayName} sent ${String(attribution.sentMessages)} message(s) and is referenced by history ` +
+          `(${parts.join(', ')}). Deleting it would erase who sent them. Archive it instead — archiving removes it ` +
+          'from every sender and binding selector and preserves all attribution.',
+      };
+    }
+
+    await withActor(viewer.actor, async (sql) => {
+      const deleted = await sql.query(
+        `delete from public.outreach_identities where id = $1 and deleted_at is null`,
+        [identityId],
+      );
+      if (deleted.affectedRows === 0) throw new Error('That identity no longer exists.');
+
+      await sql.query(
+        `insert into public.audit_events
+           (actor_type, actor_id, entity_type, entity_id, action, before_json, source_client)
+         values ('user', $1, 'outreach_identities', $2, 'identity_delete', $3::jsonb, 'web')`,
+        [
+          viewer.userId,
+          identityId,
+          JSON.stringify({
+            display_name: identity.displayName,
+            platform: identity.platform,
+            status: identity.status,
+          }),
+        ],
+      );
+    });
+
+    return { ok: true, id: identityId, message: `${identity.displayName} was deleted.` };
+  } catch (error) {
+    return { ok: false, error: describeDbError(error) };
+  }
+}

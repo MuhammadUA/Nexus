@@ -113,6 +113,7 @@ export async function companionIdentities(
               ) as business_ids
          from public.outreach_identities i
         where i.deleted_at is null
+          and i.status = 'active'
           and (i.managed_by_user_id = $1 or public.is_admin())
         order by i.display_name`,
       [userId],
