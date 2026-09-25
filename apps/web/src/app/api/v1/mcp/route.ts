@@ -17,6 +17,7 @@
  * row-level security applies to an agent exactly as it does to a person.
  */
 import { MCP_TOOLS, type McpToolName } from '@nexus/core';
+import { contentHash, sha256Hex } from '@nexus/core';
 
 import { withActor } from '@/lib/actor';
 import { requireScope, resolveCredential, type ServiceCredential, type UserCredential } from '@/lib/gateway';
@@ -25,6 +26,13 @@ import { listBusinesses } from '@/lib/repo/businesses';
 import { submitIngest } from '@/lib/repo/ingest';
 
 import { jsonOk } from '../_lib/http';
+import {
+  MCP_ENVELOPE_KEYS,
+  MCP_TOOLS_REQUIRING_IDEMPOTENCY,
+  mcpEnvelopeSchema,
+  MCP_TOOL_SCHEMAS,
+  toolCatalogue,
+} from './tool-schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,10 +51,6 @@ interface JsonRpcError {
 const PARSE_ERROR: JsonRpcError = { code: -32700, message: 'Parse error' };
 const INVALID_REQUEST: JsonRpcError = { code: -32600, message: 'Invalid Request' };
 const METHOD_NOT_FOUND: JsonRpcError = { code: -32601, message: 'Method not found' };
-
-function rpcResult(id: unknown, result: unknown): Response {
-  return jsonOk({ jsonrpc: '2.0', id: id ?? null, result });
-}
 
 function rpcError(id: unknown, error: JsonRpcError): Response {
   // JSON-RPC errors are part of the protocol, so they are returned with HTTP 200.
@@ -80,7 +84,12 @@ const TOOL_HANDLERS: Readonly<
     {
       readonly scope: string;
       readonly needsIdempotencyKey: boolean;
-      readonly run: (credential: UserCredential | ServiceCredential, args: ToolArgs, businessId: string | null) => Promise<unknown>;
+      readonly run: (
+        credential: UserCredential | ServiceCredential,
+        args: ToolArgs,
+        businessId: string | null,
+        envelope: { readonly idempotencyKey: string | undefined },
+      ) => Promise<unknown>;
     }
   >
 > = {
@@ -176,9 +185,9 @@ const TOOL_HANDLERS: Readonly<
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       return withActor(credential.actor, async (sql) => {
-        const idempotencyKey = stringArg(args, 'idempotency_key');
-        if (idempotencyKey === null) throw new Error('idempotency_key is required');
-
+        // No idempotency check here: the gateway owns it for every tool and has already replayed or
+        // reserved this key before dispatch. Reading it from `args` would always fail, because the
+        // envelope is stripped.
         const result = await sql.query<{ id: string }>(
           `insert into public.signals
              (business_id, company_id, person_id, lead_id, kind, polarity, strength, label, detail, observed_at)
@@ -189,7 +198,7 @@ const TOOL_HANDLERS: Readonly<
             stringArg(args, 'company_id'),
             stringArg(args, 'person_id'),
             stringArg(args, 'lead_id'),
-            stringArg(args, 'kind') ?? 'other',
+            stringArg(args, 'kind') ?? 'custom',
             stringArg(args, 'polarity') ?? 'neutral',
             numberArg(args, 'strength', 0),
             stringArg(args, 'label'),
@@ -207,11 +216,13 @@ const TOOL_HANDLERS: Readonly<
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       return withActor(credential.actor, async (sql) => {
-        const contentHash = stringArg(args, 'content_hash');
         const source = stringArg(args, 'source');
-        if (contentHash === null || source === null) {
-          throw new Error('source and content_hash are required');
-        }
+        if (source === null) throw new Error('source is required');
+        // Derived from the payload when the client does not supply one, so the stored hash always
+        // describes what was actually recorded rather than what the client claimed.
+        const evidenceHash =
+          stringArg(args, 'content_hash') ??
+          contentHash({ source, payload: args, observedAt: new Date().toISOString().slice(0, 10) });
         // Rediscovery is recorded as new evidence; the unique (business_id,
         // content_hash) index makes a repeat a no-op rather than a duplicate.
         const result = await sql.query<{ id: string }>(
@@ -229,7 +240,7 @@ const TOOL_HANDLERS: Readonly<
             source,
             stringArg(args, 'source_url'),
             stringArg(args, 'raw_text_or_json') ?? JSON.stringify(args),
-            contentHash,
+            evidenceHash,
             numberArg(args, 'confidence', 0.5),
           ],
         );
@@ -312,7 +323,9 @@ const TOOL_HANDLERS: Readonly<
         leadId,
         exactText,
         outcome,
-        sourceClient: stringArg(args, 'source_client') ?? 'mcp',
+        // The envelope's `source_client` was stripped before the tool ran, so the default is the
+        // transport's own name rather than something an argument could spoof.
+        sourceClient: 'mcp',
       });
       return { lead_id: leadId, captured: true };
     },
@@ -472,14 +485,18 @@ async function submitThroughPipeline(
   credential: UserCredential | ServiceCredential,
   args: ToolArgs,
   businessId: string | null,
+  envelope: { readonly idempotencyKey: string | undefined },
 ): Promise<unknown> {
   if (businessId === null) throw new Error('business_id is required');
 
-  const idempotencyKey = stringArg(args, 'idempotency_key');
-  if (idempotencyKey === null) throw new Error('idempotency_key is required for ingestion tools');
+  // Two layers of idempotency, deliberately: the gateway key guards the *tool call*, and this key
+  // guards the *ingest*. The ingest record is what makes a retry after a crash mid-pipeline safe, so
+  // it needs the key even though the gateway has already seen it.
+  const idempotencyKey = envelope.idempotencyKey;
+  if (idempotencyKey === undefined) throw new Error('idempotency_key is required for ingestion tools');
 
   const outcome = await submitIngest(credential.actor, {
-    sourceClient: stringArg(args, 'source_client') ?? 'mcp',
+    sourceClient: 'mcp',
     businessId,
     payloadType: 'candidate',
     payload: args,
@@ -497,23 +514,280 @@ async function submitThroughPipeline(
   };
 }
 
-/** Human-readable tool catalogue for `tools/list`. */
-function toolCatalogue(): readonly {
-  readonly name: string;
-  readonly description: string;
-  readonly inputSchema: Record<string, unknown>;
-}[] {
-  return MCP_TOOLS.map((name) => ({
-    name,
-    description: `Nexus intent-level tool: ${name.replace('nexus.', '')}`,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        business_id: { type: 'string', description: 'Target business (must be within the token scope).' },
-      },
-      required: name === 'nexus.list_accessible_businesses' ? [] : ['business_id'],
+/** Human-readable tool catalogue for `tools/list`, generated from the argument schemas. */
+export { toolCatalogue };
+
+/* ------------------------------------------------------------ dispatch --- */
+interface DispatchOutcome {
+  readonly response: Record<string, unknown>;
+  /** True when a write happened, so batch execution can proceed sequentially. */
+  readonly mutated: boolean;
+}
+
+/**
+ * Handles one JSON-RPC message.
+ *
+ * Extracted from `POST` so a batch element and a single request take exactly the same path — the
+ * audit found the transport doing `Array.isArray(body) ? body[0] : body`, which silently discarded
+ * every element after the first.
+ */
+async function dispatch(
+  message: unknown,
+  credential: UserCredential | ServiceCredential,
+): Promise<DispatchOutcome> {
+  const rpc = (typeof message === 'object' && message !== null ? message : {}) as JsonRpcRequest;
+  const id = rpc.id ?? null;
+
+  const error = (code: number, textMessage: string): DispatchOutcome => ({
+    response: { jsonrpc: '2.0', id, error: { code, message: textMessage } },
+    mutated: false,
+  });
+
+  if (rpc.jsonrpc !== '2.0' || typeof rpc.method !== 'string') {
+    return error(INVALID_REQUEST.code, INVALID_REQUEST.message);
+  }
+
+  switch (rpc.method) {
+    case 'initialize':
+      return {
+        response: {
+          jsonrpc: '2.0',
+          id,
+          result: {
+            protocolVersion: '2024-11-05',
+            serverInfo: { name: 'nexus', version: '1.0.0' },
+            capabilities: { tools: {} },
+          },
+        },
+        mutated: false,
+      };
+
+    case 'tools/list':
+      return { response: { jsonrpc: '2.0', id, result: { tools: toolCatalogue() } }, mutated: false };
+
+    case 'tools/call':
+      return callTool(rpc, credential);
+
+    default:
+      return error(METHOD_NOT_FOUND.code, METHOD_NOT_FOUND.message);
+  }
+}
+
+/** `tools/call`: validate the name, the envelope and the arguments, then dispatch. */
+async function callTool(
+  rpc: JsonRpcRequest,
+  credential: UserCredential | ServiceCredential,
+): Promise<DispatchOutcome> {
+  const id = rpc.id ?? null;
+  const fail = (code: number, message: string): DispatchOutcome => ({
+    response: { jsonrpc: '2.0', id, error: { code, message } },
+    mutated: false,
+  });
+  // A tool refusal is reported inside the *result* so the calling agent can react to it without
+  // treating it as a transport failure; a malformed call is a protocol error and is not.
+  const refused = (message: string): DispatchOutcome => ({
+    response: {
+      jsonrpc: '2.0',
+      id,
+      result: { isError: true, content: [{ type: 'text', text: message }] },
     },
-  }));
+    mutated: false,
+  });
+
+  const params = (rpc.params ?? {}) as { name?: unknown; arguments?: unknown };
+  const name = typeof params.name === 'string' ? params.name : '';
+
+  // Exhaustive membership test against the spec's tool list. An unknown or forbidden tool
+  // (e.g. database.execute_sql) cannot reach a handler.
+  if (!(MCP_TOOLS as readonly string[]).includes(name)) {
+    return fail(METHOD_NOT_FOUND.code, `Unknown tool: ${name}`);
+  }
+  const toolName = name as McpToolName;
+
+  const rawArgs =
+    typeof params.arguments === 'object' && params.arguments !== null
+      ? (params.arguments as ToolArgs)
+      : {};
+
+  const envelope = mcpEnvelopeSchema.safeParse(rawArgs);
+  if (!envelope.success) {
+    return refused(`Invalid arguments: ${describeIssues(envelope.error)}`);
+  }
+  // Read from `rawArgs`, not from `envelope.data`: Zod strips unknown keys, so a tool schema with a
+  // different field set would silently blank these out.
+  const businessId = typeof rawArgs['business_id'] === 'string' ? rawArgs['business_id'] : null;
+  const idempotencyKey = typeof rawArgs['idempotency_key'] === 'string' ? rawArgs['idempotency_key'] : undefined;
+
+  // Validated *before* dispatch, so "your arguments were wrong" is distinguishable from "the
+  // database refused this" — the first is fixable by retrying differently, the second is not.
+  const schema = MCP_TOOL_SCHEMAS[toolName];
+  const toolArgs: ToolArgs = Object.fromEntries(
+    Object.entries(rawArgs).filter(([key]) => !MCP_ENVELOPE_KEYS.includes(key)),
+  );
+  const parsed = schema.safeParse(toolArgs);
+  if (!parsed.success) {
+    return refused(`Invalid arguments for ${toolName}: ${describeIssues(parsed.error)}`);
+  }
+  const args = parsed.data as ToolArgs;
+
+  if (MCP_TOOLS_REQUIRING_IDEMPOTENCY[toolName] && idempotencyKey === undefined) {
+    return refused(`idempotency_key is required for ${toolName}`);
+  }
+
+  const handler = TOOL_HANDLERS[toolName];
+  const scopeCheck = requireScope(credential, handler.scope, businessId ?? '');
+  if (!scopeCheck.ok) {
+    return fail(-32003, scopeCheck.error);
+  }
+
+  // ---------------------------------------------------------------- idempotency --
+  //
+  // A key already used for this caller, business and tool returns the *first* result and does not
+  // run the tool again. Reusing a key with different arguments is refused rather than answered with
+  // the earlier result, because that would hide the client's bug behind a plausible response.
+  const key = idempotencyKey;
+  if (key !== undefined) {
+    const argumentsHash = sha256Hex(canonicalJson(args));
+    const prior = await findPriorInvocation(credential, businessId, toolName, key);
+    if (prior !== null) {
+      if (prior.argumentsHash !== argumentsHash) {
+        return refused(
+          `idempotency_key ${key} was already used for ${toolName} with different arguments.`,
+        );
+      }
+      return {
+        response: {
+          jsonrpc: '2.0',
+          id,
+          result: {
+            content: [{ type: 'text', text: JSON.stringify(prior.result) }],
+            structuredContent: prior.result,
+            idempotent: true,
+          },
+        },
+        mutated: false,
+      };
+    }
+
+    let result: unknown;
+    try {
+      result = await handler.run(credential, args, businessId, { idempotencyKey: key });
+    } catch (toolError) {
+      return refused(toolError instanceof Error ? toolError.message : 'The tool call failed.');
+    }
+
+    await rememberInvocation(credential, businessId, toolName, key, argumentsHash, result);
+    return {
+      response: {
+        jsonrpc: '2.0',
+        id,
+        result: {
+          content: [{ type: 'text', text: JSON.stringify(result) }],
+          structuredContent: result,
+          idempotent: false,
+        },
+      },
+      mutated: true,
+    };
+  }
+
+  try {
+    const result = await handler.run(credential, args, businessId, { idempotencyKey: undefined });
+    return {
+      response: {
+        jsonrpc: '2.0',
+        id,
+        result: {
+          content: [{ type: 'text', text: JSON.stringify(result) }],
+          structuredContent: result,
+        },
+      },
+      mutated: true,
+    };
+  } catch (toolError) {
+    const message = toolError instanceof Error ? toolError.message : 'The tool call failed.';
+    return { response: { jsonrpc: '2.0', id, result: { isError: true, content: [{ type: 'text', text: message }] } }, mutated: false };
+  }
+}
+
+/** `path: message` for each Zod issue, capped so a pathological payload cannot flood the response. */
+function describeIssues(error: { issues: readonly { path: readonly PropertyKey[]; message: string }[] }): string {
+  return error.issues
+    .slice(0, 10)
+    .map((issue) => `${issue.path.map(String).join('.') || '(root)'}: ${issue.message}`)
+    .join('; ');
+}
+
+/**
+ * A canonical JSON form for hashing arguments.
+ *
+ * Keys are sorted so that `{a,b}` and `{b,a}` hash identically: argument order is not part of what a
+ * caller means, and treating it as significant would refuse a legitimate retry.
+ */
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b));
+  return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(',')}}`;
+}
+
+interface PriorInvocation {
+  readonly result: unknown;
+  readonly argumentsHash: string;
+}
+
+async function findPriorInvocation(
+  credential: UserCredential | ServiceCredential,
+  businessId: string | null,
+  toolName: string,
+  idempotencyKey: string,
+): Promise<PriorInvocation | null> {
+  return withActor(credential.actor, async (sql) => {
+    const result = await sql.query<{ result: unknown; arguments_hash: string }>(
+      `select result, arguments_hash from public.mcp_tool_invocations
+        where tool_name = $1 and idempotency_key = $2
+          and business_id is not distinct from $3`,
+      [toolName, idempotencyKey, businessId],
+    );
+    const row = result.rows[0];
+    return row === undefined ? null : { result: row.result, argumentsHash: row.arguments_hash };
+  });
+}
+
+async function rememberInvocation(
+  credential: UserCredential | ServiceCredential,
+  businessId: string | null,
+  toolName: string,
+  idempotencyKey: string,
+  argumentsHash: string,
+  result: unknown,
+): Promise<void> {
+  await withActor(credential.actor, async (sql) => {
+    await sql.query(
+      `insert into public.mcp_tool_invocations
+         (api_client_id, actor_user_id, business_id, tool_name, idempotency_key, arguments_hash, result)
+       values (
+         public.acting_api_client_id(),
+         public.current_user_id(),
+         $1, $2, $3, $4, $5::jsonb
+       )
+       on conflict do nothing`,
+      [businessId, toolName, idempotencyKey, argumentsHash, JSON.stringify(result ?? {})],
+    );
+
+    await sql.query(
+      `select public.enqueue_audit(
+         'mcp_tool', null, 'mcp_tool_call', $1, null,
+         jsonb_build_object(
+           'tool_name', $2::text,
+           'idempotency_key', $3::text,
+           'arguments_hash', $4::text
+         ),
+         'mcp'
+       )`,
+      [businessId, toolName, idempotencyKey, argumentsHash],
+    );
+  });
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -533,64 +807,26 @@ export async function POST(request: Request): Promise<Response> {
     return rpcError(null, PARSE_ERROR);
   }
 
-  const rpc = (Array.isArray(body) ? body[0] : body) as JsonRpcRequest;
-  if (typeof rpc !== 'object' || rpc === null || typeof rpc.method !== 'string') {
-    return rpcError(rpc?.id ?? null, INVALID_REQUEST);
-  }
+  // JSON-RPC 2.0 batch. Returning only the first element — as this did — makes a client that sends
+  // two calls in one request see the second silently dropped. An empty batch is an invalid request,
+  // and a *notification* (no `id`) never gets a response at all.
+  if (Array.isArray(body)) {
+    if (body.length === 0) return jsonOk({ jsonrpc: '2.0', id: null, error: INVALID_REQUEST });
 
-  switch (rpc.method) {
-    case 'initialize':
-      return rpcResult(rpc.id, {
-        protocolVersion: '2024-11-05',
-        serverInfo: { name: 'nexus', version: '1.0.0' },
-        capabilities: { tools: {} },
-      });
-
-    case 'tools/list':
-      return rpcResult(rpc.id, { tools: toolCatalogue() });
-
-    case 'tools/call': {
-      const params = (rpc.params ?? {}) as { name?: unknown; arguments?: unknown };
-      const name = typeof params.name === 'string' ? params.name : '';
-
-      // Exhaustive membership test against the spec's tool list. An unknown or
-      // forbidden tool (e.g. database.execute_sql) cannot reach a handler.
-      if (!(MCP_TOOLS as readonly string[]).includes(name)) {
-        return rpcError(rpc.id, { code: METHOD_NOT_FOUND.code, message: `Unknown tool: ${name}` });
-      }
-
-      const handler = TOOL_HANDLERS[name as McpToolName];
-      const args: ToolArgs =
-        typeof params.arguments === 'object' && params.arguments !== null
-          ? (params.arguments as ToolArgs)
-          : {};
-
-      const businessId = stringArg(args, 'business_id');
-      const scopeCheck = requireScope(credential, handler.scope, businessId ?? '');
-      if (!scopeCheck.ok) {
-        return rpcError(rpc.id, { code: -32003, message: scopeCheck.error });
-      }
-
-      try {
-        const result = await handler.run(credential, args, businessId);
-        return rpcResult(rpc.id, {
-          content: [{ type: 'text', text: JSON.stringify(result) }],
-          structuredContent: result,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'The tool call failed.';
-        // Tool failures are reported inside the result so the calling agent can react
-        // without treating a refusal as a transport error.
-        return rpcResult(rpc.id, {
-          isError: true,
-          content: [{ type: 'text', text: message }],
-        });
-      }
+    const responses: Record<string, unknown>[] = [];
+    // Sequential, not parallel: several elements may write, and interleaving them through one
+    // connection would make the ordering of those writes depend on network timing.
+    for (const message of body) {
+      const outcome = await dispatch(message, credential);
+      const isNotification =
+        typeof message === 'object' && message !== null && !('id' in (message as object));
+      if (!isNotification) responses.push(outcome.response);
     }
-
-    default:
-      return rpcError(rpc.id, METHOD_NOT_FOUND);
+    return jsonOk(responses);
   }
+
+  const outcome = await dispatch(body, credential);
+  return jsonOk(outcome.response);
 }
 
 export function GET(): Response {

@@ -1,0 +1,30 @@
+feat(mcp): validate tool arguments, enforce idempotency, handle batches
+
+`mcp_contract.write_requirements` asks for schema validation and idempotency on every write. Neither
+was happening: `tools/list` advertised `{business_id}` as the whole input schema for all eighteen
+tools, `tools/call` accepted any argument shape, `needsIdempotencyKey` was read and thrown away, and a
+JSON-RPC batch was answered with `body[0]` — every later element silently dropped.
+
+- `mcp/tool-schemas.ts` — one schema per tool, typed `Record<McpToolName, …>` so adding a tool
+  without declaring its arguments is a compile error. `tools/list` publishes a JSON Schema generated
+  from those declarations, so a client that generates its call from the catalogue can now succeed.
+- Argument validation runs before dispatch and reports field paths, which makes "your arguments were
+  wrong" distinguishable from "the database refused this" — the first is fixable by retrying
+  differently and the second is not.
+- Idempotency is enforced by the gateway for every mutating tool, not only the ingestion ones. A
+  replayed key returns the first result; a key reused with different arguments is refused, because
+  answering with the earlier result would hide the client's bug behind a plausible response.
+- The envelope is stripped before a tool runs, so no handler can depend on it — which also fixes
+  `nexus.create_signal` defaulting `kind` to `'other'`, a value the database check constraint does not
+  permit, and reading an `idempotency_key` that the gateway now owns.
+- `nexus.add_source_evidence` no longer requires a client-supplied `content_hash`: the gateway
+  derives it from the payload when absent, so the stored hash describes what was recorded.
+- JSON-RPC batches answer every element, reject an empty batch, and do not answer notifications.
+  Execution is sequential because several elements may write.
+
+New migration `0020_mcp_idempotency.sql` adds `mcp_tool_invocations` — a dedicated table rather than a
+reuse of `ingest_requests`, whose `payload_type`/`content_hash`/pipeline-shaped `result` describe an
+ingest and would make the ingest trail unreadable. The arguments hash is stored so a key reused with
+different arguments can be detected rather than silently honoured.
+
+Also widens `jsonOk` to accept an array payload, which a batch response needs.

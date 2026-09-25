@@ -35,7 +35,14 @@ export function jsonError<T extends Record<string, unknown> = Record<string, nev
   return NextResponse.json({ error: message, ...(detail ?? {}) }, { status });
 }
 
-export function jsonOk<T extends Record<string, unknown>>(payload: T, status = 200): NextResponse<T> {
+/**
+ * A JSON 200 (or explicit status).
+ *
+ * Not generic over the payload any more: a JSON-RPC batch answers with an *array* of response
+ * objects, and a `T extends Record<string, unknown>` bound cannot express that. Callers that need a
+ * precise type already have it from their own literal.
+ */
+export function jsonOk(payload: unknown, status = 200): NextResponse {
   return NextResponse.json(payload, { status });
 }
 
