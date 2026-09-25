@@ -1,0 +1,31 @@
+{
+  "name": "@nexus/db",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./migrate": "./src/migrate.ts",
+    "./seed": "./seed/fixtures.ts"
+  },
+  "scripts": {
+    "verify": "node --experimental-strip-types scripts/verify.ts",
+    "reset": "node --experimental-strip-types scripts/verify.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src scripts --max-warnings 0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.2.17",
+    "@nexus/core": "workspace:*",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.5",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

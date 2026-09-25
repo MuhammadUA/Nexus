@@ -1,0 +1,34 @@
+{
+  "name": "@nexus/extension",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Nexus Companion — Chrome/Chromium Manifest V3 Side Panel.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:production": "node scripts/build.mjs --production",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src scripts --max-warnings 0",
+    "test": "vitest run --passWithNoTests",
+    "e2e": "playwright test --config=e2e/playwright.config.mjs",
+    "e2e:probe": "node e2e/probe.mjs",
+    "package": "node scripts/package.mjs"
+  },
+  "dependencies": {
+    "@nexus/core": "workspace:*",
+    "@nexus/ui": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/chrome": "^0.0.297",
+    "@types/node": "22.10.5",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

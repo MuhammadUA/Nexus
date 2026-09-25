@@ -1,0 +1,28 @@
+{
+  "name": "nexus",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --sequential run typecheck",
+    "lint": "pnpm -r --sequential run lint",
+    "test": "pnpm -r --sequential run test",
+    "test:db": "pnpm --filter @nexus/db run test",
+    "build": "pnpm --filter @nexus/web run build",
+    "db:reset": "pnpm --filter @nexus/db run reset",
+    "db:verify": "pnpm --filter @nexus/db run verify",
+    "verify": "pnpm run typecheck && pnpm run lint && pnpm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "9",
+    "@types/node": "^22.10.5",
+    "esbuild": "^0.28.2",
+    "eslint": "9",
+    "playwright": "^1.63.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "8"
+  }
+}

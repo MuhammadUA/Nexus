@@ -1,0 +1,1638 @@
+{
+  "spec_version": "1.0.0",
+  "product": {
+    "name": "NEXUS",
+    "description": "Multi-business lead-intelligence CRM, outreach workflow engine, lead-ingestion system, and browser Companion for manual LinkedIn-centric selling.",
+    "primary_goal": "Give admins a configurable Sales OS and give operators a simple daily queue/lead workspace that preserves one canonical customer history across businesses, ICPs, outreach identities, sources, sequences, and browser sessions.",
+    "non_goal": "NEXUS is not an autonomous cold-outreach spammer. Discovery/research/drafting can be automated, but human review/manual sending is the default for LinkedIn outreach."
+  },
+  "source_of_truth": {
+    "precedence": [
+      "This master JSON defines product behavior, data rules, permissions, workflows, integrations, and acceptance criteria.",
+      "The two finalized Figma files define visual hierarchy, screen composition, spacing, typography, and interaction placement.",
+      "Where Figma contains sample names/companies/statuses, treat them as seed/demo content, never hard-coded production values.",
+      "If a Figma visual and this JSON appear to conflict on a business rule, follow this JSON for behavior and preserve the Figma design language.",
+      "Do not silently remove a wireframe or workflow. If implementation is blocked, keep the route/state and document the blocker."
+    ],
+    "figma_files": {
+      "admin_backend": {
+        "name": "Nexus Admin + Backend — Final",
+        "url": "https://www.figma.com/design/WLp5O7g6XCqU8t3u7TkUMF",
+        "local_copy_expected": "Nexus_Admin_Backend_Final.fig"
+      },
+      "user_companion": {
+        "name": "Nexus User CRM + Companion — Final",
+        "url": "https://www.figma.com/design/4cO488OW7DLtsiaD4LH4TR",
+        "local_copy_expected": "Nexus_User_CRM_Companion_Final.fig"
+      }
+    }
+  },
+  "design_system": {
+    "visual_direction": [
+      "Light/off-white surfaces",
+      "Cool gray structure",
+      "Electric cyan and restrained indigo accents",
+      "Thin borders, generous but compact operational spacing",
+      "Subtle technical/sci-fi feel, never a dark gaming dashboard",
+      "Inter font",
+      "Clear cards, chips, compact tables, simple buttons and status pills",
+      "No instructional example copy on login or user-facing surfaces unless it is actionable product text"
+    ],
+    "desktop_reference": {
+      "width": 1440,
+      "height": 980
+    },
+    "companion_reference": {
+      "width": 420,
+      "height": 820
+    },
+    "layout_notes": {
+      "user_sidebar_width_approx": 220,
+      "admin_sidebar_width_approx": 238,
+      "radius_range_px": "9-14 for controls/cards, larger only for login shells",
+      "borders": "1px cool gray",
+      "primary_button": "near-black/navy background with white text",
+      "status_accents": {
+        "cyan": "new/connection/profile",
+        "green": "ready/sent/replied/active",
+        "amber": "follow-up/due/cooldown",
+        "red": "overdue/DNC/destructive",
+        "indigo": "business/ICP/configuration context"
+      }
+    },
+    "hard_rule": "Do not redesign the product into a generic SaaS theme. Reuse the Figma visual language consistently across all generated technical states."
+  },
+  "business_units": {
+    "architecture": "Every operational record is business-scoped unless explicitly global/canonical.",
+    "examples": [
+      {
+        "key": "zemnas",
+        "name": "Zemnas Creative Studio",
+        "focus": "white-label post-production/video editing",
+        "regions": [
+          "US",
+          "UK",
+          "Germany"
+        ],
+        "notes": "LinkedIn/manual prospecting; no email marketing in current workflow."
+      },
+      {
+        "key": "lavish-foods",
+        "name": "Lavish Foods",
+        "focus": "rice manufacturing/export/distribution",
+        "regions": [
+          "Germany",
+          "Europe"
+        ],
+        "notes": "RFP/tender discovery may be used; only surface tenders with at least 2-3 days before deadline."
+      },
+      {
+        "key": "ai-integrations",
+        "name": "AI Integrations",
+        "focus": "AI integration/services",
+        "regions": [
+          "GCC"
+        ],
+        "notes": "Exact ICP remains configurable; do not hard-code a guessed ICP."
+      }
+    ],
+    "business_switcher": [
+      "All Businesses (admin roll-up only)",
+      "Zemnas",
+      "Lavish Foods",
+      "AI Integrations",
+      "+ Add Business",
+      "Manage Businesses"
+    ],
+    "recommended_routes": [
+      "/b/:businessSlug/leads",
+      "/b/:businessSlug/overview",
+      "/b/:businessSlug/setup"
+    ],
+    "clone_behavior": {
+      "may_copy": [
+        "ICP structure",
+        "signal scoring",
+        "message/sequence rules",
+        "automation skeletons",
+        "assignment rules"
+      ],
+      "must_not_copy": [
+        "leads",
+        "people/company history",
+        "conversations",
+        "replies",
+        "message history",
+        "agent runs"
+      ],
+      "optional_only": [
+        "services",
+        "case studies",
+        "value propositions",
+        "outreach accounts"
+      ]
+    }
+  },
+  "roles_and_permissions": {
+    "roles": [
+      "admin",
+      "manager",
+      "user"
+    ],
+    "admin": {
+      "can": [
+        "Create/edit/archive businesses",
+        "Configure Business Brain, ICPs, sequences, signals/scoring and knowledge",
+        "Create users and assign business visibility",
+        "Assign/reassign lead ownership",
+        "Assign/reassign LinkedIn outreach identities",
+        "Self-assign allowed businesses, business domains and available outreach identities",
+        "Transfer an outreach identity from another user only through explicit confirmation and audit event",
+        "Manage integrations/MCP/API/webhooks/automation mappings",
+        "View insights and audit logs",
+        "Soft-delete and restore; permanent deletion only through explicit admin flow"
+      ]
+    },
+    "manager": {
+      "can": [
+        "View configured business scope",
+        "Manage team leads within granted scope",
+        "Use Companion with assigned identities",
+        "Perform lead work"
+      ],
+      "cannot_by_default": [
+        "Create businesses",
+        "Edit global integrations",
+        "Change another business outside granted access"
+      ]
+    },
+    "user": {
+      "can": [
+        "See only businesses explicitly granted by admin",
+        "See only leads within permitted/assigned scope",
+        "Use only LinkedIn identities assigned to them",
+        "Use My Day, My Leads, Lead Detail, notes, reply capture, tasks, snooze, user Lead Sources and Profile Queue if permission enabled",
+        "Soft-delete own/permitted leads and restore from Trash"
+      ],
+      "cannot": [
+        "Edit business/ICP/sequence/knowledge/admin integration configuration",
+        "Permanently delete records",
+        "See hidden businesses"
+      ]
+    },
+    "extension_visibility_rule": "Visible businesses in Companion = user_business_access INTERSECT selected_outreach_identity.business_access.",
+    "same_user_multiple_browsers": "Allowed. Each browser profile can bind to the same Nexus user but a different assigned outreach identity/business. Concurrent use of the same outreach identity in multiple active browser sessions should warn and can be blocked by setting."
+  },
+  "identity_model": {
+    "canonical_global_entities": [
+      "Company",
+      "Person",
+      "SocialProfile"
+    ],
+    "business_specific_entities": [
+      "Lead",
+      "ICP match",
+      "Signal",
+      "Qualification",
+      "Conversation/sequence enrollment",
+      "Assignment",
+      "Opportunity",
+      "RFP"
+    ],
+    "outreach_identity": {
+      "purpose": "Represents a specific sender identity/account, e.g. Osama LinkedIn, Bisma LinkedIn, James LinkedIn.",
+      "fields": [
+        "id",
+        "platform",
+        "display_name",
+        "profile_url",
+        "managed_by_user_id",
+        "status",
+        "daily_target",
+        "optional_browser_profile_id",
+        "created_at",
+        "updated_at"
+      ],
+      "rule": "CRM lead owner, actual sender identity, and business are separate dimensions and may differ."
+    },
+    "browser_session": {
+      "fields": [
+        "id",
+        "user_id",
+        "browser_fingerprint_or_install_id",
+        "outreach_identity_id",
+        "default_business_id",
+        "last_active_at",
+        "status"
+      ],
+      "rule": "Binding a browser does not change canonical lead ownership."
+    },
+    "conversation_ownership": "First sender identity becomes the default conversation sender/owner for the channel. Transfers are explicit and logged.",
+    "duplicate_outreach_warning": "If a prospect has already been contacted from another identity, opening the lead from a different identity must show previous sender, timestamp, prior message/status, and a duplicate-outreach warning."
+  },
+  "lead_invariants": [
+    "Same Person may exist as a lead in multiple different businesses.",
+    "Within the same business, a Person may have only one active Lead record.",
+    "Within a Lead, exactly one Primary ICP may be active at a time.",
+    "A person may match multiple ICPs in the same business, but secondary ICP matches must not create duplicate leads.",
+    "Changing Primary ICP is an audited state change, not creation of a second lead.",
+    "Normalized LinkedIn URL is the strongest person dedupe key when available.",
+    "Normalized company domain is the strongest company dedupe key when available.",
+    "Fallback dedupe may use normalized name + company + title with confidence.",
+    "Rediscovery creates a new Signal/SourceEvidence, not a duplicate Person/Company."
+  ],
+  "lead_lifecycle": {
+    "states": [
+      "new",
+      "needs_profile",
+      "ready",
+      "connection_due",
+      "connection_sent",
+      "connection_accepted",
+      "message_due",
+      "followup_due",
+      "replied",
+      "paused",
+      "cooldown",
+      "dormant",
+      "reactivation_due",
+      "interested",
+      "wrong_person",
+      "do_not_contact",
+      "archived",
+      "deleted"
+    ],
+    "default_outreach_sequence": [
+      "Connection (optional note)",
+      "Message 1",
+      "Follow-up 1",
+      "Follow-up 2",
+      "Follow-up 3",
+      "Dormant"
+    ],
+    "after_followup_3": "If no reply, move to Dormant and schedule reactivation review around 60 days (business configurable).",
+    "accepted_connection": "When a connection is accepted, Message 1 becomes due.",
+    "reply": "Any captured reply pauses/cancels pending automatic sequence steps by default.",
+    "reactivation": "Prefer a fresh buying signal/new angle. Do not blindly repeat the old sequence."
+  },
+  "sequence_engine": {
+    "entities": [
+      "Sequence",
+      "SequenceVersion",
+      "SequenceStep",
+      "SequenceEnrollment",
+      "MessageInstance",
+      "MessageVersion",
+      "MessageEvent",
+      "Conversation",
+      "ConversationOutcome",
+      "Cooldown",
+      "ContactSuppression"
+    ],
+    "default_steps": [
+      {
+        "order": 1,
+        "name": "Message 1",
+        "default_delay": "when eligible/connection accepted",
+        "purpose": "initial outreach"
+      },
+      {
+        "order": 2,
+        "name": "Follow-up 1",
+        "default_delay": "~3 days",
+        "purpose": "short relevant follow-up"
+      },
+      {
+        "order": 3,
+        "name": "Follow-up 2",
+        "default_delay": "~4 days after FU1",
+        "purpose": "new angle/proof"
+      },
+      {
+        "order": 4,
+        "name": "Follow-up 3",
+        "default_delay": "~7 days after FU2",
+        "purpose": "close loop / low-pressure final touch"
+      }
+    ],
+    "sequence_step_instruction_fields": [
+      "goal",
+      "allowed_context",
+      "word_max",
+      "cta_style",
+      "prohibited_phrases",
+      "proof_policy",
+      "tone",
+      "generation_mode"
+    ],
+    "message_states": {
+      "DYNAMIC": "May regenerate when sequence/business brain changes before send.",
+      "LOCKED": "Manually edited/approved and must not be overwritten by global changes.",
+      "SENT": "Immutable historical content; corrections use new events/versions, never overwrite."
+    },
+    "generation_timing": "Do not pre-generate all future follow-ups. Generate near due time using current approved Business Brain + current sequence version + prior messages + latest research/signals.",
+    "publish_behavior": [
+      "Sent messages remain immutable.",
+      "LOCKED unsent messages remain unchanged.",
+      "Eligible DYNAMIC unsent messages are invalidated/marked needs-regeneration.",
+      "Show impact preview before publishing sequence changes.",
+      "Retain sequence_version_id and message_version_id for auditability."
+    ],
+    "reply_outcomes": [
+      "Interested",
+      "Positive / needs info",
+      "Maybe later",
+      "No current need",
+      "Not interested",
+      "Wrong person",
+      "Already has supplier",
+      "Do not contact",
+      "Other"
+    ],
+    "do_not_contact": "Explicit DNC creates global Person+channel suppression across all outreach identities. Do not bypass via another account.",
+    "ordinary_not_interested": "May create business-specific cooldown; it is not the same as DNC."
+  },
+  "messaging_rules": {
+    "general": [
+      "Never invent company facts, results, client names, metrics, or hiring signals.",
+      "Use source evidence and approved Business Brain assets only.",
+      "Prefer one strong personalization signal instead of generic praise.",
+      "Keep CTA low pressure.",
+      "Store exact sent content and exact inbound response for later analysis."
+    ],
+    "zemnas": {
+      "target_length_words": "about 60-80",
+      "avoid_phrases": [
+        "I hope you're well",
+        "following up",
+        "quick question",
+        "I came across your profile",
+        "generic praise"
+      ],
+      "positioning": "We handle editing quietly in the background so clients can increase delivery capacity without building everything in-house.",
+      "approved_offer_example": "Free first edit may be offered when business configuration allows it."
+    }
+  },
+  "reply_and_notes": {
+    "capture_exact_inbound_text": true,
+    "capture_outcome": true,
+    "internal_note_separate_from_inbound": true,
+    "use_for_insights": true,
+    "history_rule": "Timeline must distinguish outbound messages, inbound replies, internal notes, tasks, connection events, sequence state changes and sender identity."
+  },
+  "tasks_and_my_day": {
+    "task_fields": [
+      "id",
+      "lead_id",
+      "business_id",
+      "owner_user_id",
+      "type",
+      "title",
+      "due_at",
+      "priority",
+      "reminder_at",
+      "status",
+      "note",
+      "source"
+    ],
+    "today_engine_inputs": [
+      "Sequence due step",
+      "Previous activity",
+      "Reply status",
+      "Connection status",
+      "Custom tasks",
+      "Snooze/reschedule",
+      "Due date"
+    ],
+    "today_categories": [
+      "connections",
+      "accepted/message1",
+      "follow-ups",
+      "overdue",
+      "custom tasks"
+    ],
+    "today_action_rule": "Opening an item should land on the exact actionable step, not a long generic conversation page.",
+    "done": "Completed items leave Today and appear in Done/history immediately.",
+    "upcoming": "Future sequence actions and custom tasks appear in Upcoming."
+  },
+  "companion_extension": {
+    "product_name": "Nexus Companion",
+    "platform": "Chrome/Chromium Manifest V3 Side Panel",
+    "shared_for_admin_and_user": true,
+    "role_difference": "Same core UI. Permissions determine which businesses, identities, owners and configuration choices are visible.",
+    "top_level": [
+      "CRM View",
+      "Add to CRM"
+    ],
+    "crm_modules": [
+      "Leads",
+      "Today",
+      "Search"
+    ],
+    "shared_lead_detail": "Leads/Today/Search all open the same canonical lead context; no three independent detail implementations.",
+    "list_state_preservation": [
+      "selected business",
+      "selected ICP",
+      "assignment filter",
+      "page",
+      "scroll position",
+      "selected row/index"
+    ],
+    "open_linkedin_behavior": "Open the prospect's LinkedIn profile in the active browser tab while the Side Panel remains open. Do not require the user to leave the Companion UI.",
+    "connection_action": {
+      "options": [
+        "Send with note",
+        "Send without note"
+      ],
+      "after_manual_send": "User clicks Mark connection sent.",
+      "event_fields": [
+        "lead_id",
+        "business_id",
+        "icp_id",
+        "action",
+        "outreach_identity_id",
+        "actor_user_id",
+        "timestamp",
+        "status"
+      ]
+    },
+    "followup_focus": "If Follow-up 2 is due, show Follow-up 2 plus only compact recent history. Do not show every message expanded.",
+    "search": "Accept LinkedIn URL/name/company. Search across all businesses accessible to the user. If Person has multiple business Lead contexts, show each and require choosing the correct record.",
+    "add_to_crm": {
+      "inputs": [
+        "LinkedIn profile URL",
+        "copied profile/page content",
+        "business",
+        "Primary ICP or Auto-match"
+      ],
+      "admin_extra_inputs": [
+        "owner",
+        "sender/outreach identity"
+      ],
+      "process": [
+        "parse profile",
+        "identify canonical person/company",
+        "dedupe",
+        "create/update canonical entities",
+        "create/update business lead",
+        "qualify",
+        "research",
+        "sequence/message readiness"
+      ],
+      "source_evidence": [
+        "source=LinkedIn manual import",
+        "captured_at",
+        "raw payload/content hash",
+        "confidence",
+        "canonical URL"
+      ]
+    },
+    "reply_capture": "Paste/copy exact inbound response; choose outcome; optionally add internal note; sequence pauses accordingly.",
+    "dormant_reactivation": "Show previous outreach summary and fresh signal/why-now. Generate a new reactivation angle rather than repeating old copy."
+  },
+  "lead_sources": {
+    "available_to_user_if_permissioned": [
+      "File upload",
+      "Paste list",
+      "Google Search URL",
+      "Apollo basic people search",
+      "Manual Companion Add to CRM"
+    ],
+    "required_context_each_ingestion": [
+      "Business",
+      "Primary ICP OR Auto-match"
+    ],
+    "file": {
+      "formats": [
+        "CSV",
+        "XLSX"
+      ],
+      "minimum_columns": [
+        "name",
+        "company",
+        "job title"
+      ],
+      "optional": [
+        "LinkedIn URL",
+        "location",
+        "source URL"
+      ]
+    },
+    "paste": {
+      "minimum_columns": [
+        "name",
+        "company",
+        "job title"
+      ],
+      "optional": [
+        "LinkedIn URL"
+      ]
+    },
+    "google": {
+      "input": "Google Search results URL/query workflow",
+      "expected_partial_data": [
+        "name",
+        "company",
+        "job title",
+        "source result"
+      ],
+      "missing_profile_behavior": "Create partial lead/person candidate, mark Needs Profile, send to Profile Queue."
+    },
+    "apollo": {
+      "default_mode": "People Search/basic discovery only",
+      "allowed_default_fields": [
+        "name",
+        "company",
+        "title",
+        "basic company/person metadata available without credit"
+      ],
+      "prohibited_without_explicit_approval": [
+        "email enrichment",
+        "phone enrichment",
+        "paid export/enrichment",
+        "credit-spending enrichment"
+      ],
+      "ui_must_label": "Enrichment OFF"
+    },
+    "import_batch": {
+      "must_track": [
+        "source",
+        "business",
+        "requested_primary_icp",
+        "created_count",
+        "updated_count",
+        "duplicate_count",
+        "needs_profile_count",
+        "failed_count",
+        "created_by",
+        "created_at"
+      ],
+      "undo": "Support undo for recent import by reverting records created exclusively by that import while preserving pre-existing records/history."
+    },
+    "duplicate_review": [
+      "merge into existing",
+      "keep separate only when truly different person/entity",
+      "skip"
+    ],
+    "profile_queue_flow": "Open search/profile, capture LinkedIn URL + full copied profile data, update the existing partial lead rather than creating a new lead."
+  },
+  "business_brain_and_knowledge": {
+    "asset_types": [
+      "Portfolio",
+      "Case Study",
+      "Service",
+      "Offer",
+      "Pricing",
+      "Testimonial",
+      "Process",
+      "Web Page",
+      "Document",
+      "Video / YouTube",
+      "Other proof"
+    ],
+    "fields": [
+      "type",
+      "url",
+      "title",
+      "description",
+      "tags",
+      "business_id",
+      "ai_use_allowed",
+      "may_mention_client_name",
+      "may_mention_numeric_results",
+      "approval_state",
+      "current_version_id"
+    ],
+    "ingestion": [
+      "fetch/parse",
+      "structured extraction",
+      "AI analysis",
+      "tags/relevance",
+      "human review",
+      "approve",
+      "retrieval eligible"
+    ],
+    "case_study_extraction": [
+      "public title/client if supported",
+      "type/industry",
+      "problem",
+      "solution",
+      "deliverables",
+      "services",
+      "explicit result only",
+      "relevant ICP/persona",
+      "approved claims",
+      "source URL",
+      "confidence"
+    ],
+    "youtube_extraction": [
+      "video URL",
+      "title/channel",
+      "format/style if supportable",
+      "service category",
+      "best-fit ICP/persona/use case",
+      "provenance"
+    ],
+    "claim_policy": "Outbound may use only approved factual claims. Never invent metrics/results.",
+    "retrieval": "Prospect + company + signal + ICP/need -> retrieve top relevant approved value prop + proof -> model draft. Do not dump the entire Business Brain into every prompt.",
+    "versioning": "Sent messages retain referenced asset versions. Dynamic unsent messages may use newest approved versions."
+  },
+  "signals_and_scoring": {
+    "configurable_per_icp": true,
+    "zemnas_example": {
+      "positive": {
+        "+30": "actively hiring editor",
+        "+20": "contractor/freelancer need",
+        "+15": "content/media company or frequent video output",
+        "+10": "target geography/size"
+      },
+      "negative": {
+        "-30": "recruitment intermediary/repost",
+        "-30_alt": "wedding-only business",
+        "-20": "stale vacancy",
+        "-20_alt": "wrong geography"
+      }
+    },
+    "rule": "Scores are configuration, not hard-coded product constants."
+  },
+  "admin_self_assignment_and_domains": {
+    "business_domains": {
+      "purpose": "Associate owned/official domains with a Nexus business for scoping, matching and admin defaults.",
+      "types": [
+        "primary",
+        "alias",
+        "parent/source",
+        "service domain"
+      ],
+      "examples": [
+        "zemnas.com",
+        "lavishfoods.de",
+        "lavishfoods.com.pk",
+        "axelliant.com"
+      ],
+      "rule": "One primary business context per registered domain. Explicit aliases are allowed. Never auto-merge leads across businesses because of a related/parent domain."
+    },
+    "admin_self_assignment": [
+      "Admin may grant themselves business access.",
+      "Admin may bind a default business domain and default outreach identity for Companion.",
+      "Admin may self-assign an unassigned outreach identity.",
+      "If identity is assigned to someone else, require explicit transfer confirmation and audit event."
+    ]
+  },
+  "integrations": {
+    "architecture": "NEXUS is the system of record. External agents/tools call a narrow authenticated gateway. Google Sheets is optional adapter only, never canonical storage.",
+    "chatgpt": {
+      "goal": "ChatGPT automations/agents can submit candidates/signals/RFPs/research into Nexus through a remote MCP or scoped ingest API.",
+      "preferred": "Remote MCP with OAuth/scoped service token plus explicit tools.",
+      "do_not": "Do not give ChatGPT direct PostgreSQL/Supabase service-role credentials."
+    },
+    "opencode": {
+      "role": "Agent/orchestrator/runtime.",
+      "connect_via": "Nexus MCP/API.",
+      "browser": "BrowserOS/BrowserOS Neo for persistent logged-in browsing."
+    },
+    "deepseek": {
+      "role": "Primary inexpensive model for structured extraction, research normalization and message drafting.",
+      "rule": "All AI output must be JSON/schema validated server-side before mutation."
+    },
+    "browseros": {
+      "role": "Persistent browser/operator workflows for discovery and profile research.",
+      "rule": "BrowserOS receives narrow Nexus tools/tokens, not raw DB credentials."
+    },
+    "apollo": "Use basic/zero-credit discovery by default; enrichment only after explicit approval.",
+    "youtube_linkedin_unification": "Do not create separate lead databases. Company/Person are canonical, Signals and SocialProfiles reference sources/channels."
+  },
+  "mcp_contract": {
+    "principle": "Expose intent-level tools, never arbitrary SQL.",
+    "recommended_tools": [
+      "nexus.list_accessible_businesses",
+      "nexus.get_business_context",
+      "nexus.search_person",
+      "nexus.search_company",
+      "nexus.check_duplicate",
+      "nexus.submit_candidate",
+      "nexus.create_signal",
+      "nexus.add_source_evidence",
+      "nexus.create_or_update_lead",
+      "nexus.assign_lead",
+      "nexus.submit_profile_capture",
+      "nexus.capture_reply",
+      "nexus.add_note",
+      "nexus.create_task",
+      "nexus.get_today_queue",
+      "nexus.submit_research",
+      "nexus.submit_message_draft",
+      "nexus.finish_agent_run"
+    ],
+    "forbidden_tool": "database.execute_sql",
+    "write_requirements": [
+      "business scope",
+      "actor/client identity",
+      "idempotency key when ingestion-related",
+      "schema validation",
+      "audit event"
+    ]
+  },
+  "api_contract": {
+    "base": "/api/v1",
+    "recommended_routes": [
+      "POST /ingest",
+      "GET /businesses",
+      "GET /leads",
+      "POST /leads",
+      "GET /leads/:id",
+      "PATCH /leads/:id",
+      "DELETE /leads/:id (soft delete)",
+      "POST /leads/:id/restore",
+      "POST /leads/:id/notes",
+      "POST /leads/:id/replies",
+      "POST /leads/:id/tasks",
+      "POST /leads/:id/snooze",
+      "POST /leads/:id/connection-sent",
+      "POST /leads/:id/reactivate",
+      "POST /messages/:id/lock",
+      "POST /messages/:id/mark-sent",
+      "GET /today",
+      "POST /imports",
+      "GET /imports/:id",
+      "POST /imports/:id/undo",
+      "GET /profile-queue",
+      "POST /profile-captures",
+      "GET /duplicates",
+      "POST /duplicates/:id/merge",
+      "GET /outreach-identities",
+      "POST /browser-sessions/bind",
+      "POST /browser-sessions/heartbeat",
+      "GET /audit-events"
+    ],
+    "external_ingest": {
+      "required_envelope": [
+        "source_client",
+        "business_key_or_id",
+        "payload_type",
+        "payload",
+        "idempotency_key",
+        "observed_at"
+      ],
+      "pipeline": [
+        "validate",
+        "normalize",
+        "dedupe",
+        "persist source evidence",
+        "apply business/ICP rules",
+        "create/update candidate/lead",
+        "assignment",
+        "optional sequence enrollment",
+        "audit"
+      ]
+    }
+  },
+  "data_model": {
+    "recommended_tables": [
+      "users",
+      "teams",
+      "businesses",
+      "business_domains",
+      "user_business_access",
+      "icps",
+      "lead_icp_matches",
+      "personas",
+      "offers",
+      "services",
+      "value_propositions",
+      "knowledge_assets",
+      "knowledge_asset_versions",
+      "asset_extractions",
+      "asset_tags",
+      "companies",
+      "people",
+      "social_profiles",
+      "signals",
+      "source_evidence",
+      "leads",
+      "lead_assignments",
+      "research_snapshots",
+      "outreach_identities",
+      "outreach_identity_business_access",
+      "browser_sessions",
+      "sequences",
+      "sequence_versions",
+      "sequence_steps",
+      "sequence_enrollments",
+      "conversations",
+      "conversation_outcomes",
+      "cooldowns",
+      "contact_suppressions",
+      "message_instances",
+      "message_versions",
+      "message_events",
+      "notes",
+      "tasks",
+      "interactions",
+      "import_batches",
+      "import_rows",
+      "profile_capture_queue",
+      "duplicate_candidates",
+      "opportunities",
+      "rfps",
+      "automation_configs",
+      "agent_runs",
+      "scoring_rules",
+      "prompt_versions",
+      "api_clients",
+      "webhook_endpoints",
+      "audit_events"
+    ],
+    "critical_fields": {
+      "leads": [
+        "id",
+        "business_id",
+        "person_id",
+        "company_id",
+        "primary_icp_id",
+        "owner_user_id",
+        "outreach_identity_id",
+        "status",
+        "source_type",
+        "source_url",
+        "sequence_enrollment_id",
+        "next_action_type",
+        "next_action_at",
+        "deleted_at",
+        "created_at",
+        "updated_at"
+      ],
+      "lead_icp_matches": [
+        "lead_id",
+        "icp_id",
+        "is_primary",
+        "match_score",
+        "reason",
+        "created_at"
+      ],
+      "source_evidence": [
+        "id",
+        "business_id",
+        "person_id",
+        "company_id",
+        "lead_id",
+        "source",
+        "source_url",
+        "raw_text_or_json",
+        "content_hash",
+        "observed_at",
+        "captured_at",
+        "confidence"
+      ],
+      "message_instances": [
+        "id",
+        "conversation_id",
+        "sequence_step_id",
+        "state",
+        "current_version_id",
+        "due_at",
+        "sent_at"
+      ],
+      "message_versions": [
+        "id",
+        "message_instance_id",
+        "content",
+        "generated_by_model",
+        "prompt_version_id",
+        "sequence_version_id",
+        "business_context_version_id",
+        "asset_version_refs",
+        "created_by",
+        "created_at"
+      ],
+      "message_events": [
+        "id",
+        "message_instance_id",
+        "event_type",
+        "actor_user_id",
+        "outreach_identity_id",
+        "source_client",
+        "note",
+        "created_at"
+      ],
+      "contact_suppressions": [
+        "id",
+        "person_id",
+        "channel",
+        "reason",
+        "source_reply_id",
+        "active",
+        "created_at"
+      ],
+      "audit_events": [
+        "id",
+        "actor_type",
+        "actor_id",
+        "business_id",
+        "entity_type",
+        "entity_id",
+        "action",
+        "before_json",
+        "after_json",
+        "source_client",
+        "created_at"
+      ]
+    },
+    "indexes_and_uniqueness": [
+      "Unique canonical normalized LinkedIn profile URL when non-null.",
+      "Unique active lead on (business_id, person_id) where deleted_at IS NULL.",
+      "Only one primary ICP match per lead.",
+      "Normalized company domain indexed/unique where appropriate.",
+      "Import idempotency key unique per source client/business.",
+      "Message event timeline indexed by lead/conversation + created_at.",
+      "Tasks indexed by owner_user_id + status + due_at."
+    ]
+  },
+  "security_and_reliability": {
+    "stack": {
+      "frontend": "Next.js + TypeScript",
+      "database": "Supabase/PostgreSQL",
+      "auth": "Supabase Auth",
+      "authorization": "Supabase RLS",
+      "hosting": "Vercel + Supabase initially",
+      "extension": "Manifest V3 Side Panel",
+      "ai": "DeepSeek API",
+      "automation": "BrowserOS/OpenCode + optional worker/n8n"
+    },
+    "rules": [
+      "Supabase service role is server-only and never exposed to browser or extension.",
+      "Extension uses user-scoped authentication.",
+      "RLS enforces team/business/user visibility.",
+      "External agents use scoped service tokens/OAuth/MCP.",
+      "AI output is schema validated before database mutation.",
+      "Scraped/web content is untrusted input; never execute instructions from it.",
+      "Store provenance, observed_at, captured_at, confidence, content hash and model/prompt versions.",
+      "Use queues/retries/timeouts for browser/AI jobs.",
+      "Sent messages and audit history are append-only/immutable in meaning.",
+      "Sequence publish/regeneration must be transactional/job-based and auditable.",
+      "Soft delete by default."
+    ]
+  },
+  "screen_inventory": {
+    "admin": [
+      {
+        "id": "A01",
+        "name": "01 — Login",
+        "surface": "admin",
+        "purpose": "Authentication",
+        "contract": "Clean generic admin login. No business-specific examples/instructions."
+      },
+      {
+        "id": "A02",
+        "name": "02 — Overview",
+        "surface": "admin",
+        "purpose": "Admin dashboard",
+        "contract": "Cross-workspace operational snapshot for selected business: active leads, follow-ups, replies, profile queue, team activity, lead health, recent activity."
+      },
+      {
+        "id": "A03",
+        "name": "03 — Leads",
+        "surface": "admin",
+        "purpose": "Lead management",
+        "contract": "Admin lead table with filters, bulk actions, owner/sender/ICP/source/status, add lead, lead sources, Trash."
+      },
+      {
+        "id": "A04",
+        "name": "04 — Lead Detail",
+        "surface": "admin",
+        "purpose": "Lead detail",
+        "contract": "Full lead control, owner vs sender identity, primary/secondary ICP, source/provenance, sequence status, tasks, notes, replies, history, company context, delete."
+      },
+      {
+        "id": "A05",
+        "name": "05 — Lead Sources",
+        "surface": "admin",
+        "purpose": "Ingestion hub",
+        "contract": "File, Paste, Google Search, Apollo basic discovery, recent imports, profile queue, duplicate review."
+      },
+      {
+        "id": "A06",
+        "name": "06 — Profile Queue",
+        "surface": "admin",
+        "purpose": "Profile enrichment",
+        "contract": "Imported leads that lack full LinkedIn profile capture."
+      },
+      {
+        "id": "A07",
+        "name": "07 — Duplicate Review",
+        "surface": "admin",
+        "purpose": "Deduplication",
+        "contract": "Compare imported candidate with existing person/lead; merge, keep separate, skip."
+      },
+      {
+        "id": "A08",
+        "name": "08 — Trash",
+        "surface": "admin",
+        "purpose": "Soft-delete recovery",
+        "contract": "Restore soft-deleted leads/import artifacts; permanent delete remains auditable/admin-only."
+      },
+      {
+        "id": "A09",
+        "name": "09 — Reactivation",
+        "surface": "admin",
+        "purpose": "Dormant lead reactivation",
+        "contract": "Review dormant prospects after cooling period or fresh signal; generate non-repetitive reactivation."
+      },
+      {
+        "id": "A10",
+        "name": "10 — Businesses Hub",
+        "surface": "admin",
+        "purpose": "Business administration",
+        "contract": "Create/manage business contexts; scratch/clone/template; no lead/history cloning."
+      },
+      {
+        "id": "A11",
+        "name": "11 — Business Setup · Brain",
+        "surface": "admin",
+        "purpose": "Business Brain",
+        "contract": "Offer, services, positioning, value props, approved proof, AI-eligible context, versioning."
+      },
+      {
+        "id": "A12",
+        "name": "12 — ICP Manager",
+        "surface": "admin",
+        "purpose": "ICP configuration",
+        "contract": "Company types, markets, buyers, signals, scoring, exclusions, primary ICP rule, default sequence, routing."
+      },
+      {
+        "id": "A13",
+        "name": "13 — Sequence Manager",
+        "surface": "admin",
+        "purpose": "Sequence configuration",
+        "contract": "Message 1 + FU1 + FU2 + FU3; delays, generation rules, lifecycle, publishing/version behavior, dormant/reactivation."
+      },
+      {
+        "id": "A14",
+        "name": "14 — Knowledge Library",
+        "surface": "admin",
+        "purpose": "Business knowledge",
+        "contract": "Portfolio, case studies, web pages, videos, approved facts/tags, AI retrieval eligibility."
+      },
+      {
+        "id": "A15",
+        "name": "15 — Team & Accounts",
+        "surface": "admin",
+        "purpose": "Users and outreach identities",
+        "contract": "Users, roles, business access, lead access, managed LinkedIn identities, daily counts/targets."
+      },
+      {
+        "id": "A16",
+        "name": "16 — User Permissions",
+        "surface": "admin",
+        "purpose": "Per-user access",
+        "contract": "Business visibility, lead scope, permitted actions, managed identities."
+      },
+      {
+        "id": "A17",
+        "name": "17 — Outreach Identity Detail",
+        "surface": "admin",
+        "purpose": "LinkedIn identity management",
+        "contract": "Manager, business access, targets, browser sessions, conversation ownership, transfer behavior."
+      },
+      {
+        "id": "A18",
+        "name": "18 — Integrations Gateway",
+        "surface": "admin",
+        "purpose": "External access",
+        "contract": "MCP, ingest API, webhooks, optional Google Sheets adapter; scoped auth; no direct DB credentials."
+      },
+      {
+        "id": "A19",
+        "name": "19 — Automation Mapping",
+        "surface": "admin",
+        "purpose": "Automation control",
+        "contract": "Map BrowserOS/OpenCode/other scouts to business + ICP + source + schedule + data contract."
+      },
+      {
+        "id": "A20",
+        "name": "20 — Admin Import Builder",
+        "surface": "admin",
+        "purpose": "Bulk import",
+        "contract": "Business + Primary ICP/Auto-match, source input, preview, mapping, validation, duplicate/profile counts, import."
+      },
+      {
+        "id": "A21",
+        "name": "21 — Messaging Insights",
+        "surface": "admin",
+        "purpose": "Analytics",
+        "contract": "Reply themes, sequence step performance, no-reply, wrong-person signals; feeds ICP/sequence improvement."
+      },
+      {
+        "id": "A22",
+        "name": "22 — Settings",
+        "surface": "admin",
+        "purpose": "Platform settings",
+        "contract": "Security, retention, soft-delete, DNC suppression, uniqueness defaults, reply pause, dormant defaults."
+      },
+      {
+        "id": "A23",
+        "name": "23 — Add Business Wizard",
+        "surface": "admin",
+        "purpose": "Business creation",
+        "contract": "Business identity, offer, ICPs, knowledge, sequences, team, automations; scratch/clone/template."
+      },
+      {
+        "id": "A24",
+        "name": "24 — Companion · Leads (Shared)",
+        "surface": "extension-admin",
+        "purpose": "Shared extension",
+        "contract": "Same operational Companion as users, with admin-permitted business/identity/owner choices."
+      },
+      {
+        "id": "A25",
+        "name": "25 — Companion · Today (Shared)",
+        "surface": "extension-admin",
+        "purpose": "Shared extension",
+        "contract": "Today queue: accepted connections, messages, follow-ups, overdue."
+      },
+      {
+        "id": "A26",
+        "name": "26 — Companion · Search (Shared)",
+        "surface": "extension-admin",
+        "purpose": "Shared extension",
+        "contract": "Find canonical person/lead by LinkedIn URL/name/company and open correct business context."
+      },
+      {
+        "id": "A27",
+        "name": "27 — Companion · Add to CRM (Shared)",
+        "surface": "extension-admin",
+        "purpose": "Shared extension",
+        "contract": "Manual LinkedIn capture; admin can choose business, ICP, owner, sender."
+      },
+      {
+        "id": "A28",
+        "name": "28 — Companion · Action Focus (Shared)",
+        "surface": "extension-admin",
+        "purpose": "Shared extension",
+        "contract": "Compact current-action view with only relevant message/action plus recent history."
+      },
+      {
+        "id": "A29",
+        "name": "29 — Admin · My Access & Assignment",
+        "surface": "admin",
+        "purpose": "Admin self-assignment",
+        "contract": "Admin can assign self allowed businesses/domains and available LinkedIn identities; transfer requires confirmation/audit."
+      },
+      {
+        "id": "A30",
+        "name": "30 — Admin · Business Domains",
+        "surface": "admin",
+        "purpose": "Business domain registry",
+        "contract": "Primary/alias/source domains for business scoping and matching; no automatic cross-business merge."
+      }
+    ],
+    "user": [
+      {
+        "id": "U01",
+        "name": "01 — Login",
+        "surface": "user",
+        "purpose": "Authentication",
+        "contract": "Generic user login. No hard-coded business/user instructional examples."
+      },
+      {
+        "id": "U02",
+        "name": "02 — My Day · Today",
+        "surface": "user",
+        "purpose": "Daily queue",
+        "contract": "Connections, Message 1, follow-ups, overdue; work-next behavior."
+      },
+      {
+        "id": "U03",
+        "name": "03 — My Day · Upcoming",
+        "surface": "user",
+        "purpose": "Upcoming queue",
+        "contract": "Upcoming sequence actions and custom tasks/reminders."
+      },
+      {
+        "id": "U04",
+        "name": "04 — My Day · Done",
+        "surface": "user",
+        "purpose": "Completed work",
+        "contract": "Completed connections/messages/follow-ups/reply capture with sender/business."
+      },
+      {
+        "id": "U05",
+        "name": "05 — My Leads",
+        "surface": "user",
+        "purpose": "Assigned lead list",
+        "contract": "Only authorized/assigned leads; business/ICP/identity/status/saved-view/sort filters; add lead; Trash."
+      },
+      {
+        "id": "U06",
+        "name": "06 — Lead Detail",
+        "surface": "user",
+        "purpose": "Lead workspace",
+        "contract": "Lead status, LinkedIn sender, Primary ICP, source, sequence, notes, tasks, reply capture, history, edit/delete."
+      },
+      {
+        "id": "U11",
+        "name": "11 — Lead Sources",
+        "surface": "user",
+        "purpose": "Ingestion hub",
+        "contract": "User-accessible File/Paste/Google/Apollo basic lead ingestion plus recent imports/profile queue."
+      },
+      {
+        "id": "U12",
+        "name": "12 — Lead Sources · File",
+        "surface": "user",
+        "purpose": "File import",
+        "contract": "CSV/XLSX upload with business + ICP tagging/auto-match, preview, duplicate counts."
+      },
+      {
+        "id": "U13",
+        "name": "13 — Lead Sources · Paste",
+        "surface": "user",
+        "purpose": "Paste import",
+        "contract": "Paste rows/table; map name/company/title/optional LinkedIn URL; business + ICP."
+      },
+      {
+        "id": "U14",
+        "name": "14 — Lead Sources · Google",
+        "surface": "user",
+        "purpose": "Google discovery",
+        "contract": "Enter Google search URL, collect candidate rows, create partial leads, send missing profiles to queue."
+      },
+      {
+        "id": "U15",
+        "name": "15 — Lead Sources · Apollo",
+        "surface": "user",
+        "purpose": "Apollo discovery",
+        "contract": "Basic/zero-credit people search only by default; name/company/title; enrichment OFF."
+      },
+      {
+        "id": "U16",
+        "name": "16 — Profile Queue",
+        "surface": "user",
+        "purpose": "Profile enrichment",
+        "contract": "Work partial leads by opening LinkedIn, capturing URL + full profile content, updating existing lead."
+      },
+      {
+        "id": "U17",
+        "name": "17 — Duplicate Review",
+        "surface": "user",
+        "purpose": "Deduplication",
+        "contract": "Merge/keep/skip candidate vs existing canonical record."
+      },
+      {
+        "id": "U18",
+        "name": "18 — Create Task",
+        "surface": "user",
+        "purpose": "Task creation",
+        "contract": "Task title, due date, priority, reminder, note."
+      },
+      {
+        "id": "U19",
+        "name": "19 — Snooze & Reschedule",
+        "surface": "user",
+        "purpose": "Action scheduling",
+        "contract": "Tomorrow/2 days/next week/custom date; optional reason."
+      },
+      {
+        "id": "U20",
+        "name": "20 — Edit Lead",
+        "surface": "user",
+        "purpose": "Lead editing",
+        "contract": "Editable lead fields within user permissions."
+      },
+      {
+        "id": "U21",
+        "name": "21 — Trash",
+        "surface": "user",
+        "purpose": "Soft-delete recovery",
+        "contract": "Restore deleted leads; no permanent deletion for normal user."
+      },
+      {
+        "id": "U22",
+        "name": "22 — Companion · Login & Browser Binding",
+        "surface": "extension-user",
+        "purpose": "Extension auth",
+        "contract": "Login, choose assigned LinkedIn identity + business, bind this browser profile."
+      },
+      {
+        "id": "U23",
+        "name": "23 — Companion · Leads",
+        "surface": "extension-user",
+        "purpose": "Lead browser",
+        "contract": "Business + ICP filter, assigned leads, compact statuses, persistent list state."
+      },
+      {
+        "id": "U24",
+        "name": "24 — Companion · Today",
+        "surface": "extension-user",
+        "purpose": "Daily extension queue",
+        "contract": "Accepted, follow-up, overdue filters and Work Next."
+      },
+      {
+        "id": "U25",
+        "name": "25 — Companion · Search",
+        "surface": "extension-user",
+        "purpose": "Existing lead lookup",
+        "contract": "Search LinkedIn URL/name/company; show last activity + exact next action."
+      },
+      {
+        "id": "U26",
+        "name": "26 — Companion · Add to CRM",
+        "surface": "extension-user",
+        "purpose": "Manual LinkedIn import",
+        "contract": "Paste profile URL + page content, choose business/ICP from allowed scope; dedupe/update existing."
+      },
+      {
+        "id": "U27",
+        "name": "27 — Companion · Connection Focus",
+        "surface": "extension-user",
+        "purpose": "Connection action",
+        "contract": "Connection note, send with note/without note, sender identity, mark connection sent, snooze."
+      },
+      {
+        "id": "U28",
+        "name": "28 — Companion · Follow-up Focus",
+        "surface": "extension-user",
+        "purpose": "Message action",
+        "contract": "Only current due follow-up/message, compact prior history, edit/copy/mark sent/snooze/capture reply."
+      },
+      {
+        "id": "U29",
+        "name": "29 — Companion · Reply & Notes",
+        "surface": "extension-user",
+        "purpose": "Reply capture",
+        "contract": "Paste exact inbound reply, classify outcome, add internal note, save and pause sequence as required."
+      },
+      {
+        "id": "U30",
+        "name": "30 — Companion · Dormant & Reactivation",
+        "surface": "extension-user",
+        "purpose": "Reactivation",
+        "contract": "Show completed sequence, dormant state, cooling period/fresh signal, generate non-repetitive reactivation."
+      }
+    ]
+  },
+  "screen_behavior_crosswalk": {
+    "admin_A03_Leads": [
+      "filter/sort",
+      "bulk select",
+      "assign owner",
+      "change Primary ICP",
+      "change sender",
+      "archive",
+      "soft delete",
+      "open detail",
+      "open Lead Sources",
+      "open Trash"
+    ],
+    "admin_A04_Lead_Detail": [
+      "edit",
+      "notes",
+      "tasks",
+      "exact reply capture",
+      "pause/resume sequence",
+      "cooldown",
+      "DNC",
+      "delete",
+      "full history",
+      "company context"
+    ],
+    "user_U02_Today": [
+      "filters for connections/message1/follow-ups/overdue",
+      "open exact action",
+      "Work Next",
+      "completed leaves queue"
+    ],
+    "user_U05_My_Leads": [
+      "business/ICP/identity/status/saved view filters",
+      "bulk actions within permissions",
+      "open lead",
+      "add lead",
+      "Trash"
+    ],
+    "extension_U23_Leads": [
+      "business->ICP->assigned leads",
+      "open LinkedIn in active tab",
+      "keep side panel open",
+      "restore exact list state on back"
+    ],
+    "extension_U24_Today": [
+      "click Follow-ups due -> only due leads",
+      "open exact FU1/FU2/FU3/action",
+      "compact previous history"
+    ],
+    "extension_U26_Add": [
+      "URL + copied profile content",
+      "business",
+      "Primary ICP/Auto-match",
+      "dedupe/update existing",
+      "profile parsing"
+    ],
+    "extension_U27_Connection": [
+      "connection note",
+      "with note",
+      "without note",
+      "mark sent",
+      "snooze"
+    ],
+    "extension_U28_Followup": [
+      "show current message only",
+      "edit/copy/mark sent/snooze",
+      "capture reply",
+      "compact recent history"
+    ],
+    "extension_U29_Reply": [
+      "exact inbound copy",
+      "outcome",
+      "internal note",
+      "save",
+      "sequence pause/cancel pending"
+    ],
+    "extension_U30_Dormant": [
+      "show prior sequence summary",
+      "cooldown/review date",
+      "fresh signal",
+      "generate new angle"
+    ]
+  },
+  "seed_and_demo_policy": {
+    "allowed_demo_names": [
+      "Tom Henry",
+      "Sarah Smith",
+      "Mia Becker",
+      "Jon Davies",
+      "Nora Schmidt",
+      "Lisa Weber"
+    ],
+    "allowed_demo_companies": [
+      "Frame House",
+      "ABC Media",
+      "Kite Studio",
+      "Northstar",
+      "Nova Haus",
+      "Studio 8"
+    ],
+    "rule": "Use only in seed/dev/demo fixtures. Never hard-code these as product behavior."
+  },
+  "implementation_phases": [
+    {
+      "phase": 0,
+      "name": "Repository bootstrap + Figma audit",
+      "deliverables": [
+        "Next.js app",
+        "Supabase local/dev",
+        "extension package",
+        "shared UI tokens",
+        "screen-route matrix",
+        "DB migration strategy"
+      ]
+    },
+    {
+      "phase": 1,
+      "name": "Auth, tenancy, permissions, canonical data",
+      "deliverables": [
+        "users/teams/businesses/RLS",
+        "people/companies/social profiles",
+        "business domains",
+        "outreach identities",
+        "browser sessions",
+        "audit log"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Admin configuration",
+      "deliverables": [
+        "Businesses",
+        "Business Brain",
+        "ICPs",
+        "Sequences",
+        "Knowledge",
+        "Team/Permissions",
+        "Domains",
+        "Settings"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "Lead CRM core",
+      "deliverables": [
+        "Leads",
+        "Lead Detail",
+        "notes/replies/tasks",
+        "soft delete/Trash",
+        "My Day",
+        "saved filters",
+        "lead lifecycle"
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "Sequence/message engine",
+      "deliverables": [
+        "versioned sequences",
+        "enrollments",
+        "dynamic/locked/sent messages",
+        "due engine",
+        "reply pause",
+        "cooldown",
+        "dormant/reactivation"
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "Lead ingestion",
+      "deliverables": [
+        "File",
+        "Paste",
+        "Google",
+        "Apollo basic",
+        "import batches",
+        "dedupe",
+        "Profile Queue",
+        "ICP tagging",
+        "undo import"
+      ]
+    },
+    {
+      "phase": 6,
+      "name": "Companion extension",
+      "deliverables": [
+        "auth/browser binding",
+        "Leads",
+        "Today",
+        "Search",
+        "Add to CRM",
+        "Connection Focus",
+        "Follow-up Focus",
+        "Reply/Notes",
+        "Dormant/Reactivation",
+        "state persistence"
+      ]
+    },
+    {
+      "phase": 7,
+      "name": "MCP/API integrations",
+      "deliverables": [
+        "remote MCP",
+        "ingest API",
+        "scoped service clients",
+        "webhooks",
+        "ChatGPT/OpenCode/BrowserOS contracts"
+      ]
+    },
+    {
+      "phase": 8,
+      "name": "Insights + automation",
+      "deliverables": [
+        "reply/sequence analytics",
+        "automation mapping",
+        "agent runs",
+        "source provenance",
+        "job health"
+      ]
+    },
+    {
+      "phase": 9,
+      "name": "Hardening",
+      "deliverables": [
+        "tests",
+        "access-control tests",
+        "dedupe tests",
+        "sequence tests",
+        "extension E2E",
+        "auditability",
+        "deployment docs"
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "Every screen in screen_inventory exists as a route/state/component and matches the corresponding Figma composition closely.",
+    "Normal users cannot see unassigned businesses or outreach identities.",
+    "Admin can self-assign businesses/domains and available identities; occupied identity transfer is confirmed/audited.",
+    "Same person can be a lead in multiple businesses but cannot have two active leads in one business.",
+    "One Primary ICP per lead; secondary matches do not create duplicate leads.",
+    "All ingestion methods require Business + Primary ICP/Auto-match and run dedupe before lead creation.",
+    "Google partial records enter Profile Queue and profile capture updates the same lead.",
+    "Apollo enrichment/credit-spending is OFF unless explicitly enabled.",
+    "Connection action supports note/no-note and Mark connection sent.",
+    "Today Follow-up filter opens only due follow-ups and exact current sequence step.",
+    "Reply capture stores exact response, outcome, internal note and pauses sequence.",
+    "Message 1 + FU1 + FU2 + FU3 leads to Dormant when unanswered.",
+    "Reactivation preserves full history and uses fresh context rather than repeating previous messages.",
+    "Sent messages are immutable; locked messages are not overwritten; dynamic unsent messages can regenerate.",
+    "Explicit DNC suppresses the person across all LinkedIn identities.",
+    "Trash uses soft delete and restore; permanent deletion is admin-only/audited.",
+    "Companion keeps list/filter/scroll selection state when navigating into/out of a lead.",
+    "Companion opens LinkedIn in active browser tab while side panel remains available.",
+    "MCP/API clients cannot execute arbitrary SQL or receive raw service-role DB credentials.",
+    "All external ingestion is idempotent, schema-validated and audited.",
+    "No login panel contains hard-coded explanatory examples about a specific user/business."
+  ],
+  "out_of_scope_until_explicitly_added": [
+    "Automated bulk cold-message sending on LinkedIn without human review",
+    "Email marketing campaigns for the current Zemnas workflow",
+    "Paid Apollo email/phone enrichment without explicit approval",
+    "Separate disconnected lead databases for LinkedIn, YouTube, Google or Apollo",
+    "Bypassing DNC/rejection by switching outreach identities"
+  ]
+}

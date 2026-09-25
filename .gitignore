@@ -1,0 +1,49 @@
+# Build output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Local environment and secrets
+.env.local
+.env*.local
+.env
+
+# Embedded database (PGlite) and local runtime state
+apps/web/.data/
+.data/
+
+# Scratch / decode work
+.work/
+CRM/.work/
+
+# Test + tooling output
+coverage/
+.vitest/
+*.log
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# TypeScript build info emitted by incremental tsc
+packages/*/tsconfig.tsbuildinfo
+apps/*/tsconfig.tsbuildinfo
+
+# Local UI/browser audit output
+ui-audit/
+playwright-report/
+test-results/
+
+# Ignore all environment variants except templates
+.env.*
+!.env.example
+!.env.*.example
