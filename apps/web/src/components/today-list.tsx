@@ -88,20 +88,22 @@ export function TodayList({
         )}
       </Row>
 
-      <Row wrap>
-        <a className={cx('nx-chip', selectedBusinessId.length === 0 && 'nx-chip--indigo')} href={hrefFor({ business: '' })}>
-          All businesses
-        </a>
-        {businesses.map((business) => (
-          <a
-            key={business.id}
-            className={cx('nx-chip', selectedBusinessId === business.id && 'nx-chip--indigo')}
-            href={hrefFor({ business: business.id })}
-          >
-            {business.name}
+      {businesses.length > 1 && (
+        <Row wrap>
+          <a className={cx('nx-chip', selectedBusinessId.length === 0 && 'nx-chip--indigo')} href={hrefFor({ business: '' })}>
+            All businesses
           </a>
-        ))}
-      </Row>
+          {businesses.map((business) => (
+            <a
+              key={business.id}
+              className={cx('nx-chip', selectedBusinessId === business.id && 'nx-chip--indigo')}
+              href={hrefFor({ business: business.id })}
+            >
+              {business.name}
+            </a>
+          ))}
+        </Row>
+      )}
 
       <Row wrap>
         <a className={cx('nx-chip', selectedCategory.length === 0 && 'nx-chip--cyan')} href={hrefFor({ category: '' })}>

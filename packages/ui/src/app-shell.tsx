@@ -61,18 +61,41 @@ export function AppShell({
   userLabel,
   onSignOut,
 }: AppShellProps): ReactElement {
-  const userNav = surface === 'user'
+  const availableItems = nav.flatMap((section) => section.items);
+  const pickItem = (sourceLabel: string, label = sourceLabel): NavItem | null => {
+    const item = availableItems.find((candidate) => candidate.label === sourceLabel);
+    return item === undefined ? null : { ...item, label };
+  };
+  const compactAdminNav: readonly NavSection[] = [
+    {
+      group: 'Work',
+      items: [pickItem('Overview'), pickItem('Leads')].filter((item): item is NavItem => item !== null),
+    },
+    {
+      group: 'Configure',
+      items: [
+        pickItem('Business Brain', 'Business Setup'),
+        pickItem('Team & Accounts'),
+        pickItem('Integrations Gateway', 'Integrations'),
+      ].filter((item): item is NavItem => item !== null),
+    },
+    {
+      group: 'Admin',
+      items: [pickItem('Messaging Insights', 'Insights'), pickItem('Settings')]
+        .filter((item): item is NavItem => item !== null),
+    },
+  ];
+  const shellNav = surface === 'user'
     ? [{
         group: 'My workspace',
-        items: nav
-          .flatMap((section) => section.items)
+        items: availableItems
           .filter((item) =>
             item.label === 'My Day' || item.label === 'My Leads' || item.label === 'Lead Sources',
           ),
       }]
-    : nav;
+    : compactAdminNav;
 
-  const sections = userNav
+  const sections = shellNav
     .map((section) => ({
       group: section.group,
       items: section.items
@@ -118,7 +141,9 @@ export function AppShell({
             <p className="nx-sidebar__group-label">{section.group}</p>
             <ul className="nx-nav">
               {section.items.map(({ item, href }) => {
-                const active = activeRoute === href || activeRoute.startsWith(`${href}/`);
+                const active = activeRoute === href
+                  || activeRoute.startsWith(`${href}/`)
+                  || (item.label === 'Business Setup' && activeRoute.includes('/setup/'));
                 return (
                   <li key={href}>
                     <a
