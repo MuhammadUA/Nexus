@@ -270,12 +270,60 @@ export async function cloneBusiness(
       );
 
       // Sequences and their published steps.
-      await sql.query(
-        `insert into public.sequences (business_id, name, description, is_default, status)
-         select $1, name, description, is_default, 'draft'
-           from public.sequences where business_id = $2 and deleted_at is null`,
-        [newId, sourceId],
+      //
+      // The steps used to be dropped: only the `sequences` row was copied, and a sequence whose
+      // `current_version_id` is null has no steps, so every cloned sequence was an empty shell that
+      // could never produce a message. The sequence is created `draft` deliberately — a clone has not
+      // been reviewed for this business, and a `draft` sequence produces nothing until it is
+      // published — but its version and steps are copied so that publishing it is one action rather
+      // than a rewrite.
+      const sequences = await sql.query<{ source_id: string; new_id: string }>(
+        `with created as (
+           insert into public.sequences (business_id, name, description, is_default, status, created_by)
+           select $1, s.name, s.description, s.is_default, 'draft', $3
+             from public.sequences s
+            where s.business_id = $2 and s.deleted_at is null
+           returning id, name
+         )
+         select s.id as source_id, c.id as new_id
+           from created c
+           join public.sequences s on s.business_id = $2 and s.name = c.name and s.deleted_at is null`,
+        [newId, sourceId, viewer.userId],
       );
+
+      for (const pair of sequences.rows) {
+        const version = await sql.query<{ id: string }>(
+          `insert into public.sequence_versions
+             (sequence_id, version, status, published_at, change_summary, created_by)
+           select $1, 1, 'published', now(), 'Cloned from ' || $3, $4
+             from public.sequences s
+            where s.id = $2 and s.current_version_id is not null
+           returning id`,
+          [pair.new_id, pair.source_id, input.name, viewer.userId],
+        );
+        const versionId = version.rows[0]?.id;
+        if (versionId === undefined) continue;
+
+        await sql.query(
+          `insert into public.sequence_steps
+             (sequence_version_id, step_order, kind, name, delay_days, delay_basis, goal,
+              allowed_context, word_max, cta_style, prohibited_phrases, proof_policy, tone,
+              generation_mode, is_active)
+           select $1, st.step_order, st.kind, st.name, st.delay_days, st.delay_basis, st.goal,
+                  st.allowed_context, st.word_max, st.cta_style, st.prohibited_phrases,
+                  st.proof_policy, st.tone, st.generation_mode, st.is_active
+             from public.sequence_steps st
+             join public.sequences s on s.current_version_id = st.sequence_version_id
+            where s.id = $2
+            order by st.step_order`,
+          [versionId, pair.source_id],
+        );
+
+        await sql.query(`update public.sequences set current_version_id = $2 where id = $1`, [
+          pair.new_id,
+          versionId,
+        ]);
+      }
 
       // Scoring rules that were configured globally for the source business.
       await sql.query(

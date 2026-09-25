@@ -1,30 +1,33 @@
-feat(mcp): validate tool arguments, enforce idempotency, handle batches
+fix(leads,business): make SENT history showable and clone a usable container
 
-`mcp_contract.write_requirements` asks for schema validation and idempotency on every write. Neither
-was happening: `tools/list` advertised `{business_id}` as the whole input schema for all eighteen
-tools, `tools/call` accepted any argument shape, `needsIdempotencyKey` was read and thrown away, and a
-JSON-RPC batch was answered with `body[0]` — every later element silently dropped.
+Two invariants the schema declared but did not enforce, both found by writing the test that had never
+been written.
 
-- `mcp/tool-schemas.ts` — one schema per tool, typed `Record<McpToolName, …>` so adding a tool
-  without declaring its arguments is a compile error. `tools/list` publishes a JSON Schema generated
-  from those declarations, so a client that generates its call from the catalogue can now succeed.
-- Argument validation runs before dispatch and reports field paths, which makes "your arguments were
-  wrong" distinguishable from "the database refused this" — the first is fixable by retrying
-  differently and the second is not.
-- Idempotency is enforced by the gateway for every mutating tool, not only the ingestion ones. A
-  replayed key returns the first result; a key reused with different arguments is refused, because
-  answering with the earlier result would hide the client's bug behind a plausible response.
-- The envelope is stripped before a tool runs, so no handler can depend on it — which also fixes
-  `nexus.create_signal` defaulting `kind` to `'other'`, a value the database check constraint does not
-  permit, and reading an `idempotency_key` that the gateway now owns.
-- `nexus.add_source_evidence` no longer requires a client-supplied `content_hash`: the gateway
-  derives it from the payload when absent, so the stored hash describes what was recorded.
-- JSON-RPC batches answer every element, reject an empty batch, and do not answer notifications.
-  Execution is sequential because several elements may write.
+**A SENT message must have content.** `mark_message_sent` refused an instance with no
+`current_version_id` — but `message_versions.content` is `text not null`, so an *empty* body was a
+legal version. An instance frozen onto one of those is SENT forever with nothing to display, and a
+SENT instance's versions and `current_version_id` are immutable by trigger, so it can never be
+repaired. `duplicates.test.ts` had been inserting exactly such a row: a SENT instance with no version
+at all.
 
-New migration `0020_mcp_idempotency.sql` adds `mcp_tool_invocations` — a dedicated table rather than a
-reuse of `ingest_requests`, whose `payload_type`/`content_hash`/pipeline-shaped `result` describe an
-ingest and would make the ingest trail unreadable. The arguments hash is stored so a key reused with
-different arguments can be detected rather than silently honoured.
+Enforced twice, deliberately:
 
-Also widens `jsonOk` to accept an array payload, which a batch response needs.
+- `message_versions_content_not_blank_check` — the durable invariant, covering every write path
+  including the MCP `nexus.submit_message_draft` tool.
+- `assert_sent_message_has_content()` on `message_instances` — so the refusal happens at the moment
+  the state is frozen rather than at the insert that caused it.
+
+A trigger rather than a guard inside `mark_message_sent`: that function is 180 lines of
+sequence-advance logic, and `create or replace` would mean duplicating all of it into the new
+migration, where the next change to the original would silently diverge.
+
+**A cloned Business must have a usable container.** `cloneBusiness` copied `sequences` rows without
+their versions or steps, and a sequence whose `current_version_id` is null has no steps — so every
+cloned sequence was an empty shell that could not produce a message. It now copies the published
+version and its steps and points the new sequence at them. The sequence is created `draft` on
+purpose: a clone has not been reviewed for the new business, and a draft sequence produces nothing
+until it is published, but publishing it is now one action rather than a rewrite.
+
+`cloneBusiness` had no test at all. It now has one covering what a clone copies, what it must not
+copy (leads, conversations, message history, source evidence), that the clone is audited with its
+source, and that a duplicate key is refused.

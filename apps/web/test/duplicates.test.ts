@@ -37,6 +37,7 @@ const SEQUENCE_VERSION = 'c0000000-0000-4000-8000-000000000009';
 const ENROLLMENT_ID = 'c0000000-0000-4000-8000-00000000000a';
 const CONVERSATION_ID = 'c0000000-0000-4000-8000-00000000000b';
 const MESSAGE_ID = 'c0000000-0000-4000-8000-00000000000c';
+const MESSAGE_VERSION_ID = 'c0000000-0000-4000-8000-00000000000d';
 
 beforeAll(async () => {
   h = await createAppHarness();
@@ -105,11 +106,25 @@ beforeAll(async () => {
      values ($1, $2, $3, 'linkedin', $4, now() - interval '25 days')`,
     [CONVERSATION_ID, BUSINESS_ID, INCOMING_LEAD, ADMIN_ID],
   );
+  // A sent message the reactivation candidate's "last send" is derived from. It needs a version with
+  // content: a SENT instance with no `current_version_id` is refused by the sent-content trigger,
+  // because such a row can never be displayed as history.
   await h.db.query(
     `insert into public.message_instances
-       (id, conversation_id, state, due_at, sent_at, business_id, lead_id, step_order, step_kind)
-     values ($1, $2, 'SENT', now() - interval '25 days', now() - interval '25 days', $3, $4, 1, 'message')`,
+       (id, conversation_id, state, due_at, business_id, lead_id, step_order, step_kind)
+     values ($1, $2, 'DYNAMIC', now() - interval '25 days', $3, $4, 1, 'message')`,
     [MESSAGE_ID, CONVERSATION_ID, BUSINESS_ID, INCOMING_LEAD],
+  );
+  await h.db.query(
+    `insert into public.message_versions (id, message_instance_id, content, created_by)
+     values ($1, $2, 'An earlier outreach message the history view must be able to show.', $3)`,
+    [MESSAGE_VERSION_ID, MESSAGE_ID, ADMIN_ID],
+  );
+  await h.db.query(
+    `update public.message_instances
+        set current_version_id = $2, state = 'SENT', sent_at = now() - interval '25 days'
+      where id = $1`,
+    [MESSAGE_ID, MESSAGE_VERSION_ID],
   );
   await h.db.exec('set row_security = on');
 
