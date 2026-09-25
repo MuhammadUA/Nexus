@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactElement } from 'react';
 
-import { Button, Chip, DueChip, EmptyState, LeadStatusChip, Row, cx } from '@nexus/ui';
+import { Button, EmptyState } from '@nexus/ui';
 import { useRouter } from 'next/navigation';
 
 import { focusHref, workNext, type TodayItem } from '@/lib/today-view';
@@ -21,10 +21,6 @@ import { focusHref, workNext, type TodayItem } from '@/lib/today-view';
  */
 export function TodayList({
   items,
-  businesses,
-  selectedBusinessId,
-  selectedCategory,
-  categories,
   upcoming = false,
 }: {
   readonly items: readonly TodayItem[];
@@ -42,16 +38,6 @@ export function TodayList({
     [items, selectedId],
   );
 
-  function hrefFor(overrides: { business?: string; category?: string }): string {
-    const search = new URLSearchParams();
-    const business = overrides.business ?? selectedBusinessId;
-    const category = overrides.category ?? selectedCategory;
-    if (business.length > 0) search.set('business', business);
-    if (category.length > 0) search.set('category', category);
-    const query = search.toString();
-    return `${upcoming ? '/my-day/upcoming' : '/my-day'}${query.length > 0 ? `?${query}` : ''}`;
-  }
-
   if (items.length === 0) {
     return (
       <EmptyState
@@ -66,60 +52,7 @@ export function TodayList({
   }
 
   return (
-    <div className="nx-stack">
-      <Row wrap>
-        <Button
-          variant="primary"
-          onClick={() => {
-            const next = workNext(items, selectedId);
-            if (next !== null) {
-              setSelectedId(next.leadId);
-              router.push(focusHref(next));
-            }
-          }}
-        >
-          Work next
-        </Button>
-        {selected !== null && (
-          <span className="nx-hint">
-            Next: {selected.personName}
-            {selected.companyName === null ? '' : ` · ${selected.companyName}`}
-          </span>
-        )}
-      </Row>
-
-      {businesses.length > 1 && (
-        <Row wrap>
-          <a className={cx('nx-chip', selectedBusinessId.length === 0 && 'nx-chip--indigo')} href={hrefFor({ business: '' })}>
-            All businesses
-          </a>
-          {businesses.map((business) => (
-            <a
-              key={business.id}
-              className={cx('nx-chip', selectedBusinessId === business.id && 'nx-chip--indigo')}
-              href={hrefFor({ business: business.id })}
-            >
-              {business.name}
-            </a>
-          ))}
-        </Row>
-      )}
-
-      <Row wrap>
-        <a className={cx('nx-chip', selectedCategory.length === 0 && 'nx-chip--cyan')} href={hrefFor({ category: '' })}>
-          All
-        </a>
-        {categories.map((category) => (
-          <a
-            key={category.value}
-            className={cx('nx-chip', selectedCategory === category.value && 'nx-chip--cyan')}
-            href={hrefFor({ category: category.value })}
-          >
-            {category.label} <strong>{category.count}</strong>
-          </a>
-        ))}
-      </Row>
-
+    <div className="nx-figma-queue">
       <div className="nx-table-wrap">
         <table className="nx-table nx-work-table">
           <caption className="nx-visually-hidden">Today work queue</caption>
@@ -134,24 +67,19 @@ export function TodayList({
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {items.slice(0, 4).map((item) => (
               <tr
                 key={`${item.leadId}:${item.taskId ?? item.messageInstanceId ?? 'lead'}`}
                 aria-selected={item.leadId === selectedId ? true : undefined}
               >
                 <td>
                   <strong>{item.personName}</strong>
-                  <div className="nx-table__subline"><LeadStatusChip state={item.leadState ?? 'new'} /></div>
                 </td>
                 <td>{item.companyName ?? 'No company'}</td>
-                <td>
-                  <Chip accent={accentFor(item.category)}>
-                    {item.stepOrder !== null && item.stepOrder > 0
-                      ? item.stepOrder <= 1 ? 'Message 1' : `Follow-up ${String(item.stepOrder - 1)}`
-                      : item.category.replace(/_/g, ' ')}
-                  </Chip>
-                </td>
-                <td><DueChip dueAt={item.dueAt} overdue={item.isOverdue} /></td>
+                <td>{item.stepOrder !== null && item.stepOrder > 0
+                  ? item.stepOrder <= 1 ? 'Message 1' : `Follow-up ${String(item.stepOrder - 1)}`
+                  : item.category === 'connections' ? 'Connection' : item.category.replace(/_/g, ' ')}</td>
+                <td>{item.isOverdue ? 'Overdue' : item.dueAt === null ? 'Now' : 'Today'}</td>
                 <td>{item.senderIdentityId === null ? <span className="nx-hint">Unassigned</span> : 'Assigned'}</td>
                 <td>
                   <button
@@ -170,22 +98,23 @@ export function TodayList({
           </tbody>
         </table>
       </div>
+      {!upcoming && (
+        <div className="nx-figma-queue__footer">
+          {selected !== null && <span className="nx-hint">Next: {selected.personName}</span>}
+          <Button
+            variant="primary"
+            onClick={() => {
+              const next = workNext(items, selectedId);
+              if (next !== null) {
+                setSelectedId(next.leadId);
+                router.push(focusHref(next));
+              }
+            }}
+          >
+            Work next
+          </Button>
+        </div>
+      )}
     </div>
   );
-}
-
-function accentFor(category: TodayItem['category']): 'cyan' | 'green' | 'amber' | 'red' | 'indigo' {
-  switch (category) {
-    case 'connections':
-      return 'cyan';
-    case 'accepted_message1':
-      return 'green';
-    case 'followups':
-      return 'amber';
-    case 'overdue':
-      return 'red';
-    case 'custom_tasks':
-    default:
-      return 'indigo';
-  }
 }

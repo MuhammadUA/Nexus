@@ -39,12 +39,11 @@ Chromium checks were performed against the production build using the seeded emb
 
 The checks also verified that admin controls are absent from the user shell and that contextual lead actions open without replacing the detail workspace.
 
-## Intentional remaining differences
+## Visual fidelity rule
 
-- Seed data and counts differ from the static Figma examples; the UI renders live repository data.
-- The My Day LinkedIn column can show assignment state when the queue projection does not include the identity display name. No backend projection was broadened for presentation-only parity.
-- Long configuration forms continue below the first viewport so all existing behavior remains available; the top-of-page hierarchy and density match the reference.
-- The browser extension retains its existing architecture and functional flow; shared typography and copy fixes were applied, but it was not replaced with a standalone mock.
+The `.fig` frames are the visual authority. The implementation uses their literal surface colors, 1 px strokes, radii, type scale, sidebar widths, content offsets, fixed table rows, panel dimensions, and screen hierarchy. Product behavior continues to use live repository data, so names and counts can differ from the static example content without changing the design.
+
+The primary desktop frames were reconstructed directly around their Figma geometry: My Day uses the 202 × 104 metric tiles and 1020 px queue; My Leads uses the compact five-filter and 940 px table composition; Overview uses four 236 × 106 metrics and paired 500 px panels; Lead Detail uses the 492/512 px control panels, 1024 px Actions card, and conversation table. Companion continues to build at its 420 × 820 reference size from the same exact tokens.
 
 ## Backend contracts preserved
 

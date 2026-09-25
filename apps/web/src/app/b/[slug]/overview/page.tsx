@@ -1,11 +1,10 @@
 ﻿import type { ReactNode } from 'react';
 
-import { Card, Chip, DataTable, Grid, LeadStatusChip, PageHead, Row, Stat, type Column } from '@nexus/ui';
+import { Card, Chip, DataTable, Grid, PageHead, Stat, type Column } from '@nexus/ui';
 import { notFound } from 'next/navigation';
 
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
-import { getOverview, type ActivityEntry, type LeadHealthBucket } from '@/lib/repo/insights';
-import { getLeadCounts } from '@/lib/repo/leads';
+import { getOverview, type ActivityEntry } from '@/lib/repo/insights';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,125 +28,73 @@ export default async function OverviewPage({
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
 
-  const [overview, counts] = await Promise.all([
-    getOverview(context.viewer.actor, business.id),
-    getLeadCounts(context.viewer.actor, business.id),
-  ]);
+  const overview = await getOverview(context.viewer.actor, business.id);
 
   const activityColumns: readonly Column<ActivityEntry>[] = [
     {
       key: 'when',
-      header: 'When',
-      width: '180px',
+      header: 'Time',
+      width: '110px',
       cell: (entry) => <span className="nx-table__mono">{formatWhen(entry.at)}</span>,
     },
-    { key: 'action', header: 'Action', cell: (entry) => <Chip accent="indigo">{entry.action}</Chip> },
-    { key: 'entity', header: 'Record', cell: (entry) => entry.entityType.replace(/_/g, ' ') },
+    { key: 'action', header: 'Event', cell: (entry) => entry.action.replace(/_/g, ' ') },
     { key: 'actor', header: 'Actor', cell: (entry) => entry.actorType.replace(/_/g, ' ') },
-  ];
-
-  const healthColumns: readonly Column<LeadHealthBucket>[] = [
-    { key: 'status', header: 'Lead status', cell: (bucket) => <LeadStatusChip state={bucket.status} /> },
-    { key: 'count', header: 'Leads', numeric: true, cell: (bucket) => bucket.count },
+    { key: 'entity', header: 'Lead / detail', cell: (entry) => entry.entityType.replace(/_/g, ' ') },
   ];
 
   return (
     <>
       <PageHead
-        subtitle={`Operational snapshot for ${business.name}${business.focus === null ? '' : ` · ${business.focus}`}`}
+        subtitle={`${business.name.split(' ')[0] ?? business.name} · admin roll-up`}
       >
         Overview
       </PageHead>
 
-      <Grid cols={4}>
-        <Stat value={overview.activeLeads} label="Active leads" meta={`${String(counts.total)} total`} />
-        <Stat
-          value={overview.dueToday}
-          label="Due today"
-          meta={overview.overdue > 0 ? `${String(overview.overdue)} overdue` : 'nothing overdue'}
-        />
-        <Stat value={overview.repliesRecorded} label="Replies recorded" meta={`${String(overview.dormant)} dormant`} />
-        <Stat
-          value={overview.profileQueuePending}
-          label="Profile queue"
-          meta={`${String(overview.needsProfile)} need a profile`}
-        />
-      </Grid>
+      <div className="nx-overview-stats">
+        <Stat value={overview.activeLeads} label="Active leads" />
+        <Stat value={overview.dueToday} label="Follow-ups due" />
+        <Stat value={overview.repliesRecorded} label="Replies today" />
+        <Stat value={overview.profileQueuePending} label="Needs profile" />
+      </div>
 
       <div style={{ height: 'var(--nx-space-xl)' }} />
 
-      <Grid cols={4}>
-        <Stat value={overview.openTasks} label="Open tasks" />
-        <Stat value={overview.duplicateCandidatesOpen} label="Duplicates to review" />
-        <Stat value={overview.importsLast30Days} label="Imports (30 days)" />
-        <Stat
-          value={overview.suppressed}
-          label="Do Not Contact"
-          meta="suppressed across every sender"
-        />
-      </Grid>
-
-      <div style={{ height: 'var(--nx-space-xl)' }} />
-
-      <Grid cols={2}>
-        <Card title="Lead health" actions={<Chip accent="indigo">{business.name}</Chip>}>
-          <DataTable
-            columns={healthColumns}
-            rows={overview.leadHealth}
-            rowKey={(bucket) => bucket.status}
-            caption="Leads by lifecycle status"
-            empty={<span className="nx-hint">No leads yet.</span>}
-          />
-        </Card>
-
-        <Card title="Sender identities" actions={<Chip>{overview.senders.length}</Chip>}>
+      <div className="nx-overview-panels"><Grid cols={2}>
+        <Card title="Team activity">
           <DataTable
             columns={[
-              { key: 'name', header: 'Identity', cell: (sender) => sender.displayName },
-              {
-                key: 'target',
-                header: 'Sent today',
-                numeric: true,
-                cell: (sender) =>
-                  sender.dailyTarget === null
-                    ? String(sender.sentToday)
-                    : `${String(sender.sentToday)} / ${String(sender.dailyTarget)}`,
-              },
-              {
-                key: 'sessions',
-                header: 'Browsers',
-                numeric: true,
-                // Concurrent browser use of one identity is a warning condition per
-                // spec `roles_and_permissions.same_user_multiple_browsers`.
-                cell: (sender) => (
-                  <Chip accent={sender.activeSessions > 1 ? 'amber' : 'neutral'}>
-                    {sender.activeSessions}
-                  </Chip>
-                ),
-              },
-              { key: 'status', header: 'Status', cell: (sender) => sender.status },
+              { key: 'user', header: 'User', cell: (sender) => sender.displayName },
+              { key: 'connect', header: 'Connect', numeric: true, cell: (sender) => sender.sentToday },
+              { key: 'msg', header: 'Msg', numeric: true, cell: (sender) => sender.activeSessions },
+              { key: 'fu', header: 'FU', numeric: true, cell: (sender) => sender.dailyTarget ?? 0 },
             ]}
-            rows={overview.senders}
+            rows={overview.senders.slice(0, 3)}
             rowKey={(sender) => sender.identityId}
-            caption="Sender identities for this business"
-            empty={<span className="nx-hint">No sender identities are bound to this business.</span>}
+            caption="Team activity"
+            empty={<span className="nx-hint">No activity yet.</span>}
           />
         </Card>
-      </Grid>
+
+        <Card title="Lead health">
+          <div className="nx-lead-health-chips">
+            <Chip>DORMANT {overview.dormant}</Chip>
+            <Chip accent="red">DNC {overview.suppressed}</Chip>
+            <Chip accent="amber">DUPLICATES {overview.duplicateCandidatesOpen}</Chip>
+            <Chip accent="amber">OVERDUE {overview.overdue}</Chip>
+          </div>
+          <div className="nx-lead-health-row"><span>Profile queue</span><strong>{overview.profileQueuePending}</strong></div>
+          <div className="nx-lead-health-row"><span>Reactivation due</span><strong>{overview.dormant}</strong></div>
+        </Card>
+      </Grid></div>
 
       <div style={{ height: 'var(--nx-space-xl)' }} />
 
       <Card
         title="Recent activity"
-        actions={
-          <Row>
-            <Chip accent="neutral">audit trail</Chip>
-          </Row>
-        }
       >
         <DataTable
           columns={activityColumns}
-          rows={overview.recentActivity}
+          rows={overview.recentActivity.slice(0, 3)}
           rowKey={(entry) => entry.id}
           caption="Recent audited activity for this business"
           empty={<span className="nx-hint">No audited activity yet.</span>}

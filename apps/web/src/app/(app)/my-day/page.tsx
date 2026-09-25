@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { Card, Chip, Grid, PageHead, Stat } from '@nexus/ui';
+import { PageHead } from '@nexus/ui';
 
 import { loadViewerContext } from '@/lib/viewer-context';
 import { getTodayQueue, todayCounts, TODAY_CATEGORIES, TODAY_CATEGORY_LABELS, type TodayCategory } from '@/lib/repo/today';
@@ -63,30 +63,23 @@ export default async function MyDayPage({
 
   return (
     <>
-      <PageHead
-        subtitle={context.businesses.length === 1 ? context.businesses[0]?.name : 'All accessible businesses'}
-      >
-        My Day
-      </PageHead>
+      <div className="nx-figma-my-day">
+        <PageHead
+          subtitle={context.businesses.length === 1 ? context.businesses[0]?.name.split(' ')[0] : 'All accessible businesses'}
+        >
+          My Day
+        </PageHead>
 
-      <MyDayNav active="today" />
+        <MyDayNav active="today" />
 
-      <div style={{ height: 'var(--nx-space-lg)' }} />
+        <div className="nx-figma-my-day__stats">
+          <FigmaStat value={counts.connections} label="Connections" accent="cyan" />
+          <FigmaStat value={counts.accepted_message1} label="Message 1" accent="green" />
+          <FigmaStat value={counts.followups} label="Follow-ups" accent="amber" />
+          <FigmaStat value={overdue} label="Overdue" accent="red" />
+        </div>
 
-      <Grid cols={4}>
-        <Stat value={counts.connections} label={TODAY_CATEGORY_LABELS.connections} />
-        <Stat value={counts.accepted_message1} label="Message 1" />
-        <Stat value={counts.followups} label={TODAY_CATEGORY_LABELS.followups} />
-        <Stat
-          value={overdue}
-          label="Overdue"
-          meta={overdue > 0 ? 'needs attention first' : 'nothing overdue'}
-        />
-      </Grid>
-
-      <div style={{ height: 'var(--nx-space-lg)' }} />
-
-      <Card>
+        <div className="nx-figma-my-day__table">
         {context.businesses.length === 0 ? (
           <span className="nx-hint">An administrator has not granted you access to a business yet.</span>
         ) : (
@@ -102,11 +95,26 @@ export default async function MyDayPage({
             }))}
           />
         )}
-      </Card>
-
-      <div style={{ height: 'var(--nx-space-md)' }} />
-
-      <p className="nx-hint"><Chip accent="cyan">tip</Chip> Completing an item moves it to Done and records its history immediately.</p>
+        </div>
+      </div>
     </>
+  );
+}
+
+function FigmaStat({
+  value,
+  label,
+  accent,
+}: {
+  readonly value: number;
+  readonly label: string;
+  readonly accent: 'cyan' | 'green' | 'amber' | 'red';
+}): ReactNode {
+  return (
+    <div className="nx-figma-stat">
+      <span className="nx-figma-stat__label">{label}</span>
+      <strong className="nx-figma-stat__value">{value}</strong>
+      <span className={`nx-chip nx-chip--${accent}`}>{label.toUpperCase()}</span>
+    </div>
   );
 }

@@ -129,7 +129,7 @@ export function AppShell({
             >
               {businesses.map((business) => (
                 <option key={business.id} value={business.id}>
-                  {business.name}
+                  {business.name === 'All Businesses' ? business.name : (business.name.split(' ')[0] ?? business.name)}
                 </option>
               ))}
             </select>

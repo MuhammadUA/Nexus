@@ -20,10 +20,10 @@ const labels: Readonly<Record<ActionKey, string>> = {
   note: 'Add note',
   task: 'Create task',
   reply: 'Capture reply',
-  snooze: 'Snooze / reschedule',
+  snooze: 'Set cooldown',
   edit: 'Edit lead',
   connection: 'Record connection',
-  trash: 'Move to Trash',
+  trash: 'Delete',
 };
 
 export function LeadActionWorkspace(props: LeadActionWorkspaceProps): ReactElement {

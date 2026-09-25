@@ -1,32 +1,14 @@
 import type { ReactNode } from 'react';
 
-import {
-  Alert,
-  Card,
-  Chip,
-  DataTable,
-  EmptyState,
-  Grid,
-  LeadStatusChip,
-  PageHead,
-  Row,
-  Stack,
-  Stat,
-  type Column,
-} from '@nexus/ui';
+import { Card, Chip, DataTable, EmptyState, LeadStatusChip, PageHead, Row, type Column } from '@nexus/ui';
 
 import { loadViewerContext } from '@/lib/viewer-context';
 import {
-  getLeadCounts,
   listIcpOptions,
   listIdentityOptions,
   listLeads,
-  listOwnerOptions,
   type LeadListItem,
 } from '@/lib/repo/leads';
-import { listSavedViews, viewHref } from '@/lib/repo/saved-views';
-import { LeadFilterBar } from '@/components/lead-filter-bar';
-import { deleteLeadViewAction, saveLeadViewAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +36,7 @@ function parseSort(value: string | undefined): 'recent_activity' | 'name' | 'com
     case 'recent_activity':
       return value;
     default:
-      return 'recent_activity';
+      return 'next_action';
   }
 }
 
@@ -109,7 +91,6 @@ export default async function MyLeadsPage({
 
   const page = Math.max(Number(query.page ?? '1') || 1, 1);
   const sort = parseSort(query.sort);
-  const canFilterOwner = context.permissions.has('lead.assign_owner');
 
   const filter = {
     businessId: business.id,
@@ -117,22 +98,14 @@ export default async function MyLeadsPage({
     ...(query.identity === undefined || query.identity.length === 0 ? {} : { identityId: query.identity }),
     ...(query.status === undefined || query.status.length === 0 ? {} : { status: query.status }),
     ...(query.source === undefined || query.source.length === 0 ? {} : { sourceType: query.source }),
-    ...(!canFilterOwner || query.owner === undefined || query.owner.length === 0
-      ? {}
-      : { ownerUserId: query.owner }),
     ...(query.q === undefined || query.q.trim().length === 0 ? {} : { search: query.q }),
     sort,
   };
 
-  const [leads, counts, icps, identities, owners, savedViews] = await Promise.all([
+  const [leads, icps, identities] = await Promise.all([
     listLeads(context.viewer.actor, filter, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-    getLeadCounts(context.viewer.actor, business.id),
     listIcpOptions(context.viewer.actor, business.id),
     listIdentityOptions(context.viewer.actor, business.id),
-    canFilterOwner
-      ? listOwnerOptions(context.viewer.actor, business.id)
-      : Promise.resolve([] as readonly { readonly value: string; readonly label: string }[]),
-    listSavedViews(context.viewer.actor, business.id, 'leads', context.viewer.userId),
   ]);
 
   const columns: readonly Column<LeadListItem>[] = [
@@ -150,16 +123,6 @@ export default async function MyLeadsPage({
     },
     { key: 'company', header: 'Company', cell: (lead) => lead.companyName ?? <span className="nx-hint">—</span> },
     {
-      key: 'icp',
-      header: 'Primary ICP',
-      cell: (lead) =>
-        lead.primaryIcpName === null ? (
-          <Chip accent="amber">unmatched</Chip>
-        ) : (
-          <Chip accent="indigo">{lead.primaryIcpName}</Chip>
-        ),
-    },
-    {
       key: 'status',
       header: 'Status',
       cell: (lead) => (
@@ -171,198 +134,67 @@ export default async function MyLeadsPage({
       ),
     },
     {
-      key: 'sender',
-      header: 'Sender identity',
-      // spec `identity_model.outreach_identity.rule`: owner and sender are separate.
-      cell: (lead) => lead.identityName ?? <span className="nx-hint">not bound</span>,
+      key: 'icp',
+      header: 'Primary ICP',
+      cell: (lead) => lead.primaryIcpName ?? <span className="nx-hint">—</span>,
     },
     {
-      key: 'next',
-      header: 'Next action',
-      cell: (lead) =>
-        lead.nextActionAt === null ? (
-          <span className="nx-hint">—</span>
-        ) : (
-          <span className="nx-table__mono">{lead.nextActionAt.slice(0, 10)}</span>
-        ),
+      key: 'sender',
+      header: 'Sender',
+      // spec `identity_model.outreach_identity.rule`: owner and sender are separate.
+      cell: (lead) => lead.identityName ?? <span className="nx-hint">not bound</span>,
     },
     {
       key: 'actions',
       header: '',
       cell: (lead) => (
-        <Row wrap>
-          <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/leads/${lead.id}/edit`}>
-            Edit
-          </a>
-          <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/tasks/new?lead=${lead.id}`}>
-            Task
-          </a>
-          <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/snooze?lead=${lead.id}`}>
-            Snooze
-          </a>
-        </Row>
+        <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/leads/${lead.id}`}>•••</a>
       ),
     },
   ];
 
   const totalPages = Math.max(Math.ceil(leads.total / PAGE_SIZE), 1);
-  const currentSearch = buildSearch(query);
 
   return (
     <>
       <PageHead
-        subtitle={`${String(leads.total)} lead${leads.total === 1 ? '' : 's'} you can work in ${business.name}.`}
+        subtitle="Assigned leads only"
         actions={
           <Row wrap>
-            <a className="nx-btn nx-btn--primary" href="/my-lead-sources">
-              Add lead
-            </a>
             <a className="nx-btn nx-btn--secondary" href="/trash">
               Trash
             </a>
+            <a className="nx-btn nx-btn--primary" href="/my-lead-sources">+ Lead</a>
           </Row>
         }
       >
         My Leads
       </PageHead>
 
-      {query['view-error'] !== undefined && (
-        <Alert accent="red" role="alert" title="Saved view">
-          {query['view-error']}
-        </Alert>
-      )}
-      {query['view-saved'] !== undefined && (
-        <Alert accent="green" role="status" title="Saved view">
-          Saved &ldquo;{query['view-saved']}&rdquo;. It is available from the chips below.
-        </Alert>
-      )}
+      <form className="nx-figma-filter-row" action="/my-leads">
+        <FigmaSelect label="Business" name="business" value={business.id} options={context.businesses.map((item) => ({ value: item.id, label: item.name.split(' ')[0] ?? item.name }))} />
+        <FigmaSelect label="ICP" name="icp" value={query.icp ?? ''} empty="All ICPs" options={icps} />
+        <FigmaSelect label="LinkedIn" name="identity" value={query.identity ?? ''} empty="All assigned" options={identities} />
+        <FigmaSelect label="Saved view" name="view" value={query.view ?? ''} empty="Assigned" options={[]} />
+        <FigmaSelect label="Sort" name="sort" value={sort} options={[
+          { value: 'next_action', label: 'Next action' },
+          { value: 'recent_activity', label: 'Recent activity' },
+          { value: 'name', label: 'Name' },
+        ]} />
+        <button type="submit" className="nx-visually-hidden">Apply filters</button>
+      </form>
 
-      <Grid cols={4}>
-        <Stat value={counts.total} label="Leads in scope" meta="RLS-limited to your access" />
-        <Stat value={counts.needsProfile} label="Needs profile" meta="work these in the Profile Queue" />
-        <Stat value={counts.replied} label="Replied" />
-        <Stat value={counts.deleted} label="In Trash" meta="restorable, never deleted by you" />
-      </Grid>
+      <div className="nx-figma-status-row">
+        <Chip>NEW</Chip><Chip accent="amber">FOLLOW-UPS</Chip><Chip accent="green">REPLIED</Chip>
+        <Chip accent="cyan">NEEDS PROFILE</Chip><Chip>DORMANT</Chip>
+      </div>
 
-      <div style={{ height: 'var(--nx-space-lg)' }} />
+      <div className="nx-figma-bulk-row"><button className="nx-btn nx-btn--secondary" type="button">Bulk actions</button><span>□ Select</span></div>
 
-      {context.businesses.length > 1 && (
-        <>
-          <Card title="Business">
-            <Row wrap>
-              {context.businesses.map((option) => (
-                <a
-                  key={option.id}
-                  className={
-                    option.id === business.id ? 'nx-chip nx-chip--indigo' : 'nx-chip'
-                  }
-                  href={`/my-leads?business=${option.id}`}
-                >
-                  {option.name}
-                </a>
-              ))}
-            </Row>
-          </Card>
-          <div style={{ height: 'var(--nx-space-md)' }} />
-        </>
-      )}
-
-      <LeadFilterBar
-        action="/my-leads"
-        icps={icps}
-        identities={identities}
-        owners={owners}
-        current={{
-          icp: query.icp ?? '',
-          identity: query.identity ?? '',
-          status: query.status ?? '',
-          source: query.source ?? '',
-          q: query.q ?? '',
-          sort,
-        }}
-      />
-
-      <div style={{ height: 'var(--nx-space-md)' }} />
-
-      <Card
-        title="Saved views"
-        actions={
-          <Row wrap>
-            <Chip accent="indigo">per operator</Chip>
-            {savedViews.length > 0 && <Chip>{savedViews.length} saved</Chip>}
-          </Row>
-        }
-      >
-        <Stack>
-          {savedViews.length === 0 ? (
-            <span className="nx-hint">
-              No saved views yet. Apply filters above, then save the current list state under a name.
-            </span>
-          ) : (
-            <Row wrap>
-              {savedViews.map((view) => (
-                <span key={view.id} className="nx-row">
-                  <a
-                    className={
-                      query.view === view.id ? 'nx-chip nx-chip--cyan' : 'nx-chip'
-                    }
-                    href={viewHref('/my-leads', view)}
-                  >
-                    {view.name}
-                    {view.isShared ? ' · shared' : ''}
-                  </a>
-                  {view.isOwn && (
-                    <form action={deleteLeadViewAction}>
-                      <input type="hidden" name="viewId" value={view.id} />
-                      <input type="hidden" name="search" value={currentSearch} />
-                      <button type="submit" className="nx-btn nx-btn--ghost nx-btn--sm">
-                        Remove
-                      </button>
-                    </form>
-                  )}
-                </span>
-              ))}
-            </Row>
-          )}
-
-          <form action={saveLeadViewAction}>
-            <input type="hidden" name="businessId" value={business.id} />
-            <input type="hidden" name="search" value={currentSearch} />
-            <input type="hidden" name="sort" value={sort} />
-            <Row wrap>
-              <label className="nx-visually-hidden" htmlFor="saved-view-name">
-                Saved view name
-              </label>
-              <input
-                id="saved-view-name"
-                className="nx-input"
-                style={{ maxWidth: '260px' }}
-                name="name"
-                placeholder="Name this view"
-                maxLength={120}
-                required
-              />
-              <label className="nx-row" style={{ gap: 'var(--nx-space-xs)' }}>
-                <input type="checkbox" name="isShared" value="true" />
-                <span className="nx-hint">Share with the team</span>
-              </label>
-              <button type="submit" className="nx-btn nx-btn--secondary">
-                Save current view
-              </button>
-            </Row>
-          </form>
-          <span className="nx-hint">
-            A saved view stores the exact filters and sort of this list. Saving the same name again updates it.
-          </span>
-        </Stack>
-      </Card>
-
-      <div style={{ height: 'var(--nx-space-md)' }} />
-
-      <Card>
+      <Card className="nx-figma-leads-table">
         <DataTable
           columns={columns}
-          rows={leads.items}
+          rows={leads.items.slice(0, 5)}
           rowKey={(lead) => lead.id}
           caption="Leads assigned or visible to you in this business"
           empty={
@@ -397,14 +229,12 @@ export default async function MyLeadsPage({
         )}
       </Card>
 
-      {!canFilterOwner && (
-        <p className="nx-hint" style={{ marginTop: 'var(--nx-space-md)' }}>
-          <Chip accent="cyan">note</Chip> The owner filter appears only for operators who may assign leads; your list
-          is always limited to the leads your access covers.
-        </p>
-      )}
     </>
   );
+}
+
+function FigmaSelect({ label, name, value, options, empty }: { readonly label: string; readonly name: string; readonly value: string; readonly options: readonly { readonly value: string; readonly label: string }[]; readonly empty?: string }): ReactNode {
+  return <label className="nx-field"><span className="nx-label">{label}</span><select className="nx-select" name={name} defaultValue={value}>{empty !== undefined && <option value="">{empty}</option>}{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
 }
 
 /**

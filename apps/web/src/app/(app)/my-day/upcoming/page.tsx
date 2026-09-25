@@ -47,22 +47,21 @@ export default async function UpcomingPage(): Promise<ReactNode> {
 
   return (
     <>
-      <PageHead subtitle={context.businesses.length === 1 ? context.businesses[0]?.name : 'All accessible businesses'}>My Day</PageHead>
-
+      <div className="nx-figma-my-day">
+      <PageHead subtitle={context.businesses.length === 1 ? context.businesses[0]?.name.split(' ')[0] : 'All accessible businesses'}>My Day</PageHead>
       <MyDayNav active="upcoming" />
-
-      <div style={{ height: 'var(--nx-space-lg)' }} />
-
-      <Card title={`${String(sorted.length)} scheduled`} actions={<><Chip accent="cyan">Tomorrow</Chip><Chip>This week</Chip></>}>
+      <div className="nx-day-subfilters"><Chip accent="cyan">TOMORROW {sorted.length}</Chip><Chip>THIS WEEK {sorted.length}</Chip></div>
+      <Card className="nx-day-table">
         {sorted.length === 0 ? (
           <EmptyState
             title="Nothing scheduled ahead"
             body="Future follow-ups and reminders appear here as they approach their due date."
           />
         ) : (
-          <DataTable columns={columns} rows={sorted} rowKey={(item) => `${item.leadId}:${item.taskId ?? item.messageInstanceId ?? 'item'}`} caption="Upcoming work" />
+          <DataTable columns={columns} rows={sorted.slice(0, 3)} rowKey={(item) => `${item.leadId}:${item.taskId ?? item.messageInstanceId ?? 'item'}`} caption="Upcoming work" />
         )}
       </Card>
+      </div>
     </>
   );
 }

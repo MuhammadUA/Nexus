@@ -66,20 +66,16 @@ export default async function DonePage(): Promise<ReactNode> {
 
   return (
     <>
-      <PageHead
-        subtitle={context.businesses.length === 1 ? context.businesses[0]?.name : 'All accessible businesses'}
-      >
+      <div className="nx-figma-my-day">
+      <PageHead subtitle={context.businesses.length === 1 ? context.businesses[0]?.name.split(' ')[0] : 'All accessible businesses'}>
         My Day
       </PageHead>
-
       <MyDayNav active="done" showTask={false} />
-
-      <div style={{ height: 'var(--nx-space-lg)' }} />
-
-      <Card title={`${String(sorted.length)} completed`}>
+      <div className="nx-day-subfilters"><Chip accent="green">TODAY {sorted.length}</Chip><Chip>THIS WEEK {sorted.length}</Chip></div>
+      <Card className="nx-day-table nx-day-table--done">
         <DataTable
           columns={columns}
-          rows={sorted}
+          rows={sorted.slice(0, 3)}
           rowKey={(entry) => entry.id}
           caption="Completed work"
           empty={
@@ -90,6 +86,7 @@ export default async function DonePage(): Promise<ReactNode> {
           }
         />
       </Card>
+      </div>
     </>
   );
 }

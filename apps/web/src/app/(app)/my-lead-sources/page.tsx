@@ -1,17 +1,11 @@
 ﻿import type { ReactNode } from 'react';
 
 import {
-  Alert,
   Card,
   Chip,
   DataTable,
   EmptyState,
-  EnrichmentOffChip,
-  Grid,
   PageHead,
-  Row,
-  Stack,
-  Stat,
   type Column,
 } from '@nexus/ui';
 
@@ -91,12 +85,12 @@ export default async function MyLeadSourcesPage(): Promise<ReactNode> {
       key: 'when',
       header: 'Imported',
       cell: (batch) => (
-        <Stack size="sm">
+        <div className="nx-stack nx-stack--sm">
           <span className="nx-table__mono">
             {batch.createdAt === null ? '—' : batch.createdAt.slice(0, 16).replace('T', ' ')}
           </span>
           <span className="nx-hint">{batch.createdByName ?? 'unknown operator'}</span>
-        </Stack>
+        </div>
       ),
     },
     { key: 'source', header: 'Source', cell: (batch) => <Chip accent="indigo">{batch.source.replace(/_/g, ' ')}</Chip> },
@@ -170,95 +164,42 @@ export default async function MyLeadSourcesPage(): Promise<ReactNode> {
   return (
     <>
       <PageHead
-        subtitle="Import leads you are allowed to work. Every path below needs a Business plus a Primary ICP or Auto-match, and runs the same normalization and dedupe as the admin import."
+        subtitle={context.businesses[0]?.name.split(' ')[0] ?? 'No business selected'}
         actions={
-          <Row wrap>
+          <div className="nx-row">
             {canUseProfileQueue && (
               <a className="nx-btn nx-btn--secondary" href="/my-profile-queue">
                 Profile Queue
               </a>
             )}
-            {canReviewDuplicates && (
-              <a className="nx-btn nx-btn--secondary" href="/my-duplicates">
-                Duplicate Review
-              </a>
-            )}
-            <a className="nx-btn nx-btn--secondary" href="/my-leads">
-              My Leads
-            </a>
-          </Row>
+            <a className="nx-btn nx-btn--primary" href="/my-lead-sources/google">Google Search</a>
+          </div>
         }
       >
         Lead Sources
       </PageHead>
 
-      {!canUseLeadSources && (
-        <Alert accent="amber" title="Read-only" role="alert">
-          You can see this hub but not run an import: your access does not include using lead sources. Ask an
-          administrator for the lead-source permission.
-        </Alert>
-      )}
-
-      {context.businesses.length === 0 && (
-        <Alert accent="amber" title="No business access">
-          An administrator has not granted you access to a business yet, so there is nowhere to import into.
-        </Alert>
-      )}
-
-      <Grid cols={4}>
-        <Stat value={counts.batches} label="Import batches" meta="across your businesses" />
-        <Stat value={counts.importsLast30Days} label="Imports (30 days)" />
-        <Stat value={counts.profileQueueOpen} label="Profile queue open" meta="partial leads to complete" />
-        <Stat value={counts.openDuplicates} label="Duplicates to review" meta="possible matches" />
-      </Grid>
-
-      <div style={{ height: 'var(--nx-space-lg)' }} />
-
-      <Grid cols={2}>
-        {modes.map((mode) => (
-          <Card
-            key={mode.title}
-            title={mode.title}
-            actions={
-              mode.enrichmentOff ? <EnrichmentOffChip /> : <Chip accent="indigo">lead_source.use</Chip>
-            }
-            footer={
-              canUseLeadSources ? (
-                <a className="nx-btn nx-btn--primary nx-btn--block" href={mode.href}>
-                  Start {mode.title}
-                </a>
-              ) : (
-                <span className="nx-hint">Your access does not include using lead sources.</span>
-              )
-            }
-          >
-            <Stack size="sm">
-              <span className="nx-hint">{mode.body}</span>
-              {mode.enrichmentOff && (
-                <span className="nx-hint">
-                  spec lead_sources.apollo: basic/zero-credit people search only by default. This screen never
-                  triggers an enrichment call and never spends a credit.
-                </span>
-              )}
-            </Stack>
-          </Card>
+      <div className="nx-source-tiles">
+        {modes.map((mode, index) => (
+          <a className="nx-source-tile" href={canUseLeadSources ? mode.href : '#'} key={mode.title}>
+            <Chip accent={index === 2 ? 'cyan' : index === 3 ? 'indigo' : 'neutral'}>{['FILE', 'PASTE', 'GOOGLE', 'APOLLO'][index]}</Chip>
+            <strong>{['Upload File', 'Paste List', 'Google Search', 'Apollo'][index]}</strong>
+            <span>{['CSV / XLSX', 'Rows / table', 'Search URL', 'Basic people search'][index]}</span>
+          </a>
         ))}
-      </Grid>
+      </div>
 
-      <div style={{ height: 'var(--nx-space-lg)' }} />
+      <div className="nx-source-status">
+        <Chip accent="green">Active</Chip>
+        <Chip accent="green">Done</Chip>
+        {canUseProfileQueue && <a href="/my-profile-queue"><Chip accent="amber">NEEDS PROFILE {counts.needsProfile}</Chip></a>}
+        {canReviewDuplicates && <a href="/my-duplicates"><Chip accent="amber">DUPLICATES {counts.openDuplicates}</Chip></a>}
+      </div>
 
-      <Card
-        title="Recent imports"
-        actions={
-          <Row wrap>
-            <Chip accent="neutral">newest first</Chip>
-            <span className="nx-hint">{counts.needsProfile} lead(s) still need a profile</span>
-          </Row>
-        }
-      >
+      <Card title="Recent imports" className="nx-source-recent">
         <DataTable
           columns={columns}
-          rows={recent}
+          rows={recent.slice(0, 3)}
           rowKey={(batch) => batch.id}
           caption="Recent import batches across the businesses you can see"
           empty={
@@ -269,11 +210,6 @@ export default async function MyLeadSourcesPage(): Promise<ReactNode> {
           }
         />
       </Card>
-
-      <p className="nx-hint" style={{ marginTop: 'var(--nx-space-md)' }}>
-        <Chip accent="cyan">note</Chip> A weak match never merges silently: it is sent to Duplicate Review, where you
-        decide whether to merge into the existing record, keep the records separate, or skip.
-      </p>
     </>
   );
 }

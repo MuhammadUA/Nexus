@@ -1,18 +1,16 @@
 import type { ReactNode } from 'react';
 
-import { Card, Chip, DataTable, EmptyState, Grid, LeadStatusChip, PageHead, Stat, type Column } from '@nexus/ui';
+import { Card, Chip, DataTable, EmptyState, LeadStatusChip, PageHead, type Column } from '@nexus/ui';
 import { notFound } from 'next/navigation';
 
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
 import {
-  getLeadCounts,
   listIcpOptions,
   listIdentityOptions,
   listLeads,
   listOwnerOptions,
   type LeadListItem,
 } from '@/lib/repo/leads';
-import { LeadFilterBar } from '@/components/lead-filter-bar';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +34,7 @@ function parseSort(value: string | undefined): 'recent_activity' | 'name' | 'com
     case 'recent_activity':
       return value;
     default:
-      return 'recent_activity';
+      return 'next_action';
   }
 }
 
@@ -78,9 +76,8 @@ export default async function LeadsPage({
     sort,
   };
 
-  const [leads, counts, icps, identities, owners] = await Promise.all([
+  const [leads, icps, identities, owners] = await Promise.all([
     listLeads(context.viewer.actor, filter, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-    getLeadCounts(context.viewer.actor, business.id),
     listIcpOptions(context.viewer.actor, business.id),
     listIdentityOptions(context.viewer.actor, business.id),
     listOwnerOptions(context.viewer.actor, business.id),
@@ -105,16 +102,6 @@ export default async function LeadsPage({
       cell: (lead) => lead.companyName ?? <span className="nx-hint">—</span>,
     },
     {
-      key: 'icp',
-      header: 'Primary ICP',
-      cell: (lead) =>
-        lead.primaryIcpName === null ? (
-          <Chip accent="amber">unmatched</Chip>
-        ) : (
-          <Chip accent="indigo">{lead.primaryIcpName}</Chip>
-        ),
-    },
-    {
       key: 'status',
       header: 'Status',
       cell: (lead) => (
@@ -125,6 +112,7 @@ export default async function LeadsPage({
         </div>
       ),
     },
+    { key: 'icp', header: 'Primary ICP', cell: (lead) => lead.primaryIcpName ?? '—' },
     {
       key: 'owner',
       header: 'Owner',
@@ -138,15 +126,11 @@ export default async function LeadsPage({
       cell: (lead) => lead.identityName ?? <span className="nx-hint">not bound</span>,
     },
     {
-      key: 'next',
-      header: 'Next action',
-      cell: (lead) =>
-        lead.nextActionAt === null ? (
-          <span className="nx-hint">—</span>
-        ) : (
-          <span className="nx-table__mono">{lead.nextActionAt.slice(0, 10)}</span>
-        ),
+      key: 'source',
+      header: 'Source',
+      cell: (lead) => lead.sourceType?.replace(/_/g, ' ') ?? '—',
     },
+    { key: 'actions', header: '', cell: (lead) => <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/b/${business.key}/leads/${lead.id}`}>•••</a> },
   ];
 
   const totalPages = Math.max(Math.ceil(leads.total / PAGE_SIZE), 1);
@@ -154,51 +138,34 @@ export default async function LeadsPage({
   return (
     <>
       <PageHead
-        subtitle={`${String(leads.total)} lead${leads.total === 1 ? '' : 's'} in ${business.name}`}
+        subtitle="One active lead per person + business"
         actions={
           <>
-            <a className="nx-btn nx-btn--secondary" href={`/b/${business.key}/lead-sources`}>
-              Lead sources
-            </a>
             <a className="nx-btn nx-btn--secondary" href={`/b/${business.key}/trash`}>
               Trash
             </a>
+            <a className="nx-btn nx-btn--secondary" href={`/b/${business.key}/lead-sources`}>Lead Sources</a>
+            <a className="nx-btn nx-btn--primary" href={`/b/${business.key}/lead-sources`}>+ Lead</a>
           </>
         }
       >
         Leads
       </PageHead>
 
-      <Grid cols={4}>
-        <Stat value={counts.total} label="Total leads" />
-        <Stat value={counts.needsProfile} label="Needs profile" />
-        <Stat value={counts.replied} label="Replied" />
-        <Stat value={counts.dnc} label="Do Not Contact" />
-      </Grid>
+      <form className="nx-admin-filter-row" action={`/b/${business.key}/leads`}>
+        <FilterSelect label="ICP" name="icp" value={query.icp ?? ''} empty="All ICPs" options={icps} />
+        <FilterSelect label="Owner" name="owner" value={query.owner ?? ''} empty="All owners" options={owners} />
+        <FilterSelect label="Sender" name="identity" value={query.identity ?? ''} empty="All identities" options={identities} />
+        <FilterSelect label="Status" name="status" value={query.status ?? ''} empty="All active" options={[]} />
+        <FilterSelect label="Saved view" name="sort" value={sort} options={[{ value: 'next_action', label: 'Needs attention' }, { value: 'recent_activity', label: 'Recent activity' }]} />
+        <button className="nx-visually-hidden" type="submit">Apply filters</button>
+      </form>
+      <div className="nx-figma-status-row"><Chip accent="amber">FOLLOW-UPS</Chip><Chip accent="green">REPLIED</Chip><Chip accent="cyan">NEEDS PROFILE</Chip><Chip>DORMANT</Chip><Chip accent="red">DNC</Chip></div>
 
-      <div style={{ height: 'var(--nx-space-lg)' }} />
-
-      <LeadFilterBar
-        action={`/b/${business.key}/leads`}
-        icps={icps}
-        identities={identities}
-        owners={owners}
-        current={{
-          icp: query.icp ?? '',
-          identity: query.identity ?? '',
-          status: query.status ?? '',
-          source: query.source ?? '',
-          q: query.q ?? '',
-          sort,
-        }}
-      />
-
-      <div style={{ height: 'var(--nx-space-md)' }} />
-
-      <Card>
+      <Card className="nx-admin-leads-table">
         <DataTable
           columns={columns}
-          rows={leads.items}
+          rows={leads.items.slice(0, 5)}
           rowKey={(lead) => lead.id}
           caption="Leads visible to you in this business"
           empty={
@@ -213,6 +180,8 @@ export default async function LeadsPage({
             />
           }
         />
+
+        <div className="nx-admin-bulk"><strong>Bulk actions</strong><span>Assign owner · Change Primary ICP · Change sender · Archive · Delete</span></div>
 
         {totalPages > 1 && (
           <div className="nx-card__footer">
@@ -234,6 +203,10 @@ export default async function LeadsPage({
       </Card>
     </>
   );
+}
+
+function FilterSelect({ label, name, value, options, empty }: { readonly label: string; readonly name: string; readonly value: string; readonly options: readonly { readonly value: string; readonly label: string }[]; readonly empty?: string }): ReactNode {
+  return <label className="nx-field"><span className="nx-label">{label}</span><select className="nx-select" name={name} defaultValue={value}>{empty !== undefined && <option value="">{empty}</option>}{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
 }
 
 /**
