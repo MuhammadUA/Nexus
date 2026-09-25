@@ -4,6 +4,7 @@ import { Alert, Card, Chip, DataTable, EmptyState, Grid, PageHead, Row, Stack, S
 import { notFound } from 'next/navigation';
 
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { listLeads, type LeadListItem } from '@/lib/repo/leads';
 import { listImportBatches, type ImportBatch } from '@/lib/repo/ingestion';
 import {
@@ -45,6 +46,9 @@ export default async function TrashPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/trash', businessId: business.id });
 
   const page = Math.max(Number(query.page ?? '1') || 1, 1);
 

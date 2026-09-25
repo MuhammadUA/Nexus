@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { Alert, Card, Chip, DataTable, Grid, PageHead, Stack, Stat, type Column } from '@nexus/ui';
 import {
@@ -12,6 +12,7 @@ import { notFound } from 'next/navigation';
 
 import { GrantForm, ProfileEditForm, RevokeGrantButton, UserPasswordForm } from '@/components/team-forms';
 import { loadViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { listIcpOptions, type Option } from '@/lib/repo/leads';
 import {
   ACCESS_LEVELS,
@@ -51,17 +52,17 @@ interface BusinessGrantView {
 }
 
 /**
- * A16 — User Permissions.
+ * A16 â€” User Permissions.
  *
  * Contract: "Business visibility, lead scope, permitted actions, managed
  * identities."
  *
  * The screen shows three things side by side, and the distinction matters:
  *
- *   1. the **role default** from `@nexus/core` — read-only reference, because a role
+ *   1. the **role default** from `@nexus/core` â€” read-only reference, because a role
  *      is a property of the account, not of one business;
  *   2. the **per-business grant** actually stored in `user_business_access` and
- *      `user_lead_scope` — the editable part;
+ *      `user_lead_scope` â€” the editable part;
  *   3. the **effective set**, which is the role default after those grants are
  *      applied and after `ADMIN_ONLY_PERMISSIONS` have been removed for a
  *      non-admin. That last step is why a mis-typed override can never escalate a
@@ -75,6 +76,7 @@ export default async function UserPermissionsPage({
   const { id } = await params;
 
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/team/:userId/permissions' });
   const user = await getUser(context.viewer.actor, id);
   // A user profile the viewer may not read is indistinguishable from one that does
   // not exist, which is exactly what RLS does to the row.
@@ -238,7 +240,7 @@ export default async function UserPermissionsPage({
         subtitle={
           <>
             {user.email}
-            {user.fullName === null ? '' : ' · '}
+            {user.fullName === null ? '' : ' Â· '}
             {user.fullName ?? ''}
           </>
         }
@@ -332,7 +334,7 @@ export default async function UserPermissionsPage({
 
         <Stack size="lg">
           <Card
-            title={`Role defaults — ${user.role}`}
+            title={`Role defaults â€” ${user.role}`}
             actions={<Chip accent="neutral">read-only reference</Chip>}
           >
             <Stack size="sm">

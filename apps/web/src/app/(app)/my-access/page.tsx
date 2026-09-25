@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { Alert, Card, Chip, DataTable, Grid, PageHead, Row, Stack, Stat, type Column } from '@nexus/ui';
 
@@ -8,6 +8,7 @@ import {
   SelfGrantForm,
 } from '@/components/my-access-forms';
 import { loadViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import {
   listIdentities,
   listIdentityTransfers,
@@ -19,7 +20,7 @@ import { listUserGrants, type UserBusinessGrantRow } from '@/lib/repo/businesses
 export const dynamic = 'force-dynamic';
 
 /**
- * A29 — Admin · My Access & Assignment.
+ * A29 â€” Admin Â· My Access & Assignment.
  *
  * Contract: "Admin can assign self allowed businesses/domains and available LinkedIn
  * identities; transfer requires confirmation/audit."
@@ -32,6 +33,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function MyAccessPage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-access' });
   const userId = context.viewer.userId;
 
   const [grants, visibleIdentities, transfers] = await Promise.all([
@@ -110,7 +112,7 @@ export default async function MyAccessPage(): Promise<ReactNode> {
       header: 'Businesses bound',
       cell: (identity) =>
         identity.businessNames.length === 0 ? (
-          <Chip accent="amber">none — unusable in the Companion</Chip>
+          <Chip accent="amber">none â€” unusable in the Companion</Chip>
         ) : (
           <Row wrap>
             {identity.businessNames.map((name) => (
@@ -145,7 +147,7 @@ export default async function MyAccessPage(): Promise<ReactNode> {
         <Chip accent={transfer.confirmed ? 'green' : 'amber'}>{transfer.confirmed ? 'confirmed' : 'not confirmed'}</Chip>
       ),
     },
-    { key: 'note', header: 'Note', cell: (transfer) => transfer.note ?? '—' },
+    { key: 'note', header: 'Note', cell: (transfer) => transfer.note ?? 'â€”' },
   ];
 
   return (
@@ -183,7 +185,7 @@ export default async function MyAccessPage(): Promise<ReactNode> {
           caption="Your business access grants"
           empty={
             <span className="nx-hint">
-              You hold no explicit grant yet. Visibility is never implied — grant yourself one below, or ask an
+              You hold no explicit grant yet. Visibility is never implied â€” grant yourself one below, or ask an
               administrator.
             </span>
           }
@@ -234,7 +236,7 @@ export default async function MyAccessPage(): Promise<ReactNode> {
               const bindable = context.businesses.filter((business) => !bound.has(business.id));
               return (
                 <div key={identity.id} className="nx-stack nx-stack--sm" style={{ marginTop: 'var(--nx-space-lg)' }}>
-                  <h3 className="nx-section-title">{identity.displayName} · business access</h3>
+                  <h3 className="nx-section-title">{identity.displayName} Â· business access</h3>
                   <p className="nx-hint">
                     spec `extension_visibility_rule`: the Companion shows the intersection of your business access
                     and this identity&apos;s business access. An identity bound to nothing can never be used.
@@ -354,13 +356,13 @@ export default async function MyAccessPage(): Promise<ReactNode> {
 }
 
 function formatWhen(value: string | null): string {
-  if (value === null || value.length === 0) return '—';
+  if (value === null || value.length === 0) return 'â€”';
   return new Date(value).toISOString().replace('T', ' ').slice(0, 16);
 }
 
 /** Shows user ids compactly; the actor's own id is labelled so the log stays readable. */
 function shortId(id: string | null, selfId: string | null): ReactNode {
-  if (id === null) return <span className="nx-hint">—</span>;
+  if (id === null) return <span className="nx-hint">â€”</span>;
   if (selfId !== null && id === selfId) return <Chip accent="indigo">me</Chip>;
-  return <span className="nx-table__mono">{id.slice(0, 8)}…</span>;
+  return <span className="nx-table__mono">{id.slice(0, 8)}â€¦</span>;
 }

@@ -1,11 +1,11 @@
-'use server';
+﻿'use server';
 
 /**
- * Team & accounts mutations — A15 (`/team`) and A16 (`/team/[id]`).
+ * Team & accounts mutations â€” A15 (`/team`) and A16 (`/team/[id]`).
  *
  * Every action resolves the viewer from the signed session cookie; a `userId`,
  * `role` or `password` a caller might send is validated as *input*, never trusted
- * as identity. Each write ends up inside `withActor(viewer.actor, …)`, where RLS
+ * as identity. Each write ends up inside `withActor(viewer.actor, â€¦)`, where RLS
  * on `public.users`, `public.user_business_access`, `public.user_lead_scope` and
  * the `public.require_admin` call inside `public.set_user_credential` are the
  * authorization boundary.
@@ -17,6 +17,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
+import { authorizeAction } from '@/lib/route-guard';
 import { hashPassword, passwordPolicyError } from '@/lib/password';
 import { formString, formStringOrNull } from '@/lib/form-data';
 import {
@@ -78,6 +79,10 @@ export async function createUserAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/team' });
+  if (refusal !== null) return refusal;
+
   const parsed = createUserSchema.safeParse({
     email: formStringOrNull(formData, 'email'),
     fullName: formStringOrNull(formData, 'fullName'),
@@ -151,6 +156,10 @@ export async function updateUserAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/team' });
+  if (refusal !== null) return refusal;
+
   const parsed = updateUserSchema.safeParse({
     userId: formStringOrNull(formData, 'userId'),
     fullName: formStringOrNull(formData, 'fullName'),
@@ -190,13 +199,17 @@ const setPasswordSchema = z.object({
  * Local credential path (`0015_local_credentials.sql`).
  *
  * `public.set_user_credential` is SECURITY DEFINER and calls
- * `public.require_admin`, so the signed-in admin's identity — set by `withActor` —
+ * `public.require_admin`, so the signed-in admin's identity â€” set by `withActor` â€”
  * is what authorises it. Nothing about the password is echoed back.
  */
 export async function setPasswordAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/team' });
+  if (refusal !== null) return refusal;
+
   const parsed = setPasswordSchema.safeParse({
     userId: formStringOrNull(formData, 'userId'),
     password: formStringOrNull(formData, 'password'),
@@ -240,6 +253,10 @@ export async function saveGrantAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/team' });
+  if (refusal !== null) return refusal;
+
   const parsed = grantSchema.safeParse({
     userId: formStringOrNull(formData, 'userId'),
     businessId: formStringOrNull(formData, 'businessId'),
@@ -284,6 +301,10 @@ export async function revokeGrantAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/team' });
+  if (refusal !== null) return refusal;
+
   const parsed = z.object({ userId: uuid, businessId: uuid }).safeParse({
     userId: formStringOrNull(formData, 'userId'),
     businessId: formStringOrNull(formData, 'businessId'),

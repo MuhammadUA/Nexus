@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { API_SCOPES } from '@nexus/core';
 
 import { currentViewer } from '@/lib/current-viewer';
+import { authorizeAction } from '@/lib/route-guard';
 import { generateServiceToken } from '@/lib/gateway';
 import { createApiClient, revokeApiClient } from '@/lib/repo/integrations';
 import { formString, formStringOrNull, formStrings } from '@/lib/form-data';
@@ -40,6 +41,10 @@ export async function createApiClientAction(
   _previous: IntegrationActionResult,
   formData: FormData,
 ): Promise<IntegrationActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/integrations' });
+  if (refusal !== null) return refusal;
+
   const viewer = await currentViewer();
   if (viewer === null) return { ok: false, error: 'Your session has expired. Sign in again.' };
 
@@ -97,6 +102,10 @@ export async function revokeApiClientAction(
   _previous: IntegrationActionResult,
   formData: FormData,
 ): Promise<IntegrationActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/integrations' });
+  if (refusal !== null) return refusal;
+
   const viewer = await currentViewer();
   if (viewer === null) return { ok: false, error: 'Your session has expired. Sign in again.' };
 

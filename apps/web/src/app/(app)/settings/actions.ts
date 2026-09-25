@@ -16,6 +16,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
+import { authorizeAction } from '@/lib/route-guard';
 import type { MutationResult } from '@/lib/repo/common';
 import { formString, formStringOrNull } from '@/lib/form-data';
 import {
@@ -96,6 +97,10 @@ export async function saveGlobalSettingsAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/settings' });
+  if (refusal !== null) return refusal;
+
   const viewer = await currentViewer();
   if (viewer === null) return notSignedIn;
 
@@ -133,6 +138,10 @@ export async function saveBusinessSettingsAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/settings' });
+  if (refusal !== null) return refusal;
+
   const viewer = await currentViewer();
   if (viewer === null) return notSignedIn;
 

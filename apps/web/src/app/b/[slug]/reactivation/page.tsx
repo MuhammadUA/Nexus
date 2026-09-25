@@ -19,6 +19,7 @@ import {
 import { notFound } from 'next/navigation';
 
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { asIso, asNumber, asString, asStringOrNull, read } from '@/lib/repo/common';
 import type { Row as SqlRow } from '@/lib/sql';
 import { listReactivationCandidates, type ReactivationCandidate } from '@/lib/repo/sequence';
@@ -90,6 +91,9 @@ export default async function ReactivationPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/reactivation', businessId: business.id });
 
   // The candidate list and the "open reactivation" write both come from the
   // existing sequences/leads repositories; only this view's history read is local.

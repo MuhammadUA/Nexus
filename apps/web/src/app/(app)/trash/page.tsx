@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import {
   Alert,
@@ -15,19 +15,20 @@ import {
 } from '@nexus/ui';
 
 import { loadViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { listTrashedLeads, type TrashedLead } from '@/lib/repo/user-sources';
 import { RestoreLeadButton } from '@/components/trash-restore';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * U21 — Trash.
+ * U21 â€” Trash.
  *
  * Contract: "Restore deleted leads; no permanent deletion for normal user."
  *
  * spec `roles_and_permissions.user.cannot`: "Permanently delete records", and
  * `security_and_reliability.rules`: "Soft delete by default". This screen therefore has
- * exactly one control per row — Restore — and no delete control of any kind. The admin
+ * exactly one control per row â€” Restore â€” and no delete control of any kind. The admin
  * Trash screen (`/b/[slug]/trash`) is where a permanent delete lives, behind
  * `lead.permanent_delete`, which `ADMIN_ONLY_PERMISSIONS` keeps off every normal user.
  *
@@ -36,6 +37,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function TrashPage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/trash' });
 
   const canViewTrash = context.permissions.has('trash.view');
   const businessIds = context.businesses.map((business) => business.id);
@@ -61,7 +63,7 @@ export default async function TrashPage(): Promise<ReactNode> {
         </div>
       ),
     },
-    { key: 'company', header: 'Company', cell: (lead) => lead.companyName ?? <span className="nx-hint">—</span> },
+    { key: 'company', header: 'Company', cell: (lead) => lead.companyName ?? <span className="nx-hint">â€”</span> },
     { key: 'business', header: 'Business', cell: (lead) => lead.businessName },
     {
       key: 'status',
@@ -78,7 +80,7 @@ export default async function TrashPage(): Promise<ReactNode> {
       header: 'Deleted',
       cell: (lead) => (
         <span className="nx-table__mono">
-          {lead.deletedAt === null ? '—' : lead.deletedAt.slice(0, 16).replace('T', ' ')}
+          {lead.deletedAt === null ? 'â€”' : lead.deletedAt.slice(0, 16).replace('T', ' ')}
         </span>
       ),
     },
@@ -159,7 +161,7 @@ export default async function TrashPage(): Promise<ReactNode> {
 
       <p className="nx-hint" style={{ marginTop: 'var(--nx-space-md)' }}>
         <Chip accent="cyan">note</Chip> A lead cannot be restored while the same person already has an active lead in
-        that business — the database enforces one active lead per person per business, and will say so.
+        that business â€” the database enforces one active lead per person per business, and will say so.
       </p>
     </>
   );

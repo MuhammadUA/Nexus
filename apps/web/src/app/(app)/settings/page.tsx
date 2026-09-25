@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { Alert, Button, Card, Chip, DataTable, Grid, PageHead, Row, Select, Stack, Stat, type Column } from '@nexus/ui';
 
@@ -9,6 +9,7 @@ import {
   type SettingFieldValues,
 } from '@/components/settings-forms';
 import { loadViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { PLATFORM_SETTING_DEFS } from '@/lib/repo/admin-access';
 import { listPlatformSettings, type PlatformSetting } from '@/lib/repo/businesses';
 
@@ -22,15 +23,15 @@ interface SearchParams {
 }
 
 /**
- * A22 — Settings.
+ * A22 â€” Settings.
  *
  * Contract: "Security, retention, soft-delete, DNC suppression, uniqueness defaults,
  * reply pause, dormant defaults."
  *
  * Two layers, exactly as the table models them: global rows (`business_id IS NULL`)
  * are the platform defaults, and a business row overrides the default for that
- * business only. Every value is edited through a typed control — a checkbox, a number
- * field or a days list — never a raw JSON textarea, because a hand-edited blob is how
+ * business only. Every value is edited through a typed control â€” a checkbox, a number
+ * field or a days list â€” never a raw JSON textarea, because a hand-edited blob is how
  * a boolean silently becomes the string "false".
  */
 export default async function SettingsPage({
@@ -40,6 +41,7 @@ export default async function SettingsPage({
 }): Promise<ReactNode> {
   const query = await searchParams;
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/settings' });
 
   const editableDefs: readonly SettingFieldDef[] = PLATFORM_SETTING_DEFS.map((definition) => ({
     key: definition.key,
@@ -120,7 +122,7 @@ export default async function SettingsPage({
 
       <div style={{ height: 'var(--nx-space-xl)' }} />
 
-      <Card title="Security · local credential path" actions={<Chip accent="amber">read-only</Chip>}>
+      <Card title="Security Â· local credential path" actions={<Chip accent="amber">read-only</Chip>}>
         <Stack size="sm">
           <Row between>
             <span className="nx-hint">security.local_auth_enabled</span>

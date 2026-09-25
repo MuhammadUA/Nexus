@@ -16,6 +16,7 @@ import {
 import { notFound } from 'next/navigation';
 
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import {
   getIngestionCounts,
   listImportBatches,
@@ -60,6 +61,9 @@ export default async function LeadSourcesPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/lead-sources', businessId: business.id });
 
   const canUseLeadSources = context.permissions.has('lead_source.use');
   const canUndoImport = context.permissions.has('import.undo');

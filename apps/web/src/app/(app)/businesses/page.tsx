@@ -1,14 +1,15 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { Card, Chip, DataTable, Grid, PageHead, Stat, type Column } from '@nexus/ui';
 
 import { loadViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { listBusinessSummaries, type BusinessSummary } from '@/lib/repo/businesses';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * A10 — Businesses Hub.
+ * A10 â€” Businesses Hub.
  *
  * Contract: "Create/manage business contexts; scratch/clone/template; no
  * lead/history cloning."
@@ -18,6 +19,9 @@ export const dynamic = 'force-dynamic';
  */
 export default async function BusinessesPage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  // Configuration surface: refused before the repository is touched, so a user without
+  // `business.create` cannot even learn the shape of the hub.
+  requireRouteAccess(context, { route: '/businesses' });
   const businesses = await listBusinessSummaries(context.viewer.actor);
 
   const columns: readonly Column<BusinessSummary>[] = [
@@ -37,13 +41,13 @@ export default async function BusinessesPage(): Promise<ReactNode> {
         </div>
       ),
     },
-    { key: 'focus', header: 'Focus', cell: (business) => business.focus ?? '—' },
+    { key: 'focus', header: 'Focus', cell: (business) => business.focus ?? 'â€”' },
     {
       key: 'regions',
       header: 'Regions',
       cell: (business) =>
         business.regions.length === 0 ? (
-          <span className="nx-hint">—</span>
+          <span className="nx-hint">â€”</span>
         ) : (
           <div className="nx-row nx-row--wrap">
             {business.regions.map((region) => (

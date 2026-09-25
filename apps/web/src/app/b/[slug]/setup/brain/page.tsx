@@ -12,6 +12,7 @@ import {
   BrainValuePropositionForm,
 } from '@/components/brain-forms';
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import {
   listContextVersions,
   listOffers,
@@ -48,6 +49,9 @@ export default async function BrainPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/setup/brain', businessId: business.id });
 
   const [offers, services, personas, valuePropositions, versions] = await Promise.all([
     listOffers(context.viewer.actor, business.id),

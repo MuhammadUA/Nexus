@@ -29,6 +29,7 @@ import {
   StepEditForm,
 } from '@/components/sequence-forms';
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import {
   getSequenceTimingSettings,
   listDormantLeads,
@@ -66,6 +67,9 @@ export default async function SequenceManagerPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/setup/sequences', businessId: business.id });
 
   const actor = context.viewer.actor;
   const basePath = `/b/${business.key}/setup/sequences`;

@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { Alert, Card, Chip, DataTable, Grid, PageHead, Stat, type Column } from '@nexus/ui';
 
 import { CreateUserForm } from '@/components/team-forms';
 import { loadViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { ACCESS_LEVELS, listBusinessOptions, listTeamUsers, type TeamUser } from '@/lib/repo/team';
 
 /**
@@ -16,7 +17,7 @@ const STATUS_OPTIONS = ['active', 'invited', 'suspended', 'disabled'] as const;
 export const dynamic = 'force-dynamic';
 
 /**
- * A15 — Team & Accounts.
+ * A15 â€” Team & Accounts.
  *
  * Contract: "Users, roles, business access, lead access, managed LinkedIn
  * identities, daily counts/targets."
@@ -28,6 +29,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function TeamPage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/team' });
   const [users, businesses] = await Promise.all([
     listTeamUsers(context.viewer.actor),
     listBusinessOptions(context.viewer.actor),
@@ -92,7 +94,7 @@ export default async function TeamPage(): Promise<ReactNode> {
     {
       key: 'created',
       header: 'Created',
-      cell: (user) => <span className="nx-table__mono">{user.createdAt?.slice(0, 10) ?? '—'}</span>,
+      cell: (user) => <span className="nx-table__mono">{user.createdAt?.slice(0, 10) ?? 'â€”'}</span>,
     },
     {
       key: 'actions',
@@ -164,7 +166,7 @@ export default async function TeamPage(): Promise<ReactNode> {
       )}
 
       <p className="nx-hint" style={{ marginTop: 'var(--nx-space-md)' }}>
-        Roles in use: admin · manager · user. Lead access is refined per business on each user&rsquo;s permissions
+        Roles in use: admin Â· manager Â· user. Lead access is refined per business on each user&rsquo;s permissions
         screen.
       </p>
     </>

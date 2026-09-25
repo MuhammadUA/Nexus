@@ -1,19 +1,19 @@
-'use server';
+﻿'use server';
 
 /**
- * A30 — Admin · Business Domains mutations.
+ * A30 â€” Admin Â· Business Domains mutations.
  *
  * spec `admin_self_assignment_and_domains.business_domains`:
  *   "Associate owned/official domains with a Nexus business for scoping, matching and
- *    admin defaults … One primary business context per registered domain. Explicit
+ *    admin defaults â€¦ One primary business context per registered domain. Explicit
  *    aliases are allowed. Never auto-merge leads across businesses because of a
  *    related/parent domain."
  *
  * The database does the enforcing and this file only validates shape:
- *   - `business_domains_normalized_unique (normalized_domain)` — a normalized domain
+ *   - `business_domains_normalized_unique (normalized_domain)` â€” a normalized domain
  *     exists once, under exactly one business;
- *   - `business_domains_default_primary_key` — at most one default primary per business;
- *   - `trg_business_domains_normalize` — lowercases and strips scheme/www/path before
+ *   - `business_domains_default_primary_key` â€” at most one default primary per business;
+ *   - `trg_business_domains_normalize` â€” lowercases and strips scheme/www/path before
  *     the uniqueness check, so `https://www.Example.com/x` and `example.com` collide.
  *
  * There is deliberately no merge action here: no domain operation touches leads.
@@ -22,6 +22,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
+import { authorizeAction } from '@/lib/route-guard';
 import { createDomain, deleteDomain } from '@/lib/repo/businesses';
 import { formString, formStringOrNull } from '@/lib/form-data';
 
@@ -55,6 +56,10 @@ export async function createDomainAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/business-domains' });
+  if (refusal !== null) return refusal;
+
   const parsed = createSchema.safeParse({
     businessId: formStringOrNull(formData, 'businessId'),
     domain: formStringOrNull(formData, 'domain'),
@@ -104,6 +109,10 @@ export async function deleteDomainAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/business-domains' });
+  if (refusal !== null) return refusal;
+
   const parsed = deleteSchema.safeParse({ id: formStringOrNull(formData, 'id') });
   if (!parsed.success) return { ok: false, error: 'That domain could not be found.' };
 

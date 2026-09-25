@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import {
   Alert,
@@ -23,6 +23,7 @@ import {
   RevokeBusinessButton,
 } from '@/components/identity-forms';
 import { loadViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { STALE_SESSION_MINUTES, evaluateSessionConflict } from '@/lib/identity-concurrency';
 import { listBusinessOptions } from '@/lib/repo/team';
 import {
@@ -41,14 +42,14 @@ import {
 export const dynamic = 'force-dynamic';
 
 /**
- * A17 — Outreach Identity Detail.
+ * A17 â€” Outreach Identity Detail.
  *
  * Contract: "Manager, business access, targets, browser sessions, conversation
  * ownership, transfer behavior."
  *
  * spec `identity_model.outreach_identity.rule`: "CRM lead owner, actual sender
  * identity, and business are separate dimensions and may differ." The screen
- * therefore keeps the three apart — the manager is not the lead owner, and the
+ * therefore keeps the three apart â€” the manager is not the lead owner, and the
  * identity's business access is its own grant, not the manager's.
  */
 export default async function IdentityDetailPage({
@@ -59,6 +60,7 @@ export default async function IdentityDetailPage({
   const { id } = await params;
 
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/identities/:identityId' });
   const identity = await getIdentity(context.viewer.actor, id);
   // An identity outside the viewer's scope is invisible through RLS, so it reads as
   // missing. Rendering "not found" rather than "forbidden" avoids confirming that
@@ -110,7 +112,7 @@ export default async function IdentityDetailPage({
     {
       key: 'granted',
       header: 'Granted',
-      cell: (row) => <span className="nx-table__mono">{row.createdAt?.slice(0, 10) ?? '—'}</span>,
+      cell: (row) => <span className="nx-table__mono">{row.createdAt?.slice(0, 10) ?? 'â€”'}</span>,
     },
     {
       key: 'revoke',
@@ -155,13 +157,13 @@ export default async function IdentityDetailPage({
       key: 'last',
       header: 'Last active',
       cell: (session) => (
-        <span className="nx-table__mono">{session.lastActiveAt?.slice(0, 16).replace('T', ' ') ?? '—'}</span>
+        <span className="nx-table__mono">{session.lastActiveAt?.slice(0, 16).replace('T', ' ') ?? 'â€”'}</span>
       ),
     },
     {
       key: 'created',
       header: 'Bound',
-      cell: (session) => <span className="nx-table__mono">{session.createdAt?.slice(0, 10) ?? '—'}</span>,
+      cell: (session) => <span className="nx-table__mono">{session.createdAt?.slice(0, 10) ?? 'â€”'}</span>,
     },
   ];
 
@@ -171,7 +173,7 @@ export default async function IdentityDetailPage({
         subtitle={
           <>
             {identity.platform}
-            {identity.profileUrl === null ? '' : ' · '}
+            {identity.profileUrl === null ? '' : ' Â· '}
             {identity.profileUrl ?? ''}
           </>
         }
@@ -268,7 +270,7 @@ export default async function IdentityDetailPage({
             footer={
               <span className="nx-hint">
                 spec `extension_visibility_rule`: the businesses visible in the Companion are the operator&rsquo;s
-                grants intersected with this list — never their union.
+                grants intersected with this list â€” never their union.
               </span>
             }
           >
@@ -405,17 +407,17 @@ export default async function IdentityDetailPage({
             <Stack size="sm">
               <div className="nx-row nx-row--between">
                 <span className="nx-hint">Created</span>
-                <span className="nx-table__mono">{identity.createdAt?.slice(0, 10) ?? '—'}</span>
+                <span className="nx-table__mono">{identity.createdAt?.slice(0, 10) ?? 'â€”'}</span>
               </div>
               <div className="nx-row nx-row--between">
                 <span className="nx-hint">Last updated</span>
                 <span className="nx-table__mono">
-                  {identity.updatedAt?.slice(0, 16).replace('T', ' ') ?? '—'}
+                  {identity.updatedAt?.slice(0, 16).replace('T', ' ') ?? 'â€”'}
                 </span>
               </div>
               <div className="nx-row nx-row--between">
                 <span className="nx-hint">Browser profile</span>
-                <span className="nx-table__mono">{identity.optionalBrowserProfileId ?? '—'}</span>
+                <span className="nx-table__mono">{identity.optionalBrowserProfileId ?? 'â€”'}</span>
               </div>
               {identity.normalizedProfileUrl !== null && (
                 <div className="nx-row nx-row--between">
@@ -435,7 +437,7 @@ export default async function IdentityDetailPage({
 function transferMeta(transfer: IdentityTransferRow): ReactNode {
   return (
     <Stack size="sm">
-      <span className="nx-table__mono">{transfer.createdAt?.slice(0, 16).replace('T', ' ') ?? '—'}</span>
+      <span className="nx-table__mono">{transfer.createdAt?.slice(0, 16).replace('T', ' ') ?? 'â€”'}</span>
       <div className="nx-row nx-row--wrap">
         <Chip accent={transfer.confirmed ? 'green' : 'red'}>
           {transfer.confirmed ? 'confirmed' : 'not confirmed'}
@@ -449,8 +451,8 @@ function transferMeta(transfer: IdentityTransferRow): ReactNode {
 function transferBody(transfer: IdentityTransferRow): ReactNode {
   return (
     <span>
-      {transfer.fromUserName ?? 'Unassigned'} → {transfer.toUserName ?? 'Unassigned'}
-      {transfer.note === null ? '' : ` — ${transfer.note}`}
+      {transfer.fromUserName ?? 'Unassigned'} â†’ {transfer.toUserName ?? 'Unassigned'}
+      {transfer.note === null ? '' : ` â€” ${transfer.note}`}
     </span>
   );
 }

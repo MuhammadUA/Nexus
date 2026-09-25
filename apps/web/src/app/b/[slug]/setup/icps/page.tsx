@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { SIGNAL_KINDS } from '@nexus/core';
 import {
@@ -22,6 +22,7 @@ import {
   ScoringRuleForm,
 } from '@/components/icp-forms';
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import {
   getIcp,
   getScoringRule,
@@ -36,7 +37,7 @@ import { listSequenceOptions } from '@/lib/repo/sequences';
 export const dynamic = 'force-dynamic';
 
 /**
- * A12 — ICP Manager.
+ * A12 â€” ICP Manager.
  *
  * Contract: "Company types, markets, buyers, signals, scoring, exclusions, primary ICP
  * rule, default sequence, routing."
@@ -59,6 +60,9 @@ export default async function IcpManagerPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/setup/icps', businessId: business.id });
 
   const selectedIcpId = firstParam(query.icp);
   const selectedRuleId = firstParam(query.rule);
@@ -101,7 +105,7 @@ export default async function IcpManagerPage({
     },
     {
       key: 'criteria',
-      header: 'Company types · markets',
+      header: 'Company types Â· markets',
       cell: (icp) => (
         <Stack size="sm">
           <span>{summarize(icp.criteria.companyTypes)}</span>
@@ -162,7 +166,7 @@ export default async function IcpManagerPage({
             {icp.routing.ownerUserId == null
               ? 'no owner'
               : (ownerLabels.get(icp.routing.ownerUserId) ?? 'owner')}
-            {icp.routing.autoEnroll ? ' · auto-enroll' : ' · manual enroll'}
+            {icp.routing.autoEnroll ? ' Â· auto-enroll' : ' Â· manual enroll'}
           </span>
         </Stack>
       ),
@@ -208,7 +212,7 @@ export default async function IcpManagerPage({
     {
       key: 'label',
       header: 'Label',
-      cell: (rule) => rule.label ?? <span className="nx-hint">—</span>,
+      cell: (rule) => rule.label ?? <span className="nx-hint">â€”</span>,
     },
     {
       key: 'active',
@@ -234,7 +238,7 @@ export default async function IcpManagerPage({
   return (
     <>
       <PageHead
-        subtitle={`${business.name} · company types, markets, buyers, signals, scoring and routing`}
+        subtitle={`${business.name} Â· company types, markets, buyers, signals, scoring and routing`}
         actions={
           <Row wrap>
             <Chip accent="indigo">configuration</Chip>
@@ -248,7 +252,7 @@ export default async function IcpManagerPage({
       <Alert accent="indigo" title="Primary ICP rules">
         A lead has exactly one Primary ICP. A person may match several ICPs in the same business, but a
         secondary match never creates a duplicate lead. Changing a lead&apos;s Primary ICP is an
-        audited state change, not a new lead. The numbers on this screen are configuration — scores
+        audited state change, not a new lead. The numbers on this screen are configuration â€” scores
         are not hard-coded product constants.
       </Alert>
 
@@ -257,7 +261,7 @@ export default async function IcpManagerPage({
       <Grid cols={4}>
         <Stat value={icps.length} label="ICPs configured" meta={`${String(activeIcps)} active`} />
         <Stat
-          value={defaultIcp === null ? '—' : defaultIcp.name}
+          value={defaultIcp === null ? 'â€”' : defaultIcp.name}
           label="Business default ICP"
           meta={defaultIcp === null ? 'none set: new leads match by score only' : 'one default per business'}
         />
@@ -353,7 +357,7 @@ export default async function IcpManagerPage({
               <p className="nx-hint">
                 Company types and markets describe the shape of the account. Buyer titles describe who
                 is worth contacting inside it. Signals are the evidence kinds that make a prospect
-                worth contacting now — the same vocabulary the scoring rules below score.
+                worth contacting now â€” the same vocabulary the scoring rules below score.
               </p>
               <p className="nx-hint">
                 Known signal kinds: {SIGNAL_KINDS.join(', ')}.
@@ -441,7 +445,7 @@ export default async function IcpManagerPage({
                 business, or to a single ICP.
               </p>
               <p className="nx-hint">
-                An ICP&apos;s own score overrides are a delta on top of these rules — useful for the
+                An ICP&apos;s own score overrides are a delta on top of these rules â€” useful for the
                 one signal that matters more for that segment, without changing it everywhere.
               </p>
               <p className="nx-hint">

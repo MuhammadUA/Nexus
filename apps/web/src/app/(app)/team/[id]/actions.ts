@@ -16,6 +16,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
+import { authorizeAction } from '@/lib/route-guard';
 import { hashPassword, passwordPolicyError } from '@/lib/password';
 import { setUserPassword, updateTeamUser, USER_ROLES, USER_STATUSES } from '@/lib/repo/team';
 import { formString, formStringOrNull } from '@/lib/form-data';
@@ -42,6 +43,10 @@ export async function updateUserProfileAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/team/:userId/permissions' });
+  if (refusal !== null) return refusal;
+
   const parsed = profileSchema.safeParse({
     userId: formStringOrNull(formData, 'userId'),
     fullName: formStringOrNull(formData, 'fullName'),
@@ -78,6 +83,10 @@ export async function setUserPasswordAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/team/:userId/permissions' });
+  if (refusal !== null) return refusal;
+
   const parsed = passwordSchema.safeParse({
     userId: formStringOrNull(formData, 'userId'),
     password: formStringOrNull(formData, 'password'),

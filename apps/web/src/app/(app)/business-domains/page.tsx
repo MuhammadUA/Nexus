@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { Alert, Card, Chip, DataTable, Grid, PageHead, Row, Stack, Stat, type Column } from '@nexus/ui';
 
 import { DomainCreateForm, DomainDeleteButton } from '@/components/domain-forms';
 import { loadViewerContext, type ViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { listAllDomains, type DomainRow } from '@/lib/repo/businesses';
 
 export const dynamic = 'force-dynamic';
@@ -15,14 +16,14 @@ export const dynamic = 'force-dynamic';
  * the `business_domains_type_check` constraint in 0002.
  */
 const DOMAIN_TYPE_OPTIONS: readonly { readonly value: string; readonly label: string }[] = [
-  { value: 'primary', label: 'primary — the business’s own official domain' },
-  { value: 'alias', label: 'alias — an explicit additional domain for the same business' },
-  { value: 'parent_source', label: 'parent/source — a parent or source domain, never a merge trigger' },
-  { value: 'service', label: 'service — a service-specific domain' },
+  { value: 'primary', label: 'primary â€” the businessâ€™s own official domain' },
+  { value: 'alias', label: 'alias â€” an explicit additional domain for the same business' },
+  { value: 'parent_source', label: 'parent/source â€” a parent or source domain, never a merge trigger' },
+  { value: 'service', label: 'service â€” a service-specific domain' },
 ];
 
 /**
- * A30 — Admin · Business Domains.
+ * A30 â€” Admin Â· Business Domains.
  *
  * Contract: "Primary/alias/source domains for business scoping and matching; no
  * automatic cross-business merge."
@@ -35,6 +36,7 @@ const DOMAIN_TYPE_OPTIONS: readonly { readonly value: string; readonly label: st
  */
 export default async function BusinessDomainsPage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/business-domains' });
   const domains = await listAllDomains(context.viewer.actor);
 
   // `domain.manage` is admin-only (packages/core ADMIN_ONLY_PERMISSIONS) and
@@ -86,7 +88,7 @@ export default async function BusinessDomainsPage(): Promise<ReactNode> {
         );
       },
     },
-    { key: 'notes', header: 'Notes', cell: (domain) => domain.notes ?? '—' },
+    { key: 'notes', header: 'Notes', cell: (domain) => domain.notes ?? 'â€”' },
     ...(canManage
       ? [
           {
@@ -101,7 +103,7 @@ export default async function BusinessDomainsPage(): Promise<ReactNode> {
   return (
     <>
       <PageHead
-        subtitle="Which owned domains map to which business context. Scoping and matching only — never a merge."
+        subtitle="Which owned domains map to which business context. Scoping and matching only â€” never a merge."
         actions={
           <Row wrap>
             <Chip accent="indigo">{domains.length} domains</Chip>
@@ -127,7 +129,7 @@ export default async function BusinessDomainsPage(): Promise<ReactNode> {
 
       <Alert accent="red" title="Domains never merge leads across businesses">
         A related, parent or source domain is recorded as <strong>parent/source</strong> so scoping and matching
-        can use it — it is never a reason to combine two businesses&apos; leads, people or history. Each
+        can use it â€” it is never a reason to combine two businesses&apos; leads, people or history. Each
         normalized domain belongs to exactly one business (<code>business_domains_normalized_unique</code>), and
         at most one default primary domain exists per business (
         <code>business_domains_default_primary_key</code>).
@@ -178,12 +180,12 @@ export default async function BusinessDomainsPage(): Promise<ReactNode> {
             <Card title="Rules the database enforces" actions={<Chip accent="neutral">0010 / 0011</Chip>}>
               <Stack size="sm">
                 <Rule title="One business context per domain">
-                  <code>unique (normalized_domain)</code> — the same domain cannot be claimed by two businesses.
+                  <code>unique (normalized_domain)</code> â€” the same domain cannot be claimed by two businesses.
                   A trigger lowercases the value and strips the scheme, <code>www.</code> and any path before the
                   check, so <code>https://www.Example.com/x</code> and <code>example.com</code> collide on purpose.
                 </Rule>
                 <Rule title="One default primary per business">
-                  <code>unique (business_id) where is_default and domain_type = &apos;primary&apos;</code> — a
+                  <code>unique (business_id) where is_default and domain_type = &apos;primary&apos;</code> â€” a
                   business may list several primaries, but only one of them can be the default its admin screens
                   and the Companion start from.
                 </Rule>

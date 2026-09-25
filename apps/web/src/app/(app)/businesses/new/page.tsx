@@ -1,27 +1,29 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { Alert, Card, Chip, DataTable, Grid, PageHead, Row, Stat, type Column } from '@nexus/ui';
 
 import { BusinessWizard, type WizardSource } from '@/components/business-wizard';
 import { loadViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { listBusinessSummaries, type BusinessSummary } from '@/lib/repo/businesses';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * A23 — Add Business Wizard.
+ * A23 â€” Add Business Wizard.
  *
  * Contract: "Business identity, offer, ICPs, knowledge, sequences, team, automations;
  * scratch/clone/template."
  *
  * The wizard creates the business (and, optionally, its first offer). Everything else
  * in that list is configuration that already has a dedicated screen, so the wizard
- * points at them rather than half-configuring them here — and it states the
+ * points at them rather than half-configuring them here â€” and it states the
  * `business_units.clone_behavior` boundary explicitly, because "copy an existing
  * business" is the one option people read as "copy everything".
  */
 export default async function NewBusinessPage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/businesses/new' });
 
   // `business.create` is admin-only (packages/core ADMIN_ONLY_PERMISSIONS) and RLS
   // refuses the insert for anyone else; this only decides what is rendered.
@@ -38,11 +40,11 @@ export default async function NewBusinessPage(): Promise<ReactNode> {
 
   const templateColumns: readonly Column<BusinessSummary>[] = [
     { key: 'name', header: 'Template', cell: (business) => business.name },
-    { key: 'focus', header: 'Focus', cell: (business) => business.focus ?? '—' },
+    { key: 'focus', header: 'Focus', cell: (business) => business.focus ?? 'â€”' },
     {
       key: 'regions',
       header: 'Regions',
-      cell: (business) => (business.regions.length === 0 ? '—' : business.regions.join(', ')),
+      cell: (business) => (business.regions.length === 0 ? 'â€”' : business.regions.join(', ')),
     },
     { key: 'domains', header: 'Domains', numeric: true, cell: (business) => business.domainCount },
   ];
@@ -101,24 +103,24 @@ export default async function NewBusinessPage(): Promise<ReactNode> {
           <Card title="What happens after creation" actions={<Chip accent="neutral">next screens</Chip>}>
             <ul className="nx-stack nx-stack--sm">
               <li>
-                <strong>ICPs</strong> — company types, buyers, signals, scoring, exclusions, primary ICP rule.
+                <strong>ICPs</strong> â€” company types, buyers, signals, scoring, exclusions, primary ICP rule.
               </li>
               <li>
-                <strong>Business Brain</strong> — offers, services, personas, value propositions and approval
+                <strong>Business Brain</strong> â€” offers, services, personas, value propositions and approval
                 before the AI may use a claim.
               </li>
               <li>
-                <strong>Knowledge</strong> — portfolio, case studies, pages and videos, with AI-eligibility.
+                <strong>Knowledge</strong> â€” portfolio, case studies, pages and videos, with AI-eligibility.
               </li>
               <li>
-                <strong>Sequences</strong> — message 1 plus follow-ups, delays and publishing.
+                <strong>Sequences</strong> â€” message 1 plus follow-ups, delays and publishing.
               </li>
               <li>
-                <strong>Team &amp; access</strong> — who may see this business, and which LinkedIn identities
+                <strong>Team &amp; access</strong> â€” who may see this business, and which LinkedIn identities
                 they may send from.
               </li>
               <li>
-                <strong>Automations</strong> — map scouts to this business, ICP, source and schedule.
+                <strong>Automations</strong> â€” map scouts to this business, ICP, source and schedule.
               </li>
             </ul>
           </Card>

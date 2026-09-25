@@ -4,6 +4,7 @@ import { Alert, Card, Chip, DataTable, EmptyState, Grid, PageHead, Stat, type Co
 import { notFound } from 'next/navigation';
 
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import {
   getJobHealth,
   listAgentRuns,
@@ -36,6 +37,9 @@ export default async function AutomationsPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/automations', businessId: business.id });
 
   const canManage = context.permissions.has('automation.manage');
 

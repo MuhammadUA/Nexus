@@ -762,6 +762,147 @@ export function satisfiesRoute(
   return requirement.permissions.every((p) => hasPermission(actor, permissions, p));
 }
 
+/** Why a route was allowed or refused. A closed set, so a caller cannot branch on a typo. */
+export type RouteAccessReason =
+  | 'granted'
+  | 'no_permission_required'
+  | 'permission_denied'
+  | 'business_scope_required'
+  | 'no_grant_for_business'
+  | 'route_not_declared';
+
+/**
+ * The permissions a route requires, looked up by its pattern.
+ *
+ * Accepts either a pattern (`/b/:businessSlug/setup/icps`) or a concrete path
+ * (`/b/zemnas/setup/icps`), because a page knows the former and a guard is often handed the
+ * latter. Returns null when the route is not in the matrix, which is a programming error rather
+ * than a denial: a screen that forgot to declare its requirement must fail closed at the call site.
+ */
+export function routePermissionsFor(pathOrPattern: string): RoutePermissionRequirement | null {
+  const direct = routeRequirement(pathOrPattern);
+  if (direct !== undefined) return direct;
+
+  // Concrete path: match segment-by-segment against the patterns, treating a `:name` segment as
+  // any single segment.
+  const target = pathOrPattern.split('/').filter((segment) => segment.length > 0);
+  for (const requirement of ROUTE_PERMISSIONS) {
+    const pattern = requirement.route.split('/').filter((segment) => segment.length > 0);
+    if (pattern.length !== target.length) continue;
+    const matches = pattern.every(
+      (segment, index) => segment.startsWith(':') || segment === target[index],
+    );
+    if (matches) return requirement;
+  }
+  return null;
+}
+
+/**
+ * Whether a viewer may load a route, resolved against the right scope.
+ *
+ * Two scopes, and the difference matters:
+ *
+ *   * a **business-scoped** route (`/b/:businessSlug/...`) is judged against that business's own
+ *     grant. The viewer context unions permissions across every business a person can reach, which
+ *     is right for deciding what to put in the sidebar — an operator should see a screen they can
+ *     reach in one of their businesses — but wrong for deciding whether *this* business's setup
+ *     screen may be opened. Without this, a `manager` of business A could load business B's ICP
+ *     manager because they hold `icp.manage` somewhere;
+ *   * a **global** route (`/team`, `/settings`, `/businesses`) is judged against the union, because
+ *     there is no single business for it to belong to.
+ *
+ * A missing requirement is a denial. Failing closed here is the whole point of the guard: a new
+ * screen that has not declared its requirement must not be reachable by default.
+ */
+/** True when a route pattern carries a business slug and so is judged per business. */
+export function isBusinessScopedRoute(route: string): boolean {
+  return route.startsWith('/b/:');
+}
+
+export function routeAccessAllowed(params: {
+  readonly actor: Actor;
+  readonly role: Role | null;
+  readonly grants: readonly UserBusinessGrant[];
+  readonly unionPermissions: ReadonlySet<Permission>;
+  readonly pathOrPattern: string;
+  /** The business the route belongs to, when it is business-scoped. */
+  readonly businessId?: string | null;
+}): { readonly allowed: boolean; readonly reason: RouteAccessReason; readonly permissions: readonly Permission[] } {
+  const requirement = routePermissionsFor(params.pathOrPattern);
+  if (requirement === null) {
+    return { allowed: false, reason: 'route_not_declared', permissions: [] };
+  }
+  if (requirement.permissions.length === 0) {
+    return { allowed: true, reason: 'no_permission_required', permissions: [] };
+  }
+
+  /**
+   * Business-scoped routes are judged against that business's own permissions.
+   *
+   * `unionPermissions` accumulates across every business a person can reach, which is correct for
+   * deciding what belongs in the sidebar — an operator should see a screen they can reach in one of
+   * their businesses. It is wrong for deciding whether *this* business's screen may be opened: a
+   * manager of business A holding `icp.manage` there must not load business B's ICP manager. So the
+   * scoped set is derived from the named business's grant alone.
+   *
+   * A global route is judged against the union — but the union is *re-derived* here for a
+   * non-administrator rather than taken from the caller. `effectivePermissions` is what clamps
+   * `ADMIN_ONLY_PERMISSIONS`, and a caller that assembled the set itself could pass one that still
+   * contains `settings.manage` for a manager. Re-deriving means the clamp always applies.
+   */
+  const subject = isBusinessScopedRoute(requirement.route)
+    ? scopedPermissions(params.role, params.grants, params.businessId ?? null)
+    : params.role === 'admin'
+      ? params.unionPermissions
+      : unionFromGrants(params.role, params.grants);
+
+  if (subject === null) {
+    return {
+      allowed: false,
+      reason: params.businessId === undefined || params.businessId === null
+        ? 'business_scope_required'
+        : 'no_grant_for_business',
+      permissions: requirement.permissions,
+    };
+  }
+
+  const allowed = satisfiesRoute(params.actor, subject, requirement);
+  return { allowed, reason: allowed ? 'granted' : 'permission_denied', permissions: requirement.permissions };
+}
+
+/** The permissions a single business's grant confers, or null when the business is out of scope. */
+function scopedPermissions(
+  role: Role | null,
+  grants: readonly UserBusinessGrant[],
+  businessId: string | null,
+): ReadonlySet<Permission> | null {
+  if (role === null || businessId === null) return null;
+  const grant = grants.find((candidate) => candidate.businessId === businessId);
+  if (grant === undefined) return null;
+  return effectivePermissions(role, grant, businessId);
+}
+
+/**
+ * The union of a role's permissions across every granted business, clamped.
+ *
+ * Derived rather than accepted so `ADMIN_ONLY_PERMISSIONS` is always subtracted for a
+ * non-administrator, whatever the caller believed the set contained. A null role is a viewer whose
+ * row is gone or soft-deleted, which holds nothing.
+ */
+function unionFromGrants(
+  role: Role | null,
+  grants: readonly UserBusinessGrant[],
+): ReadonlySet<Permission> | null {
+  if (role === null) return null;
+  const union = new Set<Permission>();
+  for (const grant of grants) {
+    for (const permission of effectivePermissions(role, grant, grant.businessId)) union.add(permission);
+  }
+  // A role with no grant at all still holds nothing: `effectivePermissions` returns the empty set
+  // for a missing grant, so an ungranted operator cannot reach a screen on the strength of a role.
+  return union;
+}
+
 /* ------------------------------------------------------- admin nav ----- */
 
 export interface NavItem {

@@ -4,6 +4,7 @@ import { Alert, Card, Chip, DataTable, Grid, PageHead, Row, Stat, type Column } 
 import { notFound } from 'next/navigation';
 
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { getReplyThemes, getStepPerformance, type ReplyTheme, type StepPerformance } from '@/lib/repo/insights';
 import { listAuditEvents, listAgentRuns, type AgentRunRow, type AuditRow } from '@/lib/repo/integrations';
 
@@ -32,6 +33,9 @@ export default async function MessagingInsightsPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/insights/messaging', businessId: business.id });
 
   const [themes, steps, runs, audit] = await Promise.all([
     getReplyThemes(context.viewer.actor, business.id),

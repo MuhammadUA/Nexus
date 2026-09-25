@@ -1,7 +1,7 @@
-'use server';
+﻿'use server';
 
 /**
- * Outreach identity mutations — A17 (`/identities/[id]`).
+ * Outreach identity mutations â€” A17 (`/identities/[id]`).
  *
  * The interesting action here is `assignIdentityManagerAction`. spec
  * `admin_self_assignment_and_domains.admin_self_assignment` allows an admin to
@@ -17,6 +17,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
+import { authorizeAction } from '@/lib/route-guard';
 import { formString, formStringOrNull } from '@/lib/form-data';
 import {
   IDENTITY_PLATFORMS,
@@ -61,6 +62,10 @@ export async function createIdentityAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/identities' });
+  if (refusal !== null) return refusal;
+
   const managedByUserId = formStringOrNull(formData, 'managedByUserId');
   const parsed = createSchema.safeParse({
     displayName: formStringOrNull(formData, 'displayName'),
@@ -107,6 +112,10 @@ export async function updateIdentityAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/identities' });
+  if (refusal !== null) return refusal;
+
   const profileUrl = formStringOrNull(formData, 'profileUrl');
   const notes = formStringOrNull(formData, 'notes');
   const parsed = updateSchema.safeParse({
@@ -145,6 +154,10 @@ export async function grantBusinessAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/identities' });
+  if (refusal !== null) return refusal;
+
   const parsed = businessSchema.safeParse({
     identityId: formStringOrNull(formData, 'identityId'),
     businessId: formStringOrNull(formData, 'businessId'),
@@ -167,6 +180,10 @@ export async function revokeBusinessAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/identities' });
+  if (refusal !== null) return refusal;
+
   const parsed = businessSchema.safeParse({
     identityId: formStringOrNull(formData, 'identityId'),
     businessId: formStringOrNull(formData, 'businessId'),
@@ -198,6 +215,10 @@ export async function assignIdentityManagerAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/identities' });
+  if (refusal !== null) return refusal;
+
   const note = formStringOrNull(formData, 'note');
   const parsed = assignSchema.safeParse({
     identityId: formStringOrNull(formData, 'identityId'),

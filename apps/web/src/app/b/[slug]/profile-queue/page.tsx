@@ -18,6 +18,7 @@ import { PROFILE_QUEUE_STATES } from '@nexus/core';
 import { notFound } from 'next/navigation';
 
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import {
   getProfileQueueCounts,
   getProfileQueueItem,
@@ -63,6 +64,9 @@ export default async function ProfileQueuePage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/profile-queue', businessId: business.id });
 
   const state = parseState(query.state);
   const page = Math.max(Number(query.page ?? '1') || 1, 1);

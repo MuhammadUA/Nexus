@@ -18,6 +18,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
+import { authorizeAction } from '@/lib/route-guard';
 import { createOffer } from '@/lib/repo/brain';
 import { cloneBusiness, createBusiness, getBusinessById, type BusinessInput } from '@/lib/repo/businesses';
 import { formString, formStringOrNull } from '@/lib/form-data';
@@ -94,6 +95,10 @@ export async function createBusinessAction(
   _previous: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  // Independently authorized: a Server Action is reachable without its page.
+  const refusal = await authorizeAction(null, { route: '/businesses/new' });
+  if (refusal !== null) return refusal;
+
   const parsed = wizardSchema.safeParse({
     mode: formString(formData, 'mode', 'scratch'),
     sourceBusinessId: formStringOrNull(formData, 'sourceBusinessId'),

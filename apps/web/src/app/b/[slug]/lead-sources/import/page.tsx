@@ -4,6 +4,7 @@ import { Alert, Chip, EnrichmentOffChip, PageHead, Row, Stack } from '@nexus/ui'
 import { notFound } from 'next/navigation';
 
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import { listIcpOptions } from '@/lib/repo/leads';
 import { IMPORT_BATCH_SOURCES, type ImportBatchSource } from '@/lib/repo/ingestion';
 import { ImportWizard } from '@/components/import-wizard';
@@ -44,6 +45,9 @@ export default async function ImportBuilderPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+
+  // Business-scoped configuration: judged against this business's grant alone.
+  requireRouteAccess(context, { route: '/b/:businessSlug/lead-sources/import', businessId: business.id });
 
   const sourceType = parseSourceType(query.mode);
   const icps = await listIcpOptions(context.viewer.actor, business.id);

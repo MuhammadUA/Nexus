@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { Alert, Card, Chip, DataTable, Grid, PageHead, Stat, type Column } from '@nexus/ui';
 
 import { CreateIdentityForm } from '@/components/identity-forms';
 import { loadViewerContext } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 import {
   IDENTITY_PLATFORMS,
   IDENTITY_STATUSES,
@@ -15,7 +16,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 /**
- * A17 (index) — Outreach Identities.
+ * A17 (index) â€” Outreach Identities.
  *
  * There is no A-number of its own in the spec's `screen_inventory`; it is the
  * navigable list that A17 sits under (`ADMIN_NAV`: "Outreach Identities"). It exists
@@ -28,6 +29,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function IdentitiesPage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/identities' });
   const [identities, users] = await Promise.all([
     listIdentities(context.viewer.actor),
     listAssignableUsers(context.viewer.actor),
@@ -119,7 +121,7 @@ export default async function IdentitiesPage(): Promise<ReactNode> {
     {
       key: 'created',
       header: 'Created',
-      cell: (identity) => <span className="nx-table__mono">{identity.createdAt?.slice(0, 10) ?? '—'}</span>,
+      cell: (identity) => <span className="nx-table__mono">{identity.createdAt?.slice(0, 10) ?? 'â€”'}</span>,
     },
   ];
 
