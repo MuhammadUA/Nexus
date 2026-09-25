@@ -13,6 +13,8 @@ import 'server-only';
 
 import { contentHash, normalizeLinkedInUrl, slugify } from '@nexus/core';
 
+import { deepSeekProvider } from '../ai/deepseek';
+import { resolveProfileFields } from '../ai/drafting';
 import { withActor, type Viewer } from '../actor';
 import { describeDbError, type MutationResult } from './common';
 
@@ -20,42 +22,6 @@ export interface ProfileCaptureInput {
   readonly leadId: string;
   readonly linkedinUrl: string;
   readonly pastedContent: string;
-}
-
-/**
- * Best-effort extraction from the pasted profile text.
- *
- * Deliberately conservative: anything it cannot read confidently is left null rather
- * than guessed, because a fabricated headline would be indistinguishable from a real
- * one once stored. The raw text is always kept as evidence, so a later model-assisted
- * pass has something truthful to work from.
- */
-function extractProfile(content: string): {
-  readonly fullName: string | null;
-  readonly jobTitle: string | null;
-  readonly company: string | null;
-  readonly location: string | null;
-  readonly headline: string | null;
-} {
-  const lines = content
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  const fullName = lines[0] !== undefined && lines[0].length <= 80 ? lines[0] : null;
-  const headline = lines.find((line) => line.length >= 10 && line.length <= 200) ?? null;
-
-  const split = headline === null ? null : /^(.*?)\s+at\s+(.*)$/i.exec(headline);
-  const location =
-    lines.find((line) => /^[A-Za-z .'-]+,\s*[A-Za-z .'-]+$/.test(line) && line.length <= 60) ?? null;
-
-  return {
-    fullName,
-    jobTitle: split?.[1]?.trim() ?? null,
-    company: split?.[2]?.trim() ?? null,
-    location,
-    headline,
-  };
 }
 
 export async function submitProfileCapture(
@@ -67,7 +33,32 @@ export async function submitProfileCapture(
   }
 
   const normalized = normalizeLinkedInUrl(input.linkedinUrl);
-  const extracted = extractProfile(input.pastedContent);
+
+  // Visibility is settled before the model is called. A capture for a lead the actor cannot see must
+  // fail as "not found" without spending a request on extraction, and without echoing the RLS
+  // policy name back to the operator. The read itself is wrapped because a denied row can surface as
+  // an error rather than an empty result depending on the policy.
+  const visible = await withActor(viewer.actor, async (sql) => {
+    try {
+      const lead = await sql.query<{ id: string }>(
+        `select id from public.leads where id = $1 and deleted_at is null`,
+        [input.leadId],
+      );
+      return lead.rows[0] !== undefined;
+    } catch {
+      return false;
+    }
+  });
+  if (!visible) return { ok: false, error: 'That lead could not be found.' };
+
+  // The model is used when one is configured, and the local extractor when it is not (or when the
+  // model fails). Either way the raw text is kept as evidence, and the method that produced the
+  // fields is written to the audit trail rather than assumed.
+  const extraction = await resolveProfileFields(deepSeekProvider(), {
+    pastedContent: input.pastedContent,
+    linkedinUrl: normalized.canonicalUrl ?? input.linkedinUrl,
+  });
+  const extracted = extraction.fields;
   const hash = contentHash({ url: input.linkedinUrl, content: input.pastedContent });
 
   try {
@@ -84,8 +75,8 @@ export async function submitProfileCapture(
       );
 
       const row = lead.rows[0];
-      // RLS already hides an inaccessible lead, so this is "not found" for the caller,
-      // not "forbidden".
+      // Re-checked inside the write transaction: the lead could have been deleted or hidden between
+      // the visibility check and this point.
       if (row === undefined) return { ok: false, error: 'That lead could not be found.' };
 
       let companyId = row.company_id;
@@ -173,6 +164,44 @@ export async function submitProfileCapture(
            (business_id, lead_id, person_id, type, actor_user_id, direction, summary, source_client, occurred_at)
          values ($1, $2, $3, 'profile_capture', $4, 'internal', 'LinkedIn profile captured', 'companion', now())`,
         [row.business_id, row.id, row.person_id, viewer.userId],
+      );
+
+      // Which extractor read this profile, and which model if any. Source evidence records *that*
+      // something was observed; this records *how* it was turned into fields, which is the part that
+      // would otherwise be unknowable after the fact.
+      await sql.query(
+        `select public.enqueue_audit(
+           'lead', $1, 'profile_capture_extracted', $2, null,
+           jsonb_build_object(
+             'method', $3::text,
+             'model', $4::text,
+             'note', $5::text,
+             'dropped_ungrounded', coalesce($6::jsonb, '[]'::jsonb),
+             'fields', jsonb_build_object(
+               'full_name', $7::text,
+               'job_title', $8::text,
+               'company', $9::text,
+               'location', $10::text,
+               'headline', $11::text
+             )
+           ),
+           'companion'
+         )`,
+        [
+          row.id,
+          row.business_id,
+          extraction.method,
+          extraction.model,
+          extraction.note,
+          // Passed as JSON rather than a Postgres array literal: the value reaches the driver as a
+          // plain string, and `to_jsonb` on a text parameter is not a cast the planner can perform.
+          JSON.stringify(extraction.droppedUngrounded),
+          extracted.fullName,
+          extracted.jobTitle,
+          extracted.company,
+          extracted.location,
+          extracted.headline,
+        ],
       );
 
       return { ok: true, id: row.id, message: 'Profile captured. The existing lead was updated.' };

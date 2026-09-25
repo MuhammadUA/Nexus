@@ -105,9 +105,18 @@ export const LOW_PRESSURE_CTA_PATTERNS: readonly RegExp[] = [
 
 /* ------------------------------------------------------- claim checking - */
 
-/** A number-with-unit token such as "40%", "3x", "$1.2m", "200 videos". */
+/**
+ * A number-with-unit token such as "40%", "3x", "$1.2m", "200 videos".
+ *
+ * The `%` case deliberately carries no trailing `\b`. `%` is not a word character, so a word
+ * boundary immediately after it can only be satisfied by a following word character — which would
+ * mean the percentage was glued to a word ("40%growth") — and the branch therefore never matched
+ * ordinary text such as "we cut turnaround by 40% for clients". Every percentage claim escaped the
+ * policy until this was corrected: a metric is exactly what `claim_policy` exists to catch. The
+ * `x`/`×`/`percent`/`fold` spellings end in word characters and keep their boundary.
+ */
 const NUMERIC_CLAIM_PATTERN =
-  /(?:\$\s?\d[\d,.]*\s?(?:k|m|bn|billion|million|thousand)?|\b\d[\d,.]*\s?(?:%|x|×|percent|fold)\b|\b\d[\d,.]*\s?\+?\s?(?:videos?|edits?|projects?|clients?|brands?|hours?|days?|weeks?|months?|years?|people|editors?)\b)/gi;
+  /(?:\$\s?\d[\d,.]*\s?(?:k|m|bn|billion|million|thousand)?|\b\d[\d,.]*\s?(?:%|(?:x|×|percent|fold)\b)|\b\d[\d,.]*\s?\+?\s?(?:videos?|edits?|projects?|clients?|brands?|hours?|days?|weeks?|months?|years?|people|editors?)\b)/gi;
 
 /** Words that make a sentence a first-person capability claim. */
 const FIRST_PERSON_CLAIM = /\b(we|our|i|my)\b/i;

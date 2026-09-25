@@ -12,7 +12,9 @@ import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
 import { REPLY_OUTCOMES, LEAD_STATES } from '@nexus/core';
+import { draftMessageForLead } from '@/lib/ai/drafting';
 import { formString, formStringOrNull } from '@/lib/form-data';
+import { authorizeAction } from '@/lib/route-guard';
 import {
   addNote,
   captureReply,
@@ -294,5 +296,41 @@ export async function reactivateAction(_previous: ActionResult, formData: FormDa
   return withViewer(formString(formData, 'businessSlug', ''), leadId, async (viewer) => {
     const result = await startReactivation(viewer, leadId);
     return { ok: result.ok, error: result.error ?? null, message: 'Reactivation opened.' };
+  });
+}
+
+/**
+ * Generates a draft for one message instance.
+ *
+ * The generated body is validated against the messaging rules before anything is written, so a draft
+ * that asserts an unapproved claim or misses its personalization signal is rejected rather than
+ * stored. Refusals are reported with the provider's own reason, because "the AI is rate limited" and
+ * "the AI is not configured" need different responses from the operator.
+ */
+export async function draftMessageAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  const leadId = formString(formData, 'leadId', '');
+  const messageInstanceId = formString(formData, 'messageInstanceId', '');
+  const businessId = formString(formData, 'businessId', '');
+
+  if (!leadIdSchema.safeParse(leadId).success || !leadIdSchema.safeParse(messageInstanceId).success) {
+    return { ok: false, error: 'That message is not available for drafting.' };
+  }
+
+  // A Server Action is a public endpoint, so it repeats the check its page performs. The business
+  // scope is required: `lead.view_all` for one business must not authorise drafting in another.
+  const refusal = await authorizeAction(null, {
+    route: '/b/:businessSlug/leads/:leadId',
+    businessId: businessId.length > 0 ? businessId : null,
+  });
+  if (refusal !== null) return { ok: false, error: refusal.error };
+
+  return withViewer(formString(formData, 'businessSlug', ''), leadId, async (viewer) => {
+    const outcome = await draftMessageForLead(viewer, { messageInstanceId });
+    if (!outcome.ok) return { ok: false, error: outcome.error };
+    return {
+      ok: true,
+      error: null,
+      message: `Draft generated (${String(outcome.draft.wordCount)} words, ${outcome.draft.provenance.model}).`,
+    };
   });
 }
