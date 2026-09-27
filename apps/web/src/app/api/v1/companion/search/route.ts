@@ -1,4 +1,4 @@
-﻿/**
+/**
  * GET /api/v1/companion/search?q=… — find a person or lead across every accessible
  * business.
  *
@@ -8,7 +8,7 @@
  */
 import { companionSearch } from '@/lib/repo/companion';
 
-import { authorizeUser, clampLimit, jsonError, jsonOk } from '../../_lib/http';
+import { authorizeUser, clampLimit, jsonError, jsonOk, optionalLimit } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,8 @@ export async function GET(request: Request): Promise<Response> {
   const query = params.get('q') ?? '';
   if (query.trim().length === 0) return jsonError('Enter a LinkedIn URL, name or company.', 400);
 
-  const limit = clampLimit(Number(params.get('limit') ?? ''), 25, 50);
+  // Same absent-parameter defect as the leads route: `Number('')` is 0, which clamped to 1 result.
+  const limit = clampLimit(optionalLimit(params.get('limit')), 25, 50);
   const results = await companionSearch(auth.context.actor, query, limit);
   return jsonOk({ results });
 }

@@ -1,9 +1,9 @@
-﻿/**
+/**
  * GET /api/v1/companion/leads — the panel's lead list.
  */
 import { listLeads } from '@/lib/repo/leads';
 
-import { authorizeUser, clampLimit, jsonError, jsonOk } from '../../_lib/http';
+import { authorizeUser, clampLimit, jsonError, jsonOk, optionalLimit } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,9 @@ export async function GET(request: Request): Promise<Response> {
   const icpId = params.get('icpId') ?? '';
   const status = params.get('status') ?? '';
   const search = params.get('search') ?? '';
-  const limit = clampLimit(Number(params.get('limit') ?? ''), 50, 100);
+  // `optionalLimit` keeps an ABSENT limit at the 50-row default; reading it as `Number('')` clamped
+  // the list to a single row while still reporting the full `total`.
+  const limit = clampLimit(optionalLimit(params.get('limit')), 50, 100);
   const offset = Number(params.get('offset') ?? '0');
 
   const page = await listLeads(

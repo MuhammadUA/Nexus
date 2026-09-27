@@ -136,3 +136,26 @@ export function clampLimit(value: number | undefined, fallback: number, max = 10
   if (value === undefined || !Number.isFinite(value)) return fallback;
   return Math.min(Math.max(Math.trunc(value), 1), max);
 }
+
+/**
+ * Reads an optional `limit` query parameter, returning `undefined` when the caller did not supply one.
+ *
+ * **This exists because of a real defect.** Both companion list routes read the parameter as
+ * `Number(params.get('limit') ?? '')`. `Number('')` is `0`, not `NaN`, so the `?? ''` never reached
+ * `clampLimit`'s `undefined` branch: an absent `limit` clamped `0` up to its minimum of **1**. The
+ * panel does not send a `limit` at all, so `GET /api/v1/companion/leads` answered `total: 24` with a
+ * single row, and the Companion's lead list — and with it the follow-up and dormant focus screens —
+ * could only ever show one lead. The response was well-formed and the status was 200, which is why no
+ * existing case caught it: the harness always passed an explicit `limit`.
+ *
+ * An explicitly supplied value is still clamped, so the unbounded-input guard is unchanged.
+ */
+export function optionalLimit(raw: string | null): number | undefined {
+  if (raw === null) return undefined;
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return undefined;
+  const value = Number(trimmed);
+  // A non-numeric or non-positive value is treated as absent rather than silently becoming 1.
+  if (!Number.isFinite(value) || value <= 0) return undefined;
+  return value;
+}
