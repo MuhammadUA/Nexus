@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "packageManager": "pnpm@9.15.4",
   "engines": {
-    "node": ">=20.11.0"
+    "node": "22.x"
   },
   "scripts": {
     "typecheck": "pnpm -r --sequential run typecheck",

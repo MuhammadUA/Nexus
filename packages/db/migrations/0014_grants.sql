@@ -33,7 +33,23 @@ grant usage, select on all sequences in schema public to authenticated;
 revoke execute on all functions in schema public from public;
 revoke execute on all functions in schema public from anon;
 grant execute on all functions in schema public to authenticated;
-grant execute on function auth.uid() to authenticated;
+-- On hosted Supabase auth.uid() is provider-managed and owned by
+-- supabase_auth_admin, so the application migration runner must not alter its
+-- grants. Bare PostgreSQL/PGlite owns the compatibility shim and can grant it.
+do $$
+begin
+  if exists (
+    select 1
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'auth'
+       and p.proname = 'uid'
+       and pg_get_userbyid(p.proowner) = current_user
+  ) then
+    grant execute on function auth.uid() to authenticated;
+  end if;
+end
+$$;
 
 -- ---------------------------------------------------------------------------
 -- Revoke dangerous defaults
@@ -42,8 +58,19 @@ revoke all on all tables in schema public from anon;
 revoke all on all sequences in schema public from anon;
 revoke all on schema public from anon;
 revoke create on schema public from public;
-revoke all on schema auth from public;
-revoke all on schema auth from anon;
+do $$
+begin
+  if exists (
+    select 1
+      from pg_namespace n
+     where n.nspname = 'auth'
+       and pg_get_userbyid(n.nspowner) = current_user
+  ) then
+    revoke all on schema auth from public;
+    revoke all on schema auth from anon;
+  end if;
+end
+$$;
 
 -- The audit ledger and the message history are append-only for every principal.
 revoke update, delete, truncate on public.audit_events from authenticated;

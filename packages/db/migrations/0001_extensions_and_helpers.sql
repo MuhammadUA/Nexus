@@ -66,19 +66,31 @@ grant usage on schema public to authenticated, anon;
 -- ---------------------------------------------------------------------------
 create schema if not exists auth;
 
-create or replace function auth.uid()
-  returns uuid
-  language sql
-  stable
-as $$
-  select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid;
-$$;
+-- Hosted Supabase owns auth.uid() with a managed role. Replacing or changing its
+-- grants as the migration runner is both unnecessary and rejected by Supabase.
+-- A bare PostgreSQL/PGlite database has no such function, so create the shim only
+-- in that case and grant it to the local compatibility roles we created above.
+do $outer$
+begin
+  if to_regprocedure('auth.uid()') is null then
+    execute $function$
+      create function auth.uid()
+        returns uuid
+        language sql
+        stable
+      as $body$
+        select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid;
+      $body$
+    $function$;
 
-comment on function auth.uid() is
-  'DB_CONTRACT.md §0 — the signed-in user id from request.jwt.claims, or NULL. Blank-safe: a rolled-back LOCAL setting yields '''', not NULL.';
+    comment on function auth.uid() is
+      'DB_CONTRACT.md §0 — the signed-in user id from request.jwt.claims, or NULL. Blank-safe: a rolled-back LOCAL setting yields '''', not NULL.';
 
-grant usage on schema auth to authenticated, anon;
-grant execute on function auth.uid() to authenticated, anon;
+    grant usage on schema auth to authenticated, anon;
+    grant execute on function auth.uid() to authenticated, anon;
+  end if;
+end
+$outer$;
 
 -- The helper bodies below reference tables created by later migrations, so
 -- body validation is deferred for this file only.
