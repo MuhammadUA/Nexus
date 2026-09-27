@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Domain-aware presentation components shared by the web app and the Companion.
  *
  * Status → accent mapping lives here, in one place, because spec
@@ -11,7 +11,7 @@
  * Labels are always rendered alongside colour, so status is never conveyed by
  * colour alone (accessibility requirement).
  */
-import type { ReactElement, ReactNode } from 'react';
+import type { ReactElement } from 'react';
 
 import { Chip, Row, type AccentName } from './primitives.js';
 
@@ -255,11 +255,3 @@ export function ProvenanceBlock({
   );
 }
 
-/** Renders the caller-provided empty slot with a consistent Nexus treatment. */
-export function CountChip({ count, label }: { readonly count: number; readonly label: ReactNode }): ReactElement {
-  return (
-    <Chip>
-      {label} <strong>{count}</strong>
-    </Chip>
-  );
-}

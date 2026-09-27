@@ -16,7 +16,6 @@
     "package": "node scripts/package.mjs"
   },
   "dependencies": {
-    "@nexus/core": "workspace:*",
     "@nexus/ui": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

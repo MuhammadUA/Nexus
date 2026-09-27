@@ -20,7 +20,7 @@ import type { ReactElement, ReactNode } from 'react';
 
 import type { NavItem } from '@nexus/core';
 
-import { Button, Row, cx } from './primitives.js';
+import { Button, cx } from './primitives.js';
 
 export interface NavSection {
   readonly group: string;
@@ -313,28 +313,3 @@ export function AppShell({
   );
 }
 
-/** Compact breadcrumb used by detail screens. */
-export function Breadcrumbs({
-  items,
-  onNavigate,
-}: {
-  readonly items: readonly { readonly label: string; readonly route?: string }[];
-  readonly onNavigate: (route: string) => void;
-}): ReactElement {
-  return (
-    <Row>
-      {items.map((item, index) => (
-        <Row key={`${item.label}-${String(index)}`}>
-          {index > 0 && <span className="nx-hint">/</span>}
-          {item.route === undefined ? (
-            <span className="nx-hint">{item.label}</span>
-          ) : (
-            <button type="button" className="nx-btn nx-btn--ghost nx-btn--sm" onClick={() => onNavigate(item.route as string)}>
-              {item.label}
-            </button>
-          )}
-        </Row>
-      ))}
-    </Row>
-  );
-}
