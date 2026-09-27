@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       /**
-       * CORS for the Companion API.
+       * CORS for the Companion API — the single source of truth for this policy.
        *
        * The Chrome side panel calls these routes from a `chrome-extension://` origin and sends an
        * `authorization` header, so every call is a preflighted cross-origin request. Without the
@@ -27,13 +27,14 @@ const nextConfig: NextConfig = {
        * "Nexus is unreachable" — a CORS failure, not a network one, which is why that message
        * appeared even while the server was running and answering.
        *
-       * Declared here rather than in `middleware.ts` deliberately. That file documents the same
-       * policy but never executes: Next.js resolves middleware to `src/middleware.ts` when a `src`
-       * directory is present, and this app has one, so the root-level `apps/web/middleware.ts` is
-       * ignored — `.next/server/middleware-manifest.json` lists no middleware at all. Moving it into
-       * `src/` is not sufficient on its own either: Next bundles `src/instrumentation.ts` for the edge
-       * middleware runtime, and that file imports `@/lib/db` → `node:path`, which the edge runtime
-       * cannot resolve, so the build fails. A static header rule has neither problem.
+       * This rule previously lived in `apps/web/middleware.ts`, which documented the same policy but
+       * **never executed**: Next.js resolves middleware to `src/middleware.ts` when a `src` directory
+       * is present, and this app has one, so `.next/server/middleware-manifest.json` listed no
+       * middleware at all. Moving the file into `src/` made it compile but broke the build, because
+       * Next bundles `src/instrumentation.ts` for the edge middleware runtime and that file imports
+       * `@/lib/db` → `node:path`, which the edge runtime cannot resolve. The middleware contained no
+       * request or auth logic beyond this header policy, so it was deleted rather than left as
+       * misleading dead code.
        *
        * A wildcard is safe for this surface specifically because it is token-authenticated with
        * `Authorization: Bearer` rather than cookies, and the app sets no companion cookie

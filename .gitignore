@@ -13,9 +13,24 @@ node_modules/
 .env*.local
 .env
 
-# Embedded database (PGlite) and local runtime state
+# Embedded database (PGlite) and local runtime state.
+#
+# The bare-directory patterns below only match a directory named exactly `.data`. Two PGlite data
+# directories named `.data-corrupt-<stamp>` and `.data-broken-<stamp>` therefore slipped past them and
+# were committed to this repository, adding ~88 MiB and 2,706 files of duplicated, regenerable
+# database state. The glob patterns that follow cover every `.data*` variant — including any future
+# diagnostic copy taken with a suffix — so a renamed data directory can never be tracked again.
+#
+# These have no trailing slash on purpose: a trailing slash matches directories only, whereas the
+# `.data*` forms also catch a stray lock or config file written beside the directory.
 apps/web/.data/
 .data/
+.data*/
+**/.data/
+**/.data*/
+apps/web/.data-*
+**/.data-*
+!**/.data.example/
 
 # Scratch / decode work
 .work/
