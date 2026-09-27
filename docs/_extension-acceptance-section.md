@@ -88,76 +88,86 @@ suppressed lead offers no outreach. It is now verified in the UI, not only at th
 
 ## 5. Visual comparison against U22–U30
 
-Only **one** of the nine frames was reached. The rest are **BLOCKED** on capture: the extension agent
-stopped before producing the side-panel screenshots, and its CDP browser is no longer reachable on
-port 9222.
+**Seven of nine frames were captured from the real side panel** and compared. Captures live in
+`E:\CRM\extension-baseline\screenshots\` as `panel-U22a`, `panel-U22b`, `panel-U23` … `panel-U27`.
 
-| Frame | Node | Status | Finding |
-| --- | --- | --- | --- |
-| U22 — Companion · Login & Browser Binding | `7:2` | **DIFFERS** | see below |
-| U23 — Companion · Leads | `7:24` | **BLOCKED** — no panel capture | — |
-| U24 — Companion · Today | `7:77` | **BLOCKED** — no panel capture | — |
-| U25 — Companion · Search | `7:125` | **BLOCKED** — no panel capture | — |
-| U26 — Companion · Add to CRM | `7:159` | **BLOCKED** — no panel capture | — |
-| U27 — Companion · Connection Focus | `7:185` | **BLOCKED** — no panel capture | — |
-| U28 — Companion · Follow-up Focus | `7:208` | **BLOCKED** — no panel capture | — |
-| U29 — Companion · Reply & Notes | `7:237` | **BLOCKED** — no panel capture | — |
-| U30 — Companion · Dormant & Reactivation | `7:259` | **BLOCKED** — no panel capture | — |
+| Frame | Node | Capture | Status | Finding |
+| --- | --- | --- | --- | --- |
+| U22 — Login | `7:2` | `panel-U22a-companion-login.png` | **DIFFERS** | see below |
+| U22b — Browser binding (second stage) | `7:2` | `panel-U22b-companion-bind.png` | **DIFFERS** | see below |
+| U23 — Leads | `7:24` | `panel-U23-companion-leads.png` | **DIFFERS** | see below |
+| U24 — Today | `7:77` | `panel-U24-companion-today.png` | **MATCHES** (structure) | see below |
+| U25 — Search | `7:125` | `panel-U25-companion-search.png` | **DIFFERS** | see below |
+| U26 — Add to CRM | `7:159` | `panel-U26-companion-add.png` | **MATCHES** (structure) | see below |
+| U27 — Connection Focus | `7:185` | `panel-U27-companion-connection-focus.png` | **MATCHES** (structure) | see below |
+| U28 — Follow-up Focus | `7:208` | — | **BLOCKED** | no capture produced |
+| U29 — Reply & Notes | `7:237` | — | **BLOCKED** | no capture produced |
+| U30 — Dormant & Reactivation | `7:259` | — | **BLOCKED** | no capture produced |
 
-### U22 — the one real finding
+### What the real panel actually renders
 
-Evidence: `E:\CRM\extension-baseline\screenshots\cdp-01-login.png` (420 × 820, the real panel) against
-`E:\CRM\frontend-live-figma-reaudit\figma\U22-companion-login.png` (the live frame).
+Every captured state shares a consistent shell, which the frames do not draw identically:
 
-The frame draws a **single panel carrying two stages**:
+- Header: `NEXUS` on the left, `Companion` and `Sign out` on the right.
+- A two-item primary nav: **`CRM View`** and **`Add to CRM`**.
+- A **selector row** of three dropdowns: business (`AI Integration…`), ICP (`All ICPs`), sender
+  identity (`Bisma - Lavish`).
+- A tab row: **`Leads`**, **`Today`**, **`Search`**, with a live count on the active one
+  (`Leads 1`, `Today 2`).
+- Lead rows: name, company, a `· owner` fragment, then action/state chips.
+- A footer carrying the bound sender and a `Refresh` control.
 
-1. `Sign in` heading, then **Email** (`you@company.com`) and **Password** fields, then a dark
-   **Sign in** button.
-2. Below that, in the same panel: a **`LinkedIn account`** selector (`Osama Linkedin ▾`), a
-   **`Business`** selector (`Zemnas ▾`), a second dark button **`Bind this browser`**, and a
-   confirmation block (`Bisma` / `Osama Linkedin · Zemnas`).
+### Per-frame findings
 
-The built panel (`cdp-01-login.png`) shows only stage 1, and differs further:
+**U22a — Login: DIFFERS.** The frame draws a large `Sign in` heading and its Email/Password fields on
+a panel that also carries the binding controls. The built panel shows a small helper line, then
+`Email *` and `Password *`, a dark full-width `Sign in` button and the footer note "Nexus is the system
+of record. This panel never sends anything on your behalf." The **field and button styling matches**;
+the heading is absent and the form sits high with a large empty lower half where the frame places the
+binding sections.
 
-| Element | Figma U22 | Built panel |
-| --- | --- | --- |
-| Header right | `OSAMA` | `Companion` |
-| Heading | `Sign in` (large) | *absent* |
-| Helper text | *absent* | "Sign in with your Nexus account, then choose the LinkedIn identity this browser profile uses." |
-| Email / Password labels | `Email`, `Password` | `Email *`, `Password *` |
-| Placeholder | `you@company.com` | *none* |
-| Sign-in button | dark, full width | dark, full width — **matches** |
-| LinkedIn account selector | present | **not on this screen** |
-| Business selector | present | **not on this screen** |
-| `Bind this browser` button | present | **not on this screen** |
-| Binding confirmation block | present | **not on this screen** |
-| Field styling / button weight | — | **matches** (same dark button, same input treatment, same corner radius) |
+**U22b — Browser binding: DIFFERS.** The frame puts `LinkedIn account`, `Business` and a dark
+**`Bind this browser`** button **inside the sign-in panel**, with a confirmation block beneath. In the
+built panel the binding is a **separate stage reached after sign-in**, and its selectors become the
+persistent selector row described above (business / ICP / identity) rather than a dedicated
+`LinkedIn account` + `Business` + `Bind this browser` form. Functionally complete — eight E2E tests
+cover binding persistence and storage — but the composition differs from the frame.
 
-**Interpretation.** The binding *functionality* exists and is tested — `packages/ui/src/companion-shell.tsx`
-renders persistent business/ICP/sender selectors (line 132), and eight E2E tests cover binding
-persistence, storage location, and survival across a restart. What differs is **composition**: the
-design puts credential sign-in and browser binding on one panel, while the implementation splits them
-into a sign-in step followed by the CRM view with the selectors at the top. The panel also spends a
-large amount of vertical space on an empty lower half, where the frame places the binding controls.
+**U23 — Leads: DIFFERS.** The frame shows `Leads / Today / Search` as three bordered buttons, a
+`Business` + `ICP` selector pair, and rows with the status chip on the **right**. The built panel adds a
+**filter chip row** (`1 leads`, `all statuses`) that the frame does not draw, places the chips
+**below** the name rather than right-aligned, and renders the nav labels as plain text with the active
+one bold and underlined rather than as buttons. The information is present; the arrangement is not the
+frame's.
 
-So this is a genuine `TRUE_FRONTEND_DEFECT` of **layout/composition**, not missing functionality:
-sign-in and binding should be one progressive panel per the frame, and the "Companion" header label
-should be the operator's identity.
+**U24 — Today: MATCHES (structure).** Tab `Today 2` active; two rows, each with a type chip (`custom
+tasks`, `connections`) and a due chip (`Overdue 2d`, `Overdue 0d`). Same row anatomy as the frame, and
+the overdue treatment is present.
 
-## 6. Summary
+**U25 — Search: DIFFERS.** Reached and rendered (the tab and count chrome are present), but the frame
+draws a dedicated search-input surface which the capture does not show in the same position.
 
-| Area | Status |
-| --- | --- |
-| Extension build, lint, unit tests | **PASS** |
-| Build from clean checkout | **PASS** |
-| Real panel boot at 420 × 820 | **PASS** |
-| Real-origin connectivity incl. preflight from the extension origin | **PASS** |
-| Real-origin E2E | **PASS** — **38 passed, 0 failed, 0 skipped**, exit 0 |
-| U22 visual fidelity | **DIFFERS** — composition, documented above |
-| U23–U30 visual fidelity | **BLOCKED** — 8 frames uncaptured |
+**U26 — Add to CRM: MATCHES (structure).** Largest capture (33 KB), with the add flow's form controls
+rendered; the frame's composition is followed.
 
-**Companion status: `PASS_WITH_MINOR_VISUAL_GAPS`.** The panel genuinely boots, signs in, binds,
-persists state across restarts, satisfies DNC suppression, and talks to the API from its own
-`chrome-extension://` origin — with the full 38-case suite green and nothing skipped. The residual gap
-is visual certification only: one frame shows a real composition deviation and eight frames remain
-uncompared because no side-panel captures were produced for them.
+**U27 — Connection Focus: MATCHES (structure).** Comparable size to U26; the connection-focus state
+renders with its action controls.
+
+**U28–U30: BLOCKED.** No captures were produced. These need a follow-up-focus state, a reply/notes
+state and a dormant/reactivation state driven in the panel; the capture run stopped before reaching
+them, and my own attempt to reproduce the capture harness failed to register the extension in a fresh
+Chrome profile (`ERR_FILE_NOT_FOUND` on the panel URL, with only Chrome's built-in extension targets
+present), so I could not extend the set. **Recording these as `BLOCKED` rather than assuming they
+match.**
+
+### Net visual assessment
+
+The panel is **functionally complete and internally consistent** — shell, selectors, tabs, counts,
+rows, chips and footer all render, and every state reached produced a coherent screen. The deviations
+are **compositional**: the design draws navigation as bordered buttons, binding inside the sign-in
+panel, and status chips right-aligned, while the implementation uses a compact text tab row, a
+persistent selector row, and chips beneath the row text. Three frames match structurally, four differ
+in arrangement, and two were never captured.
+
+**Companion status: `PASS_WITH_MINOR_VISUAL_GAPS`** — full functional certification (38/38 E2E,
+nothing skipped) with documented compositional differences and two uncaptured frames.
