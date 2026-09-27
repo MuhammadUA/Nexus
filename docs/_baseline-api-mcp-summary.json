@@ -1,0 +1,1996 @@
+{
+  "generated_at": "2026-09-27T18:34:05.863Z",
+  "base_url": "http://127.0.0.1:3000",
+  "tree": "E:\\CRM\\CRM-integration",
+  "branch": "integration/final",
+  "database": "embedded PGlite (apps/web/.data/nexus), seeded by apps/web/scripts/seed-demo.ts",
+  "methodology": "Real HTTP requests from scripts/baseline-verify/harness.mjs against the running server; results asserted from the response bodies, not the HTTP status. Raw evidence in scripts/baseline-verify/results.json.",
+  "counts": {
+    "total": 167,
+    "pass": 153,
+    "fail": 8,
+    "partial": 4,
+    "blocked": 2
+  },
+  "by_group": {
+    "api/auth": {
+      "total": 2,
+      "pass": 2,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "redaction": {
+      "total": 7,
+      "pass": 7,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/companion-preview": {
+      "total": 1,
+      "pass": 1,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/session": {
+      "total": 7,
+      "pass": 7,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/me": {
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/bootstrap": {
+      "total": 3,
+      "pass": 3,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/leads": {
+      "total": 6,
+      "pass": 6,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/leads/[id]": {
+      "total": 5,
+      "pass": 5,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/search": {
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/today": {
+      "total": 5,
+      "pass": 4,
+      "fail": 1,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/icps": {
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/heartbeat": {
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/bind": {
+      "total": 5,
+      "pass": 4,
+      "fail": 1,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/add": {
+      "total": 7,
+      "pass": 7,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "api/v1/companion/actions/[operation]": {
+      "total": 21,
+      "pass": 18,
+      "fail": 0,
+      "partial": 3,
+      "blocked": 0
+    },
+    "api/v1/ingest": {
+      "total": 10,
+      "pass": 8,
+      "fail": 2,
+      "partial": 0,
+      "blocked": 0
+    },
+    "cors": {
+      "total": 3,
+      "pass": 3,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "mcp/auth": {
+      "total": 3,
+      "pass": 3,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "mcp/transport": {
+      "total": 6,
+      "pass": 6,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "mcp/tools-list": {
+      "total": 2,
+      "pass": 2,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "mcp/no-sql": {
+      "total": 3,
+      "pass": 3,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "mcp/scope": {
+      "total": 5,
+      "pass": 5,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "mcp/tools-call": {
+      "total": 36,
+      "pass": 30,
+      "fail": 4,
+      "partial": 0,
+      "blocked": 2
+    },
+    "mcp/idempotency": {
+      "total": 7,
+      "pass": 6,
+      "fail": 0,
+      "partial": 1,
+      "blocked": 0
+    },
+    "mcp/batch": {
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    },
+    "mcp/validation": {
+      "total": 3,
+      "pass": 3,
+      "fail": 0,
+      "partial": 0,
+      "blocked": 0
+    }
+  },
+  "redaction": {
+    "bodies_swept": 167,
+    "patterns": [
+      "$scrypt$",
+      "\"password\":",
+      "password_hash",
+      "token_hash",
+      "secret_hash|webhook_secret|\"secret\":",
+      "service_role",
+      "nxs_… bearer token echoed",
+      "api_key|openai_api_key|deepseek_api_key|anthropic_api_key"
+    ],
+    "matches": 0,
+    "verdict": "PASS"
+  },
+  "arbitrary_sql_tool": {
+    "present": false,
+    "declared_tools": 18,
+    "forbidden_probes": [
+      "database.execute_sql",
+      "nexus.run_sql",
+      "nexus.not_a_tool"
+    ],
+    "verdict": "PASS"
+  },
+  "endpoint_verdicts": {
+    "/api/auth/login": "PASS",
+    "/api/v1/companion/session": "PASS",
+    "/api/v1/companion/me": "PASS",
+    "/api/v1/companion/bootstrap": "PASS",
+    "/api/v1/companion/leads": "PASS",
+    "/api/v1/companion/leads/[id]": "PASS",
+    "/api/v1/companion/search": "PASS",
+    "/api/v1/companion/today": "FAIL",
+    "/api/v1/companion/icps": "PASS",
+    "/api/v1/companion/heartbeat": "PASS",
+    "/api/v1/companion/bind": "FAIL",
+    "/api/v1/companion/add": "PASS",
+    "/api/v1/companion/actions/[operation]": "PARTIAL",
+    "/api/v1/ingest": "FAIL",
+    "/api/v1/mcp": "PASS",
+    "/api/companion-preview/[...path]": "PASS"
+  },
+  "tool_verdicts": {
+    "nexus.list_accessible_businesses": "PASS",
+    "nexus.get_business_context": "PASS",
+    "nexus.search_person": "PASS",
+    "nexus.search_company": "PASS",
+    "nexus.check_duplicate": "PASS",
+    "nexus.submit_candidate": "BLOCKED",
+    "nexus.create_signal": "PASS",
+    "nexus.add_source_evidence": "PASS",
+    "nexus.create_or_update_lead": "BLOCKED",
+    "nexus.assign_lead": "PASS",
+    "nexus.submit_profile_capture": "FAIL",
+    "nexus.capture_reply": "PASS",
+    "nexus.add_note": "FAIL",
+    "nexus.create_task": "FAIL",
+    "nexus.get_today_queue": "PASS",
+    "nexus.submit_research": "FAIL",
+    "nexus.submit_message_draft": "PASS",
+    "nexus.finish_agent_run": "PASS"
+  },
+  "cases": [
+    {
+      "case_id": "AUTH-LOGIN-GET",
+      "group": "api/auth",
+      "title": "GET /api/auth/login is refused",
+      "verdict": "PASS",
+      "http_status": 405,
+      "note": "405, allow: POST"
+    },
+    {
+      "case_id": "AUTH-LOGIN-BADPW",
+      "group": "api/auth",
+      "title": "POST /api/auth/login with a wrong password",
+      "verdict": "PASS",
+      "http_status": 303,
+      "note": "303 -> /login?error=Email+or+password+is+incorrect.&email=admin%40nexus.local"
+    },
+    {
+      "case_id": "AUTH-LOGIN-BADPW-NOLEAK",
+      "group": "redaction",
+      "title": "Wrong-password response carries no hash/secret",
+      "verdict": "PASS",
+      "http_status": 303,
+      "note": "no hash material in the redirect response"
+    },
+    {
+      "case_id": "PREVIEW-DISABLED",
+      "group": "api/companion-preview",
+      "title": "Preview route is 404 when disabled",
+      "verdict": "PASS",
+      "http_status": 404,
+      "note": "404 (NEXUS_COMPANION_PREVIEW unset)"
+    },
+    {
+      "case_id": "COMP-SESSION-OK",
+      "group": "api/v1/companion/session",
+      "title": "POST sign-in with valid credentials",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, token prefix nxu_-vZgcg…, role admin"
+    },
+    {
+      "case_id": "COMP-SESSION-BADPW",
+      "group": "api/v1/companion/session",
+      "title": "POST sign-in with a wrong password",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401 typed error body {\"error\": \"Email or password is incorrect.\"}"
+    },
+    {
+      "case_id": "COMP-SESSION-MALFORMED",
+      "group": "api/v1/companion/session",
+      "title": "POST sign-in with malformed JSON",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"Expected a JSON body.\"}"
+    },
+    {
+      "case_id": "COMP-SESSION-INVALID",
+      "group": "api/v1/companion/session",
+      "title": "POST sign-in with an invalid body",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\": \"email: String must contain at least 3 character(s)\"}"
+    },
+    {
+      "case_id": "COMP-SESSION-NOLEAK",
+      "group": "redaction",
+      "title": "Sign-in response exposes only the newly issued token",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "body carries token + session only; no password/hash field"
+    },
+    {
+      "case_id": "COMP-SESSION-DELETE",
+      "group": "api/v1/companion/session",
+      "title": "DELETE revokes the calling token",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200 {\"revoked\":true}"
+    },
+    {
+      "case_id": "COMP-SESSION-DELETE-VERIFY",
+      "group": "api/v1/companion/session",
+      "title": "Revoked token is refused afterwards",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401 after revocation"
+    },
+    {
+      "case_id": "COMP-SESSION-DELETE-NOAUTH",
+      "group": "api/v1/companion/session",
+      "title": "DELETE without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401 {\"error\":\"Missing token.\"}"
+    },
+    {
+      "case_id": "COMP-ME-OK",
+      "group": "api/v1/companion/me",
+      "title": "GET as admin",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, session.email=admin@nexus.local role=admin"
+    },
+    {
+      "case_id": "COMP-ME-NOAUTH",
+      "group": "api/v1/companion/me",
+      "title": "GET without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401 {\"error\":\"Sign in to Nexus.\"}"
+    },
+    {
+      "case_id": "COMP-ME-BADTOKEN",
+      "group": "api/v1/companion/me",
+      "title": "GET with an unknown bearer token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-ME-SERVICETOKEN",
+      "group": "api/v1/companion/me",
+      "title": "GET with a service token (user-only endpoint)",
+      "verdict": "PASS",
+      "http_status": 403,
+      "note": "403 typed refusal"
+    },
+    {
+      "case_id": "COMP-BOOTSTRAP-OK",
+      "group": "api/v1/companion/bootstrap",
+      "title": "GET as admin",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, businesses=3 identities=2 binding=null concurrency.action=allow"
+    },
+    {
+      "case_id": "COMP-BOOTSTRAP-MANAGER-SCOPE",
+      "group": "api/v1/companion/bootstrap",
+      "title": "Manager sees only granted businesses",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, manager businesses=[zemnas] (granted: zemnas only)"
+    },
+    {
+      "case_id": "COMP-BOOTSTRAP-NOAUTH",
+      "group": "api/v1/companion/bootstrap",
+      "title": "GET without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-BOOTSTRAP-NOLEAK",
+      "group": "redaction",
+      "title": "Bootstrap reveals no token hash or identity secret",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "no token_hash / scrypt / service_role / password substring"
+    },
+    {
+      "case_id": "COMP-LEADS-OK",
+      "group": "api/v1/companion/leads",
+      "title": "GET leads for zemnas as admin",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, total=25 returned=5"
+    },
+    {
+      "case_id": "COMP-LEADS-NOBIZ",
+      "group": "api/v1/companion/leads",
+      "title": "GET without businessId",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"A valid businessId is required.\"}"
+    },
+    {
+      "case_id": "COMP-LEADS-BADBIZ",
+      "group": "api/v1/companion/leads",
+      "title": "GET with a non-UUID businessId",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 typed error"
+    },
+    {
+      "case_id": "COMP-LEADS-WRONGBIZ-MANAGER",
+      "group": "api/v1/companion/leads",
+      "title": "Manager (zemnas only) requests lavish-foods leads",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, leaks nothing: total=0 leads=0 (RLS-filtered)"
+    },
+    {
+      "case_id": "COMP-LEADS-BOGUSBIZ",
+      "group": "api/v1/companion/leads",
+      "title": "GET with a well-formed but nonexistent businessId",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200 with an empty page (no existence disclosure)"
+    },
+    {
+      "case_id": "COMP-LEADS-NOAUTH",
+      "group": "api/v1/companion/leads",
+      "title": "GET without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-LEAD-ONE-OK",
+      "group": "api/v1/companion/leads/[id]",
+      "title": "GET a real seeded lead as admin",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, detail.lead.id matches, personName=\"Tom Henry\" status=new"
+    },
+    {
+      "case_id": "COMP-LEAD-ONE-BADID",
+      "group": "api/v1/companion/leads/[id]",
+      "title": "GET with a non-UUID id",
+      "verdict": "PASS",
+      "http_status": 404,
+      "note": "404 typed error"
+    },
+    {
+      "case_id": "COMP-LEAD-ONE-MISSING",
+      "group": "api/v1/companion/leads/[id]",
+      "title": "GET a nonexistent (valid UUID) lead",
+      "verdict": "PASS",
+      "http_status": 404,
+      "note": "404 {\"error\":\"That lead could not be found.\"}"
+    },
+    {
+      "case_id": "COMP-LEAD-ONE-WRONGBIZ",
+      "group": "api/v1/companion/leads/[id]",
+      "title": "Manager requests a lavish-foods lead",
+      "verdict": "PASS",
+      "http_status": 404,
+      "note": "404 — inaccessible lead is indistinguishable from missing"
+    },
+    {
+      "case_id": "COMP-LEAD-ONE-NOAUTH",
+      "group": "api/v1/companion/leads/[id]",
+      "title": "GET without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-LEAD-NOLEAK",
+      "group": "redaction",
+      "title": "Lead detail carries no secret material",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "no token_hash / scrypt / service_role / password substring"
+    },
+    {
+      "case_id": "COMP-SEARCH-OK",
+      "group": "api/v1/companion/search",
+      "title": "GET search for a seeded person name",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, 1 result(s), first=\"Tom Henry\""
+    },
+    {
+      "case_id": "COMP-SEARCH-EMPTYQ",
+      "group": "api/v1/companion/search",
+      "title": "GET search with an empty q",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"Enter a LinkedIn URL, name or company.\"}"
+    },
+    {
+      "case_id": "COMP-SEARCH-NOAUTH",
+      "group": "api/v1/companion/search",
+      "title": "GET search without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-SEARCH-STANDARDUSER",
+      "group": "api/v1/companion/search",
+      "title": "GET search as a standard user",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, 1 result(s) visible under a standard user's RLS"
+    },
+    {
+      "case_id": "COMP-TODAY-OK",
+      "group": "api/v1/companion/today",
+      "title": "GET the admin Today queue for zemnas",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, 0 item(s)"
+    },
+    {
+      "case_id": "COMP-TODAY-OTHERUSER-STANDARD",
+      "group": "api/v1/companion/today",
+      "title": "Standard user asks for another user’s queue",
+      "verdict": "FAIL",
+      "http_status": 500,
+      "note": "500 Internal Server Error with an untyped body: \"\""
+    },
+    {
+      "case_id": "COMP-TODAY-OTHERUSER-MANAGER",
+      "group": "api/v1/companion/today",
+      "title": "Manager asks for another user’s queue",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200 (manager path delegated to get_today_queue)"
+    },
+    {
+      "case_id": "COMP-TODAY-NOBIZ",
+      "group": "api/v1/companion/today",
+      "title": "GET Today without businessId",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 typed error"
+    },
+    {
+      "case_id": "COMP-TODAY-NOAUTH",
+      "group": "api/v1/companion/today",
+      "title": "GET Today without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-ICPS-OK",
+      "group": "api/v1/companion/icps",
+      "title": "GET ICPs for zemnas",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, 2 ICP(s)"
+    },
+    {
+      "case_id": "COMP-ICPS-WRONGBIZ",
+      "group": "api/v1/companion/icps",
+      "title": "Manager requests ai-integrations ICPs",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200 with an empty list (RLS denies, no leakage)"
+    },
+    {
+      "case_id": "COMP-ICPS-NOBIZ",
+      "group": "api/v1/companion/icps",
+      "title": "GET ICPs without businessId",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 typed error"
+    },
+    {
+      "case_id": "COMP-ICPS-NOAUTH",
+      "group": "api/v1/companion/icps",
+      "title": "GET ICPs without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-HEARTBEAT-OK",
+      "group": "api/v1/companion/heartbeat",
+      "title": "POST heartbeat for the seeded binding",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200 {\"ok\":true}"
+    },
+    {
+      "case_id": "COMP-HEARTBEAT-INVALID",
+      "group": "api/v1/companion/heartbeat",
+      "title": "POST heartbeat with a too-short installId",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"installId: String must contain at least 8 character(s)\"}"
+    },
+    {
+      "case_id": "COMP-HEARTBEAT-MALFORMED",
+      "group": "api/v1/companion/heartbeat",
+      "title": "POST heartbeat with malformed JSON",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"Expected a JSON body.\"}"
+    },
+    {
+      "case_id": "COMP-HEARTBEAT-NOAUTH",
+      "group": "api/v1/companion/heartbeat",
+      "title": "POST heartbeat without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-BIND-OK",
+      "group": "api/v1/companion/bind",
+      "title": "POST bind a free identity from a fresh browser profile",
+      "verdict": "FAIL",
+      "http_status": 400,
+      "note": "expected 200 binding, got 400 {\"error\":\"You do not have permission to do that.\",\"reason\":\"bind_failed\"}"
+    },
+    {
+      "case_id": "COMP-BIND-CONFLICT",
+      "group": "api/v1/companion/bind",
+      "title": "POST bind an identity already held by another live profile, without transfer",
+      "verdict": "PASS",
+      "http_status": 409,
+      "note": "409 reason=identity_in_use, conflicts=[{\"sessionId\":\"9940b399-5afe-481b-b1b2-4998c607079c\",\"operatorName\":\"Osama Sender\",\"lastActiveAt\":\"2026-09-27T18:34:03.514Z\",\"isSelf\":false}]"
+    },
+    {
+      "case_id": "COMP-BIND-INVALID",
+      "group": "api/v1/companion/bind",
+      "title": "POST bind with an invalid body",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"installId: String must contain at least 8 character(s)\"}"
+    },
+    {
+      "case_id": "COMP-BIND-MALFORMED",
+      "group": "api/v1/companion/bind",
+      "title": "POST bind with malformed JSON",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 typed body"
+    },
+    {
+      "case_id": "COMP-BIND-NOAUTH",
+      "group": "api/v1/companion/bind",
+      "title": "POST bind without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-BIND-NOLEAK",
+      "group": "redaction",
+      "title": "Bind conflict payload names the holder without secrets",
+      "verdict": "PASS",
+      "http_status": 409,
+      "note": "holder detail carries display names/timestamps only"
+    },
+    {
+      "case_id": "COMP-ADD-OK",
+      "group": "api/v1/companion/add",
+      "title": "POST add a LinkedIn profile (creates a lead)",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, leadId=69358a9d-f18e-4ff5-b09e-d32507bbe90d created=false needsProfile=false deduped=true"
+    },
+    {
+      "case_id": "COMP-ADD-IDEMPOTENT",
+      "group": "api/v1/companion/add",
+      "title": "POST the identical capture with the same idempotencyKey",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, same leadId=69358a9d-f18e-4ff5-b09e-d32507bbe90d, deduped=true (no second lead)"
+    },
+    {
+      "case_id": "COMP-ADD-NOTLINKEDIN",
+      "group": "api/v1/companion/add",
+      "title": "POST add with a non-LinkedIn profile URL",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 reason=not_a_linkedin_profile"
+    },
+    {
+      "case_id": "COMP-ADD-INVALID",
+      "group": "api/v1/companion/add",
+      "title": "POST add with missing required fields",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"businessId: Required\"}"
+    },
+    {
+      "case_id": "COMP-ADD-MALFORMED",
+      "group": "api/v1/companion/add",
+      "title": "POST add with a JSON body that is not an object",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"Expected object, received null\"}"
+    },
+    {
+      "case_id": "COMP-ADD-NOAUTH",
+      "group": "api/v1/companion/add",
+      "title": "POST add without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "COMP-ADD-WRONGBIZ",
+      "group": "api/v1/companion/add",
+      "title": "Standard user (zemnas) adds into lavish-foods",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 refused: \"new row violates row-level security policy for table \\\"companies\\\"\""
+    },
+    {
+      "case_id": "ACT-mark-connection-sent-OK",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST mark-connection-sent with a valid body",
+      "verdict": "PARTIAL",
+      "http_status": 400,
+      "note": "400 \"You do not have permission to do that.\" — request rejected by a domain rule, typed"
+    },
+    {
+      "case_id": "ACT-mark-connection-sent-INVALID",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST mark-connection-sent with an invalid body",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"leadId: Invalid uuid\"}"
+    },
+    {
+      "case_id": "ACT-mark-connection-sent-NOAUTH",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST mark-connection-sent without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "ACT-mark-message-sent-OK",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST mark-message-sent with a valid body",
+      "verdict": "PARTIAL",
+      "http_status": 400,
+      "note": "400 \"You do not have permission to do that.\" — request rejected by a domain rule, typed"
+    },
+    {
+      "case_id": "ACT-mark-message-sent-INVALID",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST mark-message-sent with an invalid body",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"messageInstanceId: Invalid uuid\"}"
+    },
+    {
+      "case_id": "ACT-mark-message-sent-NOAUTH",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST mark-message-sent without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "ACT-capture-reply-OK",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST capture-reply with a valid body",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200 {\"ok\":true}"
+    },
+    {
+      "case_id": "ACT-capture-reply-INVALID",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST capture-reply with an invalid body",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"exactText: String must contain at least 1 character(s)\"}"
+    },
+    {
+      "case_id": "ACT-capture-reply-NOAUTH",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST capture-reply without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "ACT-snooze-OK",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST snooze with a valid body",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200 {\"ok\":true}"
+    },
+    {
+      "case_id": "ACT-snooze-INVALID",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST snooze with an invalid body",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"until: Invalid datetime\"}"
+    },
+    {
+      "case_id": "ACT-snooze-NOAUTH",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST snooze without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "ACT-reactivate-OK",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST reactivate with a valid body",
+      "verdict": "PARTIAL",
+      "http_status": 400,
+      "note": "400 \"The request could not be completed.\" — request rejected by a domain rule, typed"
+    },
+    {
+      "case_id": "ACT-reactivate-INVALID",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST reactivate with an invalid body",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"leadId: Invalid uuid\"}"
+    },
+    {
+      "case_id": "ACT-reactivate-NOAUTH",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST reactivate without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "ACT-capture-profile-OK",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST capture-profile with a valid body",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200 {\"ok\":true}"
+    },
+    {
+      "case_id": "ACT-capture-profile-INVALID",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST capture-profile with an invalid body",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"linkedinUrl: String must contain at least 4 character(s)\"}"
+    },
+    {
+      "case_id": "ACT-capture-profile-NOAUTH",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST capture-profile without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401"
+    },
+    {
+      "case_id": "ACT-UNKNOWN-OP",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST an undeclared operation",
+      "verdict": "PASS",
+      "http_status": 404,
+      "note": "404 {\"error\":\"Unknown operation.\"}"
+    },
+    {
+      "case_id": "ACT-MALFORMED",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST an action with malformed JSON",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 typed body"
+    },
+    {
+      "case_id": "ACT-WRONGBIZ-STANDARD",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "Standard user acts on another business’s lead",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 refused: \"The request could not be completed.\""
+    },
+    {
+      "case_id": "INGEST-OK",
+      "group": "api/v1/ingest",
+      "title": "POST a candidate envelope with a scoped service token",
+      "verdict": "FAIL",
+      "http_status": 400,
+      "note": "expected 200/201 with a leadId, got 400 {\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}"
+    },
+    {
+      "case_id": "INGEST-IDEMPOTENT",
+      "group": "api/v1/ingest",
+      "title": "POST the same envelope with the same idempotency_key",
+      "verdict": "FAIL",
+      "http_status": 400,
+      "note": "expected 200 idempotent=true with the original leadId, got 400 {\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}"
+    },
+    {
+      "case_id": "INGEST-NOAUTH",
+      "group": "api/v1/ingest",
+      "title": "POST ingest without a token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401 {\"error\":\"Missing or invalid token.\"}"
+    },
+    {
+      "case_id": "INGEST-USERSCOPED",
+      "group": "api/v1/ingest",
+      "title": "POST ingest with a user (companion) token",
+      "verdict": "PASS",
+      "http_status": 201,
+      "note": "201 — \"accepted (user token bypasses the service scope list by design) leadId=008537fb-f721-4115-94cd-843e49167b7b\""
+    },
+    {
+      "case_id": "INGEST-SCOPE",
+      "group": "api/v1/ingest",
+      "title": "POST ingest with a token lacking ingest:write",
+      "verdict": "PASS",
+      "http_status": 403,
+      "note": "403 {\"error\":\"This token does not have the ingest:write scope.\"}"
+    },
+    {
+      "case_id": "INGEST-UNKNOWNBIZ",
+      "group": "api/v1/ingest",
+      "title": "POST ingest for an unknown business",
+      "verdict": "PASS",
+      "http_status": 404,
+      "note": "404 with the deliberately two-meaning message"
+    },
+    {
+      "case_id": "INGEST-PAYLOADTYPE-RESTRICTED",
+      "group": "api/v1/ingest",
+      "title": "POST ingest with a type outside the endpoint allow-list",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"payload_type opportunity is not accepted by this endpoint.\"}"
+    },
+    {
+      "case_id": "INGEST-INVALID-ENVELOPE",
+      "group": "api/v1/ingest",
+      "title": "POST ingest with an incomplete envelope",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 {\"error\":\"Invalid ingest envelope at business_key_or_id: Invalid input\"}"
+    },
+    {
+      "case_id": "INGEST-MALFORMED",
+      "group": "api/v1/ingest",
+      "title": "POST ingest with malformed JSON",
+      "verdict": "PASS",
+      "http_status": 400,
+      "note": "400 typed body"
+    },
+    {
+      "case_id": "INGEST-INACTIVE-TOKEN",
+      "group": "api/v1/ingest",
+      "title": "POST ingest with a deactivated service token",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "401 — is_active=false resolves to anonymous"
+    },
+    {
+      "case_id": "CORS-PREFLIGHT-COMPANION",
+      "group": "cors",
+      "title": "OPTIONS preflight on a companion route",
+      "verdict": "PASS",
+      "http_status": 204,
+      "note": "204, ACAO=* methods=\"GET, POST, OPTIONS\" headers=\"authorization, content-type\" (next.config.ts static rule)"
+    },
+    {
+      "case_id": "CORS-GET-COMPANION",
+      "group": "cors",
+      "title": "Companion GET carries the ACAO header",
+      "verdict": "PASS",
+      "http_status": 401,
+      "note": "ACAO=* on a 401 response (wildcard, cookie-free surface)"
+    },
+    {
+      "case_id": "CORS-INGEST-NO-WILDCARD",
+      "group": "cors",
+      "title": "The ingest route is not opened to wildcard origins",
+      "verdict": "PASS",
+      "http_status": 405,
+      "note": "no ACAO header on /api/v1/ingest (only /api/v1/companion/* is opened)"
+    },
+    {
+      "case_id": "MCP-AUTH-NOTOKEN",
+      "group": "mcp/auth",
+      "title": "POST tools/list without a token",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "HTTP 200 JSON-RPC -32001 \"Missing or invalid token.\""
+    },
+    {
+      "case_id": "MCP-AUTH-BADTOKEN",
+      "group": "mcp/auth",
+      "title": "POST tools/list with an unknown bearer token",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "HTTP 200 JSON-RPC -32001"
+    },
+    {
+      "case_id": "MCP-AUTH-INACTIVE",
+      "group": "mcp/auth",
+      "title": "POST tools/list with a deactivated service token",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32001 (is_active=false is treated as anonymous)"
+    },
+    {
+      "case_id": "MCP-GET-DISCOVERY",
+      "group": "mcp/transport",
+      "title": "GET capability discovery",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, protocol=mcp transport=http-jsonrpc tools=18"
+    },
+    {
+      "case_id": "MCP-PARSE-ERROR",
+      "group": "mcp/transport",
+      "title": "POST a malformed JSON body",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "HTTP 200 JSON-RPC -32700 Parse error"
+    },
+    {
+      "case_id": "MCP-INITIALIZE",
+      "group": "mcp/transport",
+      "title": "initialize",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "protocolVersion=2024-11-05 server=nexus v1.0.0"
+    },
+    {
+      "case_id": "MCP-METHOD-NOTFOUND",
+      "group": "mcp/transport",
+      "title": "An unknown JSON-RPC method",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32601 Method not found"
+    },
+    {
+      "case_id": "MCP-INVALID-REQUEST",
+      "group": "mcp/transport",
+      "title": "A message without jsonrpc:\"2.0\"",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32600 Invalid Request"
+    },
+    {
+      "case_id": "MCP-TOOLS-LIST",
+      "group": "mcp/tools-list",
+      "title": "tools/list returns all 18 declared tools",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "18 tools: nexus.list_accessible_businesses, nexus.get_business_context, nexus.search_person, nexus.search_company, nexus.check_duplicate, nexus.submit_candidate, nexus.create_signal, nexus.add_source_evidence, nexus.create_or_update_lead, nexus.assign_lead, nexus.submit_profile_capture, nexus.captur…"
+    },
+    {
+      "case_id": "MCP-TOOLS-LIST-SCHEMA",
+      "group": "mcp/tools-list",
+      "title": "Every tool publishes an inputSchema with required args",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "all 18 schemas are objects with business_id (uuid) required except the discovery tool; all 12 write tools require idempotency_key"
+    },
+    {
+      "case_id": "MCP-TOOLS-LIST-NOSQL",
+      "group": "mcp/no-sql",
+      "title": "The catalogue exposes no arbitrary-SQL tool",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "no tool name or argument mentions sql/statement; catalogue = intent tools only (checked 18 tools, 102 distinct args)"
+    },
+    {
+      "case_id": "MCP-NO-SQL-TOOL",
+      "group": "mcp/no-sql",
+      "title": "tools/call database.execute_sql",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32601 \"Unknown tool: database.execute_sql\" — the tool is not in the dispatch table"
+    },
+    {
+      "case_id": "MCP-NO-SQL-TOOL-2",
+      "group": "mcp/no-sql",
+      "title": "tools/call nexus.run_sql",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32601 Unknown tool"
+    },
+    {
+      "case_id": "MCP-UNKNOWN-TOOL",
+      "group": "mcp/transport",
+      "title": "tools/call an unknown tool name",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32601 Unknown tool"
+    },
+    {
+      "case_id": "MCP-SCOPE-nexus.create_signal",
+      "group": "mcp/scope",
+      "title": "nexus.create_signal with a token lacking signal:create",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32003 \"This token does not have the signal:create scope.\""
+    },
+    {
+      "case_id": "MCP-SCOPE-nexus.add_note",
+      "group": "mcp/scope",
+      "title": "nexus.add_note with a token lacking note:add",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32003 \"This token does not have the note:add scope.\""
+    },
+    {
+      "case_id": "MCP-SCOPE-nexus.create_task",
+      "group": "mcp/scope",
+      "title": "nexus.create_task with a token lacking task:create",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32003 \"This token does not have the task:create scope.\""
+    },
+    {
+      "case_id": "MCP-SCOPE-nexus.finish_agent_run",
+      "group": "mcp/scope",
+      "title": "nexus.finish_agent_run with a token lacking agent:run",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32003 \"This token does not have the agent:run scope.\""
+    },
+    {
+      "case_id": "MCP-SCOPE-WRONGBUSINESS",
+      "group": "mcp/scope",
+      "title": "A token scoped to ai-integrations targets zemnas",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32003 \"This token is not scoped to that business.\""
+    },
+    {
+      "case_id": "MCP-OK-nexus.list_accessible_businesses",
+      "group": "mcp/tools-call",
+      "title": "nexus.list_accessible_businesses happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: businesses=ai-integrations,lavish-foods,zemnas"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.list_accessible_businesses",
+      "group": "mcp/tools-call",
+      "title": "nexus.list_accessible_businesses invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments: business_id: Invalid uuid"
+    },
+    {
+      "case_id": "MCP-OK-nexus.get_business_context",
+      "group": "mcp/tools-call",
+      "title": "nexus.get_business_context happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: business.key=zemnas"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.get_business_context",
+      "group": "mcp/tools-call",
+      "title": "nexus.get_business_context invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "JSON-RPC error -32003: This token is not scoped to that business."
+    },
+    {
+      "case_id": "MCP-OK-nexus.search_person",
+      "group": "mcp/tools-call",
+      "title": "nexus.search_person happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: results=1"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.search_person",
+      "group": "mcp/tools-call",
+      "title": "nexus.search_person invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.search_person: query: String must contain at least 1 character(s)"
+    },
+    {
+      "case_id": "MCP-OK-nexus.search_company",
+      "group": "mcp/tools-call",
+      "title": "nexus.search_company happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: companies=2"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.search_company",
+      "group": "mcp/tools-call",
+      "title": "nexus.search_company invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.search_company: query: String must contain at least 1 character(s)"
+    },
+    {
+      "case_id": "MCP-OK-nexus.check_duplicate",
+      "group": "mcp/tools-call",
+      "title": "nexus.check_duplicate happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: duplicate=true matches=1"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.check_duplicate",
+      "group": "mcp/tools-call",
+      "title": "nexus.check_duplicate invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.check_duplicate: query: Required"
+    },
+    {
+      "case_id": "MCP-OK-nexus.submit_candidate",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_candidate happy path",
+      "verdict": "BLOCKED",
+      "http_status": 200,
+      "note": "well-formed write refused by the database (RLS): new row violates row-level security policy for table \"people\""
+    },
+    {
+      "case_id": "MCP-BAD-nexus.submit_candidate",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_candidate invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.submit_candidate: full_name: String must contain at least 1 character(s)"
+    },
+    {
+      "case_id": "MCP-OK-nexus.create_signal",
+      "group": "mcp/tools-call",
+      "title": "nexus.create_signal happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: signal_id=80c4ae36-76a1-430c-a0c3-c92a0fae6b51"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.create_signal",
+      "group": "mcp/tools-call",
+      "title": "nexus.create_signal invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.create_signal: kind: Invalid enum value. Expected 'hiring' | 'contractor_need' | 'content_output' | 'geography_size' | 'rf"
+    },
+    {
+      "case_id": "MCP-OK-nexus.add_source_evidence",
+      "group": "mcp/tools-call",
+      "title": "nexus.add_source_evidence happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: evidence_id=298f5c0b-2641-4b1a-9945-212484f49fa8 deduplicated=false"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.add_source_evidence",
+      "group": "mcp/tools-call",
+      "title": "nexus.add_source_evidence invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.add_source_evidence: source: Required"
+    },
+    {
+      "case_id": "MCP-OK-nexus.create_or_update_lead",
+      "group": "mcp/tools-call",
+      "title": "nexus.create_or_update_lead happy path",
+      "verdict": "BLOCKED",
+      "http_status": 200,
+      "note": "well-formed write refused by the database (RLS): new row violates row-level security policy for table \"companies\""
+    },
+    {
+      "case_id": "MCP-BAD-nexus.create_or_update_lead",
+      "group": "mcp/tools-call",
+      "title": "nexus.create_or_update_lead invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.create_or_update_lead: linkedin_url: Expected string, received number"
+    },
+    {
+      "case_id": "MCP-OK-nexus.assign_lead",
+      "group": "mcp/tools-call",
+      "title": "nexus.assign_lead happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: lead_id=69358a9d-f18e-4ff5-b09e-d32507bbe90d owner_user_id=d0000001-0000-4000-8000-000000000003"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.assign_lead",
+      "group": "mcp/tools-call",
+      "title": "nexus.assign_lead invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Unknown lead"
+    },
+    {
+      "case_id": "MCP-OK-nexus.submit_profile_capture",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_profile_capture happy path",
+      "verdict": "FAIL",
+      "http_status": 200,
+      "note": "200 with isError payload: You do not have permission to do that."
+    },
+    {
+      "case_id": "MCP-BAD-nexus.submit_profile_capture",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_profile_capture invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: That lead could not be found."
+    },
+    {
+      "case_id": "MCP-OK-nexus.capture_reply",
+      "group": "mcp/tools-call",
+      "title": "nexus.capture_reply happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: lead_id=69358a9d-f18e-4ff5-b09e-d32507bbe90d captured=true"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.capture_reply",
+      "group": "mcp/tools-call",
+      "title": "nexus.capture_reply invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.capture_reply: exact_text: String must contain at least 1 character(s)"
+    },
+    {
+      "case_id": "MCP-OK-nexus.add_note",
+      "group": "mcp/tools-call",
+      "title": "nexus.add_note happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: note_id=eff1494b-5b73-402b-ad84-37273ae5f2c4"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.add_note",
+      "group": "mcp/tools-call",
+      "title": "nexus.add_note invalid call",
+      "verdict": "FAIL",
+      "http_status": 200,
+      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"note_id\":null})"
+    },
+    {
+      "case_id": "MCP-OK-nexus.create_task",
+      "group": "mcp/tools-call",
+      "title": "nexus.create_task happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: task_id=97afba55-c007-41cd-ad47-ddffdcaeb38e"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.create_task",
+      "group": "mcp/tools-call",
+      "title": "nexus.create_task invalid call",
+      "verdict": "FAIL",
+      "http_status": 200,
+      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"task_id\":null})"
+    },
+    {
+      "case_id": "MCP-OK-nexus.get_today_queue",
+      "group": "mcp/tools-call",
+      "title": "nexus.get_today_queue happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: items=7"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.get_today_queue",
+      "group": "mcp/tools-call",
+      "title": "nexus.get_today_queue invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "accepted as a valid negative result: {\"items\":[]}"
+    },
+    {
+      "case_id": "MCP-OK-nexus.submit_research",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_research happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: research_snapshot_id=9f2382d8-d4af-494b-8215-bd498e757775"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.submit_research",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_research invalid call",
+      "verdict": "FAIL",
+      "http_status": 200,
+      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"research_snapshot_id\":null})"
+    },
+    {
+      "case_id": "MCP-OK-nexus.submit_message_draft",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_message_draft happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: message_version_id=fe6b1c9c-1bdf-4f34-8625-1d8920774342"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.submit_message_draft",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_message_draft invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.submit_message_draft: content: String must contain at least 1 character(s)"
+    },
+    {
+      "case_id": "MCP-OK-nexus.finish_agent_run",
+      "group": "mcp/tools-call",
+      "title": "nexus.finish_agent_run happy path",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result asserted: agent_run_id=ded11dbe-a6a1-4059-bce1-aaf54126b56f"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.finish_agent_run",
+      "group": "mcp/tools-call",
+      "title": "nexus.finish_agent_run invalid call",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments for nexus.finish_agent_run: agent_name: String must contain at least 1 character(s)"
+    },
+    {
+      "case_id": "MCP-IDEM-FIRST",
+      "group": "mcp/idempotency",
+      "title": "create_signal with a fresh idempotency_key",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "signal_id=f4790b89-08ea-41da-8639-8f83d1fa5c36 idempotent=false"
+    },
+    {
+      "case_id": "MCP-IDEM-REPLAY",
+      "group": "mcp/idempotency",
+      "title": "Same key + same payload is replayed, not re-run",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "idempotent=true, same signal_id=f4790b89-08ea-41da-8639-8f83d1fa5c36 (no second row)"
+    },
+    {
+      "case_id": "MCP-IDEM-DIFFERENT-PAYLOAD",
+      "group": "mcp/idempotency",
+      "title": "Same key + different payload is refused",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: \"idempotency_key mcp-idem-1790534044329 was already used for nexus.create_signal with different arguments.\""
+    },
+    {
+      "case_id": "MCP-IDEM-KEY-REQUIRED",
+      "group": "mcp/idempotency",
+      "title": "submit_candidate without idempotency_key",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: \"idempotency_key is required for nexus.submit_candidate\""
+    },
+    {
+      "case_id": "MCP-IDEM-PER-BUSINESS",
+      "group": "mcp/idempotency",
+      "title": "The same key under a different business is not treated as a replay",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "distinct signal_id=5abe3fef-33e6-4dba-a38d-ae52ea1a1a73 idempotent=false"
+    },
+    {
+      "case_id": "MCP-NO-KEY-READONLY-REPEAT",
+      "group": "mcp/idempotency",
+      "title": "A read-only tool without a key returns identical results twice",
+      "verdict": "PASS",
+      "http_status": null,
+      "note": "identical structuredContent across two calls (non-mutating)"
+    },
+    {
+      "case_id": "MCP-MUTATION-WITHOUT-KEY-INSERTS",
+      "group": "mcp/idempotency",
+      "title": "add_note carries a key in the catalogue; omitting it still mutates",
+      "verdict": "PARTIAL",
+      "http_status": 200,
+      "note": "refused without a key: idempotency_key is required for nexus.add_note"
+    },
+    {
+      "case_id": "MCP-BATCH",
+      "group": "mcp/batch",
+      "title": "A batch of two valid calls returns two responses",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "2 responses, ids=[101,102] (both elements executed)"
+    },
+    {
+      "case_id": "MCP-BATCH-MIXED",
+      "group": "mcp/batch",
+      "title": "A mixed success/error batch answers per element",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "4 responses: 201 success, 202 -32601, 203 result.isError, 204 -32601"
+    },
+    {
+      "case_id": "MCP-BATCH-EMPTY",
+      "group": "mcp/batch",
+      "title": "An empty batch is an invalid request",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32600 Invalid Request"
+    },
+    {
+      "case_id": "MCP-BATCH-NOTIFICATION",
+      "group": "mcp/batch",
+      "title": "A notification element gets no response entry",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "1 response, for id 301 only"
+    },
+    {
+      "case_id": "MCP-ENVELOPE-SCHEMA",
+      "group": "mcp/validation",
+      "title": "An idempotency_key shorter than 8 characters is refused",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "result.isError: Invalid arguments: idempotency_key: String must contain at least 8 character(s)"
+    },
+    {
+      "case_id": "MCP-ARGS-NONOBJECT",
+      "group": "mcp/validation",
+      "title": "tools/call with non-object arguments",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "refused: \"Invalid arguments for nexus.search_company: query: Required\""
+    },
+    {
+      "case_id": "MCP-NAME-MISSING",
+      "group": "mcp/validation",
+      "title": "tools/call with no tool name",
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "-32601 Unknown tool: \"\""
+    },
+    {
+      "case_id": "REDACT-CORPUS",
+      "group": "redaction",
+      "title": "Swept 165 captured response bodies for secret material",
+      "verdict": "PASS",
+      "http_status": null,
+      "note": "no match for any of: scrypt password hash | password field | password_hash field | token_hash field | secret_hash / webhook_secret | service_role key | supabase service key | bearer token echoed | ai/api secret across 165 bodies"
+    },
+    {
+      "case_id": "REDACT-COLUMN-SURVEY",
+      "group": "redaction",
+      "title": "Which secret-bearing tables exist",
+      "verdict": "PASS",
+      "http_status": null,
+      "note": "checked responses for material from: api_clients, user_api_tokens, user_credentials, webhook_endpoints, integration_credentials"
+    }
+  ],
+  "failures": [
+    {
+      "case_id": "COMP-TODAY-OTHERUSER-STANDARD",
+      "group": "api/v1/companion/today",
+      "title": "Standard user asks for another user’s queue",
+      "verdict": "FAIL",
+      "endpoint_or_tool": "/api/v1/companion/today?businessId=d0000002-0000-4000-8000-000000000001&userId=<admin>",
+      "method": "GET",
+      "http_status": 500,
+      "request_body": null,
+      "body": "",
+      "note": "500 Internal Server Error with an untyped body: \"\"",
+      "finding": "F-1"
+    },
+    {
+      "case_id": "COMP-BIND-OK",
+      "group": "api/v1/companion/bind",
+      "title": "POST bind a free identity from a fresh browser profile",
+      "verdict": "FAIL",
+      "endpoint_or_tool": "/api/v1/companion/bind",
+      "method": "POST",
+      "http_status": 400,
+      "request_body": {
+        "installId": "baseline-install-0001",
+        "identityId": "d0000005-0000-4000-8000-000000000002",
+        "defaultBusinessId": "d0000002-0000-4000-8000-000000000002",
+        "transfer": false
+      },
+      "body": "{\"error\":\"You do not have permission to do that.\",\"reason\":\"bind_failed\"}",
+      "note": "expected 200 binding, got 400 {\"error\":\"You do not have permission to do that.\",\"reason\":\"bind_failed\"}",
+      "finding": null
+    },
+    {
+      "case_id": "ACT-mark-connection-sent-OK",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST mark-connection-sent with a valid body",
+      "verdict": "PARTIAL",
+      "endpoint_or_tool": "/api/v1/companion/actions/mark-connection-sent",
+      "method": "POST",
+      "http_status": 400,
+      "request_body": {
+        "leadId": "69358a9d-f18e-4ff5-b09e-d32507bbe90d",
+        "identityId": "d0000005-0000-4000-8000-000000000002",
+        "withNote": true
+      },
+      "body": "{\"error\":\"You do not have permission to do that.\"}",
+      "note": "400 \"You do not have permission to do that.\" — request rejected by a domain rule, typed",
+      "finding": "F-7"
+    },
+    {
+      "case_id": "ACT-mark-message-sent-OK",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST mark-message-sent with a valid body",
+      "verdict": "PARTIAL",
+      "endpoint_or_tool": "/api/v1/companion/actions/mark-message-sent",
+      "method": "POST",
+      "http_status": 400,
+      "request_body": {
+        "messageInstanceId": "d0000019-0000-4000-8000-000000000001",
+        "identityId": "d0000005-0000-4000-8000-000000000002"
+      },
+      "body": "{\"error\":\"You do not have permission to do that.\"}",
+      "note": "400 \"You do not have permission to do that.\" — request rejected by a domain rule, typed",
+      "finding": "F-7"
+    },
+    {
+      "case_id": "ACT-reactivate-OK",
+      "group": "api/v1/companion/actions/[operation]",
+      "title": "POST reactivate with a valid body",
+      "verdict": "PARTIAL",
+      "endpoint_or_tool": "/api/v1/companion/actions/reactivate",
+      "method": "POST",
+      "http_status": 400,
+      "request_body": {
+        "leadId": "69358a9d-f18e-4ff5-b09e-d32507bbe90d"
+      },
+      "body": "{\"error\":\"The request could not be completed.\"}",
+      "note": "400 \"The request could not be completed.\" — request rejected by a domain rule, typed",
+      "finding": "F-7"
+    },
+    {
+      "case_id": "INGEST-OK",
+      "group": "api/v1/ingest",
+      "title": "POST a candidate envelope with a scoped service token",
+      "verdict": "FAIL",
+      "endpoint_or_tool": "/api/v1/ingest",
+      "method": "POST",
+      "http_status": 400,
+      "request_body": {
+        "source_client": "baseline-verify",
+        "business_key_or_id": "zemnas",
+        "payload_type": "candidate",
+        "payload": {
+          "full_name": "Baseline Ingest Person 1790534044085",
+          "job_title": "Content Lead",
+          "company_name": "Northstar 1790534044085",
+          "linkedin_url": "https://www.linkedin.com/in/baseline-ingest-1790534044085"
+        },
+        "idempotency_key": "baseline-ingest-1790534044085",
+        "observed_at": "2026-09-27T18:34:04.085Z"
+      },
+      "body": "{\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}",
+      "note": "expected 200/201 with a leadId, got 400 {\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}",
+      "finding": "F-2"
+    },
+    {
+      "case_id": "INGEST-IDEMPOTENT",
+      "group": "api/v1/ingest",
+      "title": "POST the same envelope with the same idempotency_key",
+      "verdict": "FAIL",
+      "endpoint_or_tool": "/api/v1/ingest",
+      "method": "POST",
+      "http_status": 400,
+      "request_body": "<same envelope>",
+      "body": "{\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}",
+      "note": "expected 200 idempotent=true with the original leadId, got 400 {\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}",
+      "finding": "F-2"
+    },
+    {
+      "case_id": "MCP-OK-nexus.submit_candidate",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_candidate happy path",
+      "verdict": "BLOCKED",
+      "endpoint_or_tool": "/api/v1/mcp",
+      "method": "POST",
+      "http_status": 200,
+      "request_body": {
+        "method": "tools/call",
+        "name": "nexus.submit_candidate",
+        "arguments": {
+          "business_id": "d0000002-0000-4000-8000-000000000001",
+          "idempotency_key": "mcp-cand-1790534044329",
+          "full_name": "Baseline MCP Candidate",
+          "job_title": "Head of Production",
+          "company_name": "Northstar",
+          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-candidate-1790534044329"
+        }
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"new row violates row-level security policy for table \\\"people\\\"\"}]}}",
+      "note": "well-formed write refused by the database (RLS): new row violates row-level security policy for table \"people\"",
+      "finding": "F-2"
+    },
+    {
+      "case_id": "MCP-OK-nexus.create_or_update_lead",
+      "group": "mcp/tools-call",
+      "title": "nexus.create_or_update_lead happy path",
+      "verdict": "BLOCKED",
+      "endpoint_or_tool": "/api/v1/mcp",
+      "method": "POST",
+      "http_status": 200,
+      "request_body": {
+        "method": "tools/call",
+        "name": "nexus.create_or_update_lead",
+        "arguments": {
+          "business_id": "d0000002-0000-4000-8000-000000000001",
+          "idempotency_key": "mcp-lead-1790534044329",
+          "full_name": "Baseline MCP Lead Person",
+          "company_name": "Studio 8",
+          "job_title": "Content Lead",
+          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-lead-1790534044329"
+        }
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"new row violates row-level security policy for table \\\"companies\\\"\"}]}}",
+      "note": "well-formed write refused by the database (RLS): new row violates row-level security policy for table \"companies\"",
+      "finding": "F-2"
+    },
+    {
+      "case_id": "MCP-OK-nexus.submit_profile_capture",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_profile_capture happy path",
+      "verdict": "FAIL",
+      "endpoint_or_tool": "/api/v1/mcp",
+      "method": "POST",
+      "http_status": 200,
+      "request_body": {
+        "method": "tools/call",
+        "name": "nexus.submit_profile_capture",
+        "arguments": {
+          "business_id": "d0000002-0000-4000-8000-000000000001",
+          "idempotency_key": "mcp-cap-1790534044329",
+          "lead_id": "69358a9d-f18e-4ff5-b09e-d32507bbe90d",
+          "linkedin_url": "https://www.linkedin.com/in/baseline-verify-person",
+          "pasted_content": "Baseline Verify\nHead of Production at Frame House\nMunich, Germany"
+        }
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"You do not have permission to do that.\"}]}}",
+      "note": "200 with isError payload: You do not have permission to do that.",
+      "finding": "F-6"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.add_note",
+      "group": "mcp/tools-call",
+      "title": "nexus.add_note invalid call",
+      "verdict": "FAIL",
+      "endpoint_or_tool": "/api/v1/mcp",
+      "method": "POST",
+      "http_status": 200,
+      "request_body": {
+        "method": "tools/call",
+        "name": "nexus.add_note",
+        "arguments": {
+          "business_id": "d0000002-0000-4000-8000-000000000001",
+          "idempotency_key": "mcp-note-bad-1790534044329",
+          "lead_id": "00000000-0000-4000-8000-0000000000ff",
+          "body": "x"
+        }
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"note_id\\\":null}\"}],\"structuredContent\":{\"note_id\":null},\"idempotent\":false}}",
+      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"note_id\":null})",
+      "finding": "F-3"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.create_task",
+      "group": "mcp/tools-call",
+      "title": "nexus.create_task invalid call",
+      "verdict": "FAIL",
+      "endpoint_or_tool": "/api/v1/mcp",
+      "method": "POST",
+      "http_status": 200,
+      "request_body": {
+        "method": "tools/call",
+        "name": "nexus.create_task",
+        "arguments": {
+          "business_id": "d0000002-0000-4000-8000-000000000001",
+          "idempotency_key": "mcp-task-bad-1790534044329",
+          "lead_id": "00000000-0000-4000-8000-0000000000ff",
+          "title": "x"
+        }
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"task_id\\\":null}\"}],\"structuredContent\":{\"task_id\":null},\"idempotent\":false}}",
+      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"task_id\":null})",
+      "finding": "F-3"
+    },
+    {
+      "case_id": "MCP-BAD-nexus.submit_research",
+      "group": "mcp/tools-call",
+      "title": "nexus.submit_research invalid call",
+      "verdict": "FAIL",
+      "endpoint_or_tool": "/api/v1/mcp",
+      "method": "POST",
+      "http_status": 200,
+      "request_body": {
+        "method": "tools/call",
+        "name": "nexus.submit_research",
+        "arguments": {
+          "business_id": "d0000002-0000-4000-8000-000000000001",
+          "idempotency_key": "mcp-res-bad-1790534044329",
+          "lead_id": "00000000-0000-4000-8000-0000000000ff",
+          "summary": "x"
+        }
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"research_snapshot_id\\\":null}\"}],\"structuredContent\":{\"research_snapshot_id\":null},\"idempotent\":false}}",
+      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"research_snapshot_id\":null})",
+      "finding": "F-3"
+    },
+    {
+      "case_id": "MCP-MUTATION-WITHOUT-KEY-INSERTS",
+      "group": "mcp/idempotency",
+      "title": "add_note carries a key in the catalogue; omitting it still mutates",
+      "verdict": "PARTIAL",
+      "endpoint_or_tool": "/api/v1/mcp",
+      "method": "POST",
+      "http_status": 200,
+      "request_body": {
+        "name": "nexus.add_note",
+        "arguments": {
+          "business_id": "d0000002-0000-4000-8000-000000000001",
+          "lead_id": "69358a9d-f18e-4ff5-b09e-d32507bbe90d",
+          "body": "no-key note 1790534044329"
+        }
+      },
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"idempotency_key is required for nexus.add_note\"}]}}",
+      "note": "refused without a key: idempotency_key is required for nexus.add_note",
+      "finding": "F-4"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "High",
+      "title": "/api/v1/companion/today turns a database refusal into an untyped HTTP 500",
+      "code": "apps/web/src/app/api/v1/companion/today/route.ts:33-38",
+      "request": "GET /api/v1/companion/today?businessId=<zemnas>&userId=<admin id> with osama@nexus.local (standard user, zemnas access)",
+      "response": "HTTP 500, empty body. An SSM-style typed `{ \"error\": … }` with 403 was expected.",
+      "evidence_cases": [
+        "COMP-TODAY-OTHERUSER-STANDARD"
+      ]
+    },
+    {
+      "id": "F-2",
+      "severity": "High",
+      "title": "Service-token writes fail with RLS 42501 on the business-less canonical tables",
+      "code": "packages/db/migrations/0013_rls.sql:477-487 (`companies_insert`), 518-528 (`people_insert`); hit from apps/web/src/lib/repo/ingest.ts:184-211",
+      "request": "POST /api/v1/mcp {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"nexus.submit_candidate\",\"arguments\":{\"business_id\":\"d0000002-…-0001\",\"idempotency_key\":\"mcp-cand-…\",\"full_name\":\"Baseline MCP Candidate\",\"company_name\":\"Northstar\",\"job_title\":\"Head of Production\",\"linkedin_url\":\"…\"}}}",
+      "response": "HTTP 200, {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"new row violates row-level security policy for table \\\"companies\\\"\"}]}}",
+      "evidence_cases": [
+        "MCP-OK-nexus.submit_candidate",
+        "MCP-OK-nexus.create_or_update_lead",
+        "INGEST-OK",
+        "INGEST-IDEMPOTENT"
+      ]
+    },
+    {
+      "id": "F-3",
+      "severity": "High",
+      "title": "Three MCP write tools report success while writing nothing",
+      "code": "apps/web/src/app/api/v1/mcp/route.ts:371-380 (`add_note`), 391-407 (`create_task`), 438-447 (`submit_research`)",
+      "request": "POST /api/v1/mcp tools/call nexus.add_note with lead_id = 00000000-0000-4000-8000-0000000000ff (valid UUID, no such lead)",
+      "response": "HTTP 200, result.structuredContent = {\"note_id\":null} with no isError flag. Same shape for create_task ({\"task_id\":null}) and submit_research ({\"research_snapshot_id\":null}).",
+      "evidence_cases": [
+        "MCP-BAD-nexus.add_note",
+        "MCP-BAD-nexus.create_task",
+        "MCP-BAD-nexus.submit_research"
+      ]
+    },
+    {
+      "id": "F-4",
+      "severity": "Medium",
+      "title": "Idempotency metadata contradicts itself between the catalogue and the dispatch table",
+      "code": "apps/web/src/app/api/v1/mcp/tool-schemas.ts:204-223 (`MCP_TOOLS_REQUIRING_IDEMPOTENCY`) vs apps/web/src/app/api/v1/mcp/route.ts:120-410 (`TOOL_HANDLERS[*].needsIdempotencyKey`)",
+      "request": "POST /api/v1/mcp tools/call nexus.add_note with no idempotency_key (the handler table says this is unnecessary)",
+      "response": "HTTP 200, result.isError = true, text \"idempotency_key is required for nexus.add_note\" — i.e. the constant wins.",
+      "evidence_cases": [
+        "MCP-IDEM-KEY-REQUIRED",
+        "MCP-MUTATION-WITHOUT-KEY-INSERTS"
+      ]
+    },
+    {
+      "id": "F-5",
+      "severity": "Medium",
+      "title": "nexus.finish_agent_run’s default state can never be inserted",
+      "code": "apps/web/src/app/api/v1/mcp/route.ts:499 (`stringArg(args, 'state') ?? 'completed'`) vs packages/db/migrations/0009_integrations_audit.sql:123-125 (`agent_runs_state_check`)",
+      "request": "POST /api/v1/mcp tools/call nexus.finish_agent_run with { business_id, agent_name } and no state",
+      "response": "HTTP 200, result.isError = true, \"new row for relation \\\"agent_runs\\\" violates check constraint \\\"agent_runs_state_check\\\"\". Passing state:\"succeeded\" succeeds.",
+      "evidence_cases": [
+        "MCP-OK-nexus.finish_agent_run"
+      ]
+    },
+    {
+      "id": "F-6",
+      "severity": "Medium",
+      "title": "nexus.submit_profile_capture is refused for a lead the caller can otherwise act on",
+      "code": "apps/web/src/app/api/v1/mcp/route.ts:320-338 → apps/web/src/lib/repo/profile-capture.ts",
+      "request": "POST /api/v1/mcp tools/call nexus.submit_profile_capture with a real lead id, its LinkedIn URL and pasted content",
+      "response": "HTTP 200, result.isError = true, text \"You do not have permission to do that.\"",
+      "evidence_cases": [
+        "MCP-OK-nexus.submit_profile_capture"
+      ]
+    },
+    {
+      "id": "F-7",
+      "severity": "Medium",
+      "title": "Three companion operations refuse the administrator with a blanket message",
+      "code": "apps/web/src/app/api/v1/companion/actions/[operation]/route.ts:84-127 → apps/web/src/lib/repo/leads.ts (`markConnectionSent`, `markMessageSent`, `startReactivation`)",
+      "request": "POST /api/v1/companion/actions/mark-connection-sent { leadId: <real zemnas lead>, identityId: <real active identity>, withNote: true } as admin",
+      "response": "HTTP 400 {\"error\":\"You do not have permission to do that.\"}",
+      "evidence_cases": [
+        "ACT-mark-connection-sent-OK",
+        "ACT-mark-message-sent-OK",
+        "ACT-reactivate-OK"
+      ]
+    },
+    {
+      "id": "F-8",
+      "severity": "Low",
+      "title": "nexus.get_today_queue answers a null/unknown user with an empty queue",
+      "code": "apps/web/src/app/api/v1/mcp/route.ts:410-427",
+      "request": "POST /api/v1/mcp tools/call nexus.get_today_queue with user_id = 00000000-0000-4000-8000-0000000000ff",
+      "response": "HTTP 200, result.structuredContent = {\"items\":[]}",
+      "evidence_cases": [
+        "MCP-BAD-nexus.get_today_queue"
+      ]
+    },
+    {
+      "id": "F-9",
+      "severity": "Info",
+      "title": "The two scope vocabularies are disjoint, so the contract and the database disagree about a token’s authority",
+      "code": "packages/core/src/contracts.ts:535-554 (`MCP_TOOL_SCOPES`) and apps/web/src/app/api/v1/mcp/route.ts:675 (`handler.scope`) vs packages/db/migrations/0013_rls.sql (every `is_api_client_allowed(...)` call)",
+      "request": "A service token carrying only the contract scopes (`candidate:submit`, `signal:create`, …) then calling a write tool",
+      "response": "`42501 new row violates row-level security policy for table \"signals\"` (among others) even though the gateway’s scope check passed.",
+      "evidence_cases": []
+    },
+    {
+      "id": "F-10",
+      "severity": "Info",
+      "title": "Known dead code: `apps/web/middleware.ts` never executes",
+      "code": "apps/web/middleware.ts",
+      "request": "GET /api/v1/companion/me with Origin: chrome-extension://…",
+      "response": "200/401 with `access-control-allow-origin: *` from the next.config.ts rule; a preflight returns 204 with the methods and headers advertised.",
+      "evidence_cases": [
+        "CORS-PREFLIGHT-COMPANION",
+        "CORS-GET-COMPANION",
+        "CORS-INGEST-NO-WILDCARD"
+      ]
+    }
+  ]
+}
