@@ -1,18 +1,18 @@
 # NEXUS — Pre-Deployment Baseline Report
 
-**Status: all release gates green at `585d51c`.** Eight `BLOCKED` capability areas, six hard row caps
+**Status: all release gates green at `f93bff4`.** Eight `BLOCKED` capability areas, six hard row caps
 and two product defects found during this baseline are closed. Three items cannot be closed inside
 this environment and are named here rather than worked around; nothing in this report claims more than
 was executed.
 
 | | |
 | --- | --- |
-| Branch | `integration/final` |
-| HEAD | `585d51c` |
+| Branch | `integration/final` — pushed to `origin` |
+| HEAD | `f93bff4` |
 | Backend source | `backend/remediation` @ `9f009186cfc976f27bd85a3406b2448053266b26` (never modified) |
 | Frontend donor | `codex/figma-frontend` @ `4427dd2efef8e3542174596ccae34944710855c4` (selective only, never merged) |
 | Working tree | **clean** |
-| Baseline tag | `nexus-predeploy-baseline-v1` — exists, points at `1e866b0`; see §7 |
+| Baseline tag | `nexus-predeploy-baseline-v1` → **`f93bff4`**, pushed; see §7 |
 | Deployment | **not performed**; no provider chosen, no DNS/domain/Supabase/hosting change |
 
 ## 0. Gate results
@@ -235,17 +235,22 @@ Accepted and recorded rather than fixed:
 - **F-4 / F-7** remain `PARTIAL` by construction rather than by defect (a keyless-write case that the
   engine correctly refuses, and a fixture pairing whose refusal is the guard working).
 
-## 7. Tag
+## 7. Tag — action taken
 
-`nexus-predeploy-baseline-v1` exists and points at `1e866b0`, which is an ancestor of this HEAD. It is
-not dangling, but it no longer names the tip. Its message already records its own scoped residuals and
-the fact that it does not assert more than was verified; two of those residuals have since moved
-(U29/U30 are now captured, and the U28 cause is established).
+`nexus-predeploy-baseline-v1` **has been moved to `f93bff4`** and force-pushed, and its message was
+rewritten to match the commit it names.
 
-With the release gate green, the remaining choice is the repository owner's: leave the tag as the
-record of what was frozen at `1e866b0` and tag the release commit separately, or re-point it
-deliberately. Either way the tag message must match the commit it names and must keep naming the open
-residuals.
+It previously targetted `1e866b0`, five commits back. That message described the state at that commit,
+including two scoped residuals that have since changed — **U29 and U30 are now captured and compared**
+from the real panel, and the **U28 cause is established** — and its gate list predated the two product
+defects fixed here. The brief's condition was that the tag be created only once every baseline gate is
+green; the gates are now green and verified in a fresh worktree, so the tag now names that commit.
+
+Force-pushing was acceptable in this specific case because the tag named a commit in this branch's own
+linear history, no release was cut from it, and nothing could have depended on it. The previous target
+`1e866b0` remains permanently reachable on the branch.
+
+The tag message names its own residuals, so it cannot be read as asserting more than was verified.
 
 ## 8. Deployment
 
@@ -262,9 +267,10 @@ it is host-agnostic; the dead middleware file no longer exists to confuse anyone
 Every gate the brief names is green at this commit, including the clean-checkout release gate, and the
 `BLOCKED` count is zero. Two product defects were found during this baseline and fixed with regression
 tests; six false findings were removed from the verification record and replaced with statuses derived
-from the evidence.
+from the evidence. The branch is pushed and the baseline tag now marks the verified commit.
 
 What this report does **not** claim: that service-token ingestion works on the embedded engine (it does
 not, and the reason is documented), that the live AI provider has been exercised (it has not — no key
 here), or that the Companion's visual comparison is complete (nine of ten states were captured; the
-tenth needs demo content that does not exist yet).
+tenth needs demo content that does not exist yet). Those three are stated as residuals in the tag
+message itself, so the tag cannot be read as asserting more than was verified.

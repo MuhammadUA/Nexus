@@ -8,7 +8,7 @@ records the full release gate executed in a **fresh git worktree at the same com
 | --- | --- |
 | Integration worktree | `E:\CRM\CRM-integration` |
 | Clean gate worktree | `E:\CRM\CRM-cleancheck-2` (git worktree, `--detach`) |
-| Commit under test | `585d51cdd96285604fb5e7cd188c5f5cf3fe9361` |
+| Commit under test | `f93bff4f15ee9b79f2453f909b39915d8fb2d665` |
 | Started from | pristine tree — verified absent: `node_modules`, `apps/web/node_modules`, `apps/web/.data`, `apps/web/.next`, `apps/extension/dist` |
 
 ## Gate results
@@ -64,7 +64,7 @@ whenever the tree moves rather than once per baseline.
 
 ```powershell
 cd E:\CRM\CRM-integration
-git worktree add E:\CRM\CRM-cleancheck-2 --detach 585d51c
+git worktree add E:\CRM\CRM-cleancheck-2 --detach f93bff4
 cd E:\CRM\CRM-cleancheck-2
 pnpm install --frozen-lockfile
 pnpm run typecheck

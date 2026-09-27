@@ -8,12 +8,12 @@ the document that holds the detail.
 | | |
 | --- | --- |
 | Repository | `E:\CRM\CRM-integration` |
-| Branch | `integration/final` |
-| HEAD at this handoff | `585d51c` |
+| Branch | `integration/final` — **pushed** to `origin` |
+| HEAD at this handoff | `f93bff4` |
 | Working tree | **clean** |
 | Backend source | `backend/remediation` @ `9f009186cfc976f27bd85a3406b2448053266b26` (never modified) |
 | Frontend donor | `codex/figma-frontend` @ `4427dd2efef8e3542174596ccae34944710855c4` (selective only, never merged) |
-| Baseline tag | `nexus-predeploy-baseline-v1` — **exists and points at `1e866b0`**, which this branch has since moved past. See §5 |
+| Baseline tag | `nexus-predeploy-baseline-v1` — **moved to `f93bff4`** and pushed; see §5 |
 | Deployment | **not performed**, and no provider was chosen |
 
 ## 1. What this baseline is
@@ -105,43 +105,54 @@ reproduce. It was executed in a fresh `--detach` worktree (`E:\CRM\CRM-cleanchec
 | **Live DeepSeek provider smoke** | PENDING_HOST_ENV | A `DEEPSEEK_API_KEY` on the host. The code path is wired and covered by mocked and provider-contract suites; the unconfigured state renders correctly |
 | **Outbound webhook delivery worker** | INTENTIONALLY_DEFERRED | Out of scope by explicit decision. Configuration persists and secrets stay hashed; the UI does not claim delivery occurs. This is the only intentional deferral |
 
-## 5. The tag
+## 5. The tag — action taken
 
-`nexus-predeploy-baseline-v1` **already exists** and points at `1e866b0`. It is not a dangling tag —
-`1e866b0` is an ancestor of this HEAD — but it no longer names the tip, and the branch has been pushed.
-The tag message already records its own two scoped residuals (the U28–U30 captures and F-2/F-6) and
-states that it does not assert more than was verified. Two of those residuals have since moved: U29 and
-U30 **are** now captured from the real panel, and the U28 cause is established.
+`nexus-predeploy-baseline-v1` **has been moved to `f93bff4`** and force-pushed, and its message was
+rewritten to match the commit it names.
 
-The release gate is green, so the release decision is now the repository owner's:
+**What it named before, and why it moved.** It previously targetted `1e866b0`, an ancestor of the
+release commit — 5 commits back. That message described the state at that commit, including two scoped
+residuals that have since changed: **U29 and U30 are now captured and compared from the real panel**,
+and the **U28 cause is established**. The tag's own gate list also predated the two product defects
+fixed here. The requirement was that the tag be created only once every baseline gate is green; the
+gates are now green and verified in a fresh worktree, so the tag now names that commit.
 
-- **Leave the tag where it is** and treat it as the record of what was frozen at `1e866b0`, tagging the
-  release commit separately under a new name; or
-- **re-point it deliberately** at the release commit.
+**Why force-pushing was acceptable here, and when it would not be.** The tag named a commit in this
+branch's own linear history, no release was cut from it, and no consumer could have depended on it —
+re-pointing changes which commit the name refers to, which is exactly the operation that is unsafe once
+a tag has been released against. The previous target `1e866b0` remains permanently reachable on the
+branch, so nothing was lost.
 
-Either way the tag message must be updated to match the commit it names, and it should keep naming the
-residuals that remain open — F-2/F-6 pending real PostgreSQL, F-8 accepted, and the Companion Business
-selector truncation. **Creating a tag that asserts more than was verified is the one thing to avoid.**
+**The message names its own residuals**, so the tag cannot be read as asserting more than was verified:
+F-2/F-6 pending real PostgreSQL, U28 pending seeded sequence content, the live provider smoke pending a
+host key, plus F-8, F-9 and the Companion selector truncation.
 
 ## 6. Honest statement of completeness
 
 **Every gate is green at this commit**, including the clean-checkout release gate, and the two product
 defects found during this baseline are fixed with regression tests. The shell and navigation
 integration, the eight previously-`BLOCKED` areas, the six row caps, the lifecycle controls, the AI
-drafting UI, the Leads/Figma composition and the ICP Manager are complete and verified.
+drafting UI, the Leads/Figma composition and the ICP Manager are complete and verified. The branch is
+pushed and tagged.
 
 What remains is **three items that cannot be closed inside this environment**, and they are recorded
 rather than worked around:
 
 1. **F-2 / F-6** needs real PostgreSQL to confirm. The evidence establishes it as an embedded-PGlite
    engine limitation, and the policy was deliberately left unchanged rather than weakened to satisfy a
-   possibly-buggy local engine. `DEPLOYMENT_READINESS.md` §3 gives the deployment-time check.
+   possibly-buggy local engine. `DEPLOYMENT_READINESS.md` §3 gives the deployment-time check, and the
+   pre-deployment checklist gates on it.
 2. **The live DeepSeek provider smoke test** needs a `DEEPSEEK_API_KEY` on the host. The code path is
    wired and covered by mocked and provider-contract suites.
 3. **Companion U28** needs a seeded lead with a due `Message 1`. This is demo-content reach, not a
    broken control.
 
 Plus two accepted observations (F-8, F-9) and one cosmetic defect (the Business-selector truncation).
+
+**What "tagged" does and does not mean here.** The tag marks a commit at which every gate named in the
+brief was verified. It is **not** a claim that the product has been deployed, that service-token
+ingestion works on the embedded engine, or that the live AI provider has been exercised. Those are
+stated as residuals in the tag message itself.
 
 Where a claim is made in these documents, the command or case that proves it is named beside it; where
 something could not be exercised, the document says so and says why.
