@@ -88,8 +88,8 @@ suppressed lead offers no outreach. It is now verified in the UI, not only at th
 
 ## 5. Visual comparison against U22–U30
 
-**Seven of nine frames were captured from the real side panel** and compared. Captures live in
-`E:\CRM\extension-baseline\screenshots\` as `panel-U22a`, `panel-U22b`, `panel-U23` … `panel-U27`.
+**Nine of the ten panel states were captured from the real side panel** and compared. Captures live in
+`E:\CRM\extension-baseline\screenshots\`.
 
 | Frame | Node | Capture | Status | Finding |
 | --- | --- | --- | --- | --- |
@@ -100,22 +100,66 @@ suppressed lead offers no outreach. It is now verified in the UI, not only at th
 | U25 — Search | `7:125` | `panel-U25-companion-search.png` | **DIFFERS** | see below |
 | U26 — Add to CRM | `7:159` | `panel-U26-companion-add.png` | **MATCHES** (structure) | see below |
 | U27 — Connection Focus | `7:185` | `panel-U27-companion-connection-focus.png` | **MATCHES** (structure) | see below |
-| U28 — Follow-up Focus | `7:208` | — | **BLOCKED** | no capture produced |
-| U29 — Reply & Notes | `7:237` | — | **BLOCKED** | no capture produced |
-| U30 — Dormant & Reactivation | `7:259` | — | **BLOCKED** | no capture produced |
+| U28 — Follow-up Focus | `7:208` | — | **BLOCKED** | no capture; cause established below |
+| U29 — Reply & Notes | `7:237` | `panel-U29-companion-reply-notes.png` | **MATCHES** (structure) | captured this baseline |
+| U30 — Dormant & Reactivation | `7:259` | `panel-U30-companion-dormant-reactivation.png` | **MATCHES** (structure) | captured this baseline |
 
-### What the real panel actually renders
+### U29 and U30 — captured this baseline
+
+The earlier run left these `BLOCKED` because it walked only the panel's **tab**-level navigation
+(`Leads` / `Today` / `Search` / `Add to CRM`). All three outstanding frames are **lead focus** states,
+one level deeper: they are reached by opening a lead row, then by the focus screen's own controls.
+`E:\CRM\extension-baseline\capture-focus-frames.mjs` drives that path over CDP against the real
+`chrome-extension://…/sidepanel.html`, and each capture is validated against what the screen renders
+rather than assumed:
+
+| Frame | Reached by | What the capture shows | Verdict |
+| --- | --- | --- | --- |
+| **U29 — Reply & Notes** | focus screen → `Capture reply` | `Exact reply*` verbatim text area with the caption *"Paste the reply word for word. It is stored verbatim and never re-worded."*, an `Outcome*` select carrying all nine outcomes (Interested … Do not contact … Other), a separate `Internal note`, the notice *"Saving pauses pending sequence steps. An explicit 'Do not contact' suppresses this person on every identity."*, and a full-width `Save reply` | **MATCHES** structurally. The frame's composition — exact text, then outcome, then a separate note — is followed, and the safety copy is present rather than implied |
+| **U30 — Dormant & Reactivation** | a dormant lead (`Marcus Reed`, `sequence.state = dormant`) | the lead header with a `Dormant` chip, `Sending as Osama - Zemnas`, an amber alert *"Dormant. Review from 2026-10-27."*, a primary **`Open reactivation`** button, and the sequence history beneath | **MATCHES** structurally. The dormant state is read from `sequence.state`, and the reactivation date shown is the stored `reactivationDueAt`, not a literal |
+
+**U28 — Follow-up Focus: still not captured, and the reason is now established.** The frame requires
+`ActionFocus`'s follow-up branch, which renders only when `currentMessage` exists and is not the
+connection step (`sidepanel.tsx:1130-1175`). Driving the product's own API was attempted — rebinding to
+Osama (who holds the Zemnas grant), then `POST /api/v1/companion/actions/mark-connection-sent` on a
+Zemnas lead — and the call **succeeds (200)**, recording `connection_sent:without_note` in the lead's
+history. It still renders the connection step, because no due `Message 1` message instance exists for
+that lead: **every seeded lead sits on the connection step.** This is demo-content reach, not a broken
+control — the follow-up view is implemented, and its message block, `Immutable` notice and state chip
+are covered by the E2E suite and by the `sequence-lifecycle` database cases. It is recorded as
+`BLOCKED` rather than assumed to match, with the exact button that must be pressed in the CRM
+(`mark-connection-sent` advancing the enrollment) to produce a capturable state.
+
+### A real defect this comparison exposed, and the fix
+
+Driving the panel surfaced a bug no test had caught, because every case that touched the endpoint
+supplied the parameter the panel omits:
+
+`GET /api/v1/companion/leads` and `GET /api/v1/companion/search` read their optional `limit` as
+`Number(params.get('limit') ?? '')`. `Number('')` is **`0`**, not `NaN`, so `clampLimit` raised it to its
+minimum of **1** instead of using the route default. The panel sends no `limit`, so the lead list
+answered `200 {"total":24,"leads":[ …one row… ]}`: a well-formed list containing a single lead. **The
+dormant and follow-up focus screens were unreachable in the panel for exactly this reason** — the lead
+that renders them was never listed. Fixed by distinguishing "absent" from "zero" (`optionalLimit`), with
+11 regression cases in `apps/web/test/api-limit-params.test.ts`; verified live afterwards, `?businessId=<zemnas>`
+returns 24 of 24 rows.
+
+**One minor visual defect observed while capturing, not yet fixed:** the panel's **Business selector
+truncates its selected value** to `Zemnas Creati`, so the operator cannot read which business is active
+on a 420px panel. `All ICPs`, `Bisma - Lavish` and `Osama - Zemnas` fit; the longest business name does
+not. Recorded rather than silently dropped.
+
+### What the real panel renders
 
 Every captured state shares a consistent shell, which the frames do not draw identically:
 
 - Header: `NEXUS` on the left, `Companion` and `Sign out` on the right.
 - A two-item primary nav: **`CRM View`** and **`Add to CRM`**.
-- A **selector row** of three dropdowns: business (`AI Integration…`), ICP (`All ICPs`), sender
-  identity (`Bisma - Lavish`).
-- A tab row: **`Leads`**, **`Today`**, **`Search`**, with a live count on the active one
-  (`Leads 1`, `Today 2`).
-- Lead rows: name, company, a `· owner` fragment, then action/state chips.
-- A footer carrying the bound sender and a `Refresh` control.
+- A **selector row** of three dropdowns: business, ICP (`All ICPs`), sender identity.
+- A tab row: **`Leads`**, **`Today`**, **`Search`**, with a live count on the active one.
+- A filter chip row (`24 leads`, `all statuses`) that the frames do not draw.
+- Lead rows: name, company, `· sender`, then action/state chips.
+- A footer carrying `Refresh`.
 
 ### Per-frame findings
 
@@ -129,45 +173,39 @@ binding sections.
 **U22b — Browser binding: DIFFERS.** The frame puts `LinkedIn account`, `Business` and a dark
 **`Bind this browser`** button **inside the sign-in panel**, with a confirmation block beneath. In the
 built panel the binding is a **separate stage reached after sign-in**, and its selectors become the
-persistent selector row described above (business / ICP / identity) rather than a dedicated
-`LinkedIn account` + `Business` + `Bind this browser` form. Functionally complete — eight E2E tests
-cover binding persistence and storage — but the composition differs from the frame.
+persistent selector row described above rather than a dedicated `LinkedIn account` + `Business` +
+`Bind this browser` form. Functionally complete — eight E2E tests cover binding persistence and
+storage — but the composition differs from the frame. This capture run also exercised the two-step
+conflict flow for real: binding an identity another profile holds answered **409** with the holder
+named, and `Transfer to this browser` then succeeded with **200**, which is the designed path.
 
 **U23 — Leads: DIFFERS.** The frame shows `Leads / Today / Search` as three bordered buttons, a
 `Business` + `ICP` selector pair, and rows with the status chip on the **right**. The built panel adds a
-**filter chip row** (`1 leads`, `all statuses`) that the frame does not draw, places the chips
+**filter chip row** (`24 leads`, `all statuses`) that the frame does not draw, places the chips
 **below** the name rather than right-aligned, and renders the nav labels as plain text with the active
 one bold and underlined rather than as buttons. The information is present; the arrangement is not the
 frame's.
 
-**U24 — Today: MATCHES (structure).** Tab `Today 2` active; two rows, each with a type chip (`custom
-tasks`, `connections`) and a due chip (`Overdue 2d`, `Overdue 0d`). Same row anatomy as the frame, and
-the overdue treatment is present.
+**U24 — Today: MATCHES (structure).** Tab `Today` active; rows with a type chip and a due chip, the
+overdue treatment present. Same row anatomy as the frame.
 
 **U25 — Search: DIFFERS.** Reached and rendered (the tab and count chrome are present), but the frame
 draws a dedicated search-input surface which the capture does not show in the same position.
 
-**U26 — Add to CRM: MATCHES (structure).** Largest capture (33 KB), with the add flow's form controls
+**U26 — Add to CRM: MATCHES (structure).** Largest capture, with the add flow's form controls
 rendered; the frame's composition is followed.
 
-**U27 — Connection Focus: MATCHES (structure).** Comparable size to U26; the connection-focus state
-renders with its action controls.
-
-**U28–U30: BLOCKED.** No captures were produced. These need a follow-up-focus state, a reply/notes
-state and a dormant/reactivation state driven in the panel; the capture run stopped before reaching
-them, and my own attempt to reproduce the capture harness failed to register the extension in a fresh
-Chrome profile (`ERR_FILE_NOT_FOUND` on the panel URL, with only Chrome's built-in extension targets
-present), so I could not extend the set. **Recording these as `BLOCKED` rather than assuming they
-match.**
+**U27 — Connection Focus: MATCHES (structure).** The connection-focus state renders with its action
+controls (`Mark sent with note` / `Mark sent without note`).
 
 ### Net visual assessment
 
 The panel is **functionally complete and internally consistent** — shell, selectors, tabs, counts,
-rows, chips and footer all render, and every state reached produced a coherent screen. The deviations
-are **compositional**: the design draws navigation as bordered buttons, binding inside the sign-in
-panel, and status chips right-aligned, while the implementation uses a compact text tab row, a
-persistent selector row, and chips beneath the row text. Three frames match structurally, four differ
-in arrangement, and two were never captured.
+rows, chips and footer all render, and every state reached produced a coherent screen. Of the ten
+states: **five match** the frames structurally (U24, U26, U27, U29, U30), **four differ in arrangement**
+(U22a, U22b, U23, U25), and **one is blocked with a named cause** (U28).
 
-**Companion status: `PASS_WITH_MINOR_VISUAL_GAPS`** — full functional certification (38/38 E2E,
-nothing skipped) with documented compositional differences and two uncaptured frames.
+**Companion status: `PASS_WITH_MINOR_VISUAL_GAPS`** — full functional certification (38/38 E2E, nothing
+skipped) with documented compositional differences, one uncaptured frame whose cause is established,
+and one minor truncation defect recorded.
+

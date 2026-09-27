@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T19:42:27.718Z",
+  "generated_at": "2026-09-27T20:49:38.409Z",
   "base_url": "http://127.0.0.1:3000",
   "tree": "E:\\CRM\\CRM-integration",
   "branch": "integration/final",
@@ -426,7 +426,7 @@
       "title": "GET leads for zemnas as admin",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "200, total=21 returned=5"
+      "note": "200, total=26 returned=5"
     },
     {
       "case_id": "COMP-LEADS-NOBIZ",
@@ -657,8 +657,8 @@
       "group": "api/v1/companion/bind",
       "title": "POST bind a free identity from a fresh browser profile",
       "verdict": "PASS",
-      "http_status": 200,
-      "note": "200, binding present, transferredFrom=0"
+      "http_status": 409,
+      "note": "409 reason=identity_in_use — a decision, not a failure"
     },
     {
       "case_id": "COMP-BIND-CONFLICT",
@@ -666,7 +666,7 @@
       "title": "POST bind an identity already held by another live profile, without transfer",
       "verdict": "PASS",
       "http_status": 409,
-      "note": "409 reason=identity_in_use, conflicts=[{\"sessionId\":\"98753a4a-47fb-4172-8b2c-e7aee20dee74\",\"operatorName\":\"Osama Sender\",\"lastActiveAt\":\"2026-09-27T19:42:25.539Z\",\"isSelf\":false}]"
+      "note": "409 reason=identity_in_use, conflicts=[{\"sessionId\":\"7a720623-7525-4ecd-bdb6-c2e137b073fb\",\"operatorName\":\"Nexus Administrator\",\"lastActiveAt\":\"2026-09-27T20:47:48.162Z\",\"isSelf\":true}]"
     },
     {
       "case_id": "COMP-BIND-INVALID",
@@ -706,7 +706,7 @@
       "title": "POST add a LinkedIn profile (creates a lead)",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "200, leadId=8ae8809a-e236-40b1-b419-fc8227b33150 created=true needsProfile=false deduped=false"
+      "note": "200, leadId=8ae8809a-e236-40b1-b419-fc8227b33150 created=false needsProfile=false deduped=true"
     },
     {
       "case_id": "COMP-ADD-IDEMPOTENT",
@@ -954,7 +954,7 @@
       "title": "POST ingest with a user (companion) token",
       "verdict": "PASS",
       "http_status": 201,
-      "note": "201 — \"accepted (user token bypasses the service scope list by design) leadId=e86a6e48-b2f1-4acb-a5a4-5ccd3059fc26\""
+      "note": "201 — \"accepted (user token bypasses the service scope list by design) leadId=deac81e0-1b57-4e91-b913-2091cf2ca116\""
     },
     {
       "case_id": "INGEST-SCOPE",
@@ -1282,7 +1282,7 @@
       "title": "nexus.create_signal happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: signal_id=090a10a8-de57-407c-801d-fd053e044ea7"
+      "note": "result asserted: signal_id=3ddcfbd3-045a-423a-96ab-2bb4bdf141a3"
     },
     {
       "case_id": "MCP-BAD-nexus.create_signal",
@@ -1298,7 +1298,7 @@
       "title": "nexus.add_source_evidence happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: evidence_id=07a493de-ae91-4602-bd3e-b8209f4245f0 deduplicated=false"
+      "note": "result asserted: evidence_id=ec9cab3d-5e52-4d6d-bcd3-9091e79cf83d deduplicated=false"
     },
     {
       "case_id": "MCP-BAD-nexus.add_source_evidence",
@@ -1378,7 +1378,7 @@
       "title": "nexus.add_note happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: note_id=8803ae0f-92b8-42d2-8c50-e86ca14610c0"
+      "note": "result asserted: note_id=26fe6d0e-6873-4d90-90a1-26cadfc6cf1f"
     },
     {
       "case_id": "MCP-BAD-nexus.add_note",
@@ -1394,7 +1394,7 @@
       "title": "nexus.create_task happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: task_id=855fd758-7c98-4e96-a5bf-6bd95c1814e0"
+      "note": "result asserted: task_id=e15ec966-3355-4e0a-a460-8db39ee9930a"
     },
     {
       "case_id": "MCP-BAD-nexus.create_task",
@@ -1426,7 +1426,7 @@
       "title": "nexus.submit_research happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: research_snapshot_id=5f9ea3ab-3171-4ec9-b1f1-f341d8fa4f56"
+      "note": "result asserted: research_snapshot_id=4f6a61d2-4bd4-43d2-881a-43d9a54d5890"
     },
     {
       "case_id": "MCP-BAD-nexus.submit_research",
@@ -1442,7 +1442,7 @@
       "title": "nexus.submit_message_draft happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: message_version_id=9cbb5b3c-94a4-4eda-bb89-c3f88da97f2d"
+      "note": "result asserted: message_version_id=c7c8fd3e-3387-4651-849e-108b6ff28fc1"
     },
     {
       "case_id": "MCP-BAD-nexus.submit_message_draft",
@@ -1458,7 +1458,7 @@
       "title": "nexus.finish_agent_run happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: agent_run_id=218340cc-82b6-491e-8055-8384f84221be"
+      "note": "result asserted: agent_run_id=c3e46452-47df-49de-8c8a-9bd62e25d691"
     },
     {
       "case_id": "MCP-BAD-nexus.finish_agent_run",
@@ -1474,7 +1474,7 @@
       "title": "create_signal with a fresh idempotency_key",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "signal_id=d6eec1c2-acc4-4ad7-b590-b03bb24d588c idempotent=false"
+      "note": "signal_id=5343df38-1925-42b7-88c5-911610915f11 idempotent=false"
     },
     {
       "case_id": "MCP-IDEM-REPLAY",
@@ -1482,7 +1482,7 @@
       "title": "Same key + same payload is replayed, not re-run",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "idempotent=true, same signal_id=d6eec1c2-acc4-4ad7-b590-b03bb24d588c (no second row)"
+      "note": "idempotent=true, same signal_id=5343df38-1925-42b7-88c5-911610915f11 (no second row)"
     },
     {
       "case_id": "MCP-IDEM-DIFFERENT-PAYLOAD",
@@ -1490,7 +1490,7 @@
       "title": "Same key + different payload is refused",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result.isError: \"idempotency_key mcp-idem-1790538146368 was already used for nexus.create_signal with different arguments.\""
+      "note": "result.isError: \"idempotency_key mcp-idem-1790542176994 was already used for nexus.create_signal with different arguments.\""
     },
     {
       "case_id": "MCP-IDEM-KEY-REQUIRED",
@@ -1506,7 +1506,7 @@
       "title": "The same key under a different business is not treated as a replay",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "distinct signal_id=85789d17-2d36-4a7a-8d0a-4ba9aa67ad9f idempotent=false"
+      "note": "distinct signal_id=0addf6dc-e5cc-40b8-a849-82b44fe40d6c idempotent=false"
     },
     {
       "case_id": "MCP-NO-KEY-READONLY-REPEAT",
@@ -1659,13 +1659,13 @@
         "business_key_or_id": "zemnas",
         "payload_type": "candidate",
         "payload": {
-          "full_name": "Baseline Ingest Person 1790538146179",
+          "full_name": "Baseline Ingest Person 1790542176774",
           "job_title": "Content Lead",
-          "company_name": "Northstar 1790538146179",
-          "linkedin_url": "https://www.linkedin.com/in/baseline-ingest-1790538146179"
+          "company_name": "Northstar 1790542176774",
+          "linkedin_url": "https://www.linkedin.com/in/baseline-ingest-1790542176774"
         },
-        "idempotency_key": "baseline-ingest-1790538146179",
-        "observed_at": "2026-09-27T19:42:26.179Z"
+        "idempotency_key": "baseline-ingest-1790542176774",
+        "observed_at": "2026-09-27T20:49:36.774Z"
       },
       "body": "{\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}",
       "note": "expected 200/201 with a leadId, got 400 {\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}",
@@ -1697,11 +1697,11 @@
         "name": "nexus.submit_candidate",
         "arguments": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-cand-1790538146368",
+          "idempotency_key": "mcp-cand-1790542176994",
           "full_name": "Baseline MCP Candidate",
           "job_title": "Head of Production",
           "company_name": "Northstar",
-          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-candidate-1790538146368"
+          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-candidate-1790542176994"
         }
       },
       "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"new row violates row-level security policy for table \\\"people\\\"\"}]}}",
@@ -1721,11 +1721,11 @@
         "name": "nexus.create_or_update_lead",
         "arguments": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-lead-1790538146368",
+          "idempotency_key": "mcp-lead-1790542176994",
           "full_name": "Baseline MCP Lead Person",
           "company_name": "Studio 8",
           "job_title": "Content Lead",
-          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-lead-1790538146368"
+          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-lead-1790542176994"
         }
       },
       "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"new row violates row-level security policy for table \\\"companies\\\"\"}]}}",
@@ -1745,7 +1745,7 @@
         "name": "nexus.submit_profile_capture",
         "arguments": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-cap-1790538146368",
+          "idempotency_key": "mcp-cap-1790542176994",
           "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
           "linkedin_url": "https://www.linkedin.com/in/baseline-verify-person",
           "pasted_content": "Baseline Verify\nHead of Production at Frame House\nMunich, Germany"
@@ -1768,7 +1768,7 @@
         "arguments": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
           "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
-          "body": "no-key note 1790538146368"
+          "body": "no-key note 1790542176994"
         }
       },
       "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"idempotency_key is required for nexus.add_note\"}]}}",

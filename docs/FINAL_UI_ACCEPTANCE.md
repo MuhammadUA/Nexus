@@ -126,16 +126,21 @@ Server Action is reachable without its page, and returns real counts so the bar 
 | Pager preserves filters | PASS |
 | No `.slice(0, n)` row cap anywhere in `apps/web/src` | PASS — verified by repository-wide search |
 | Records reachable with no gaps | PASS |
+| Boundary matrix at 1 / 5 / 6 / 21 / 25 / 26+ records | **PASS** — `scripts/baseline-verify/a03-leads-verify.mjs`, **43/43 checks** against a running build with 32 live records at `pageSize=5` |
+| Out-of-range page (`pageSize=5&page=6`, `&page=99`) | **PASS** — clamps by 307 redirect to an existing page with rows; a blank table is not a reachable state |
+| Every chip's advertised count equals its own filter result | **PASS** — asserted per chip |
 
 **On the row caps:** a repository-wide search for `.slice(0, n)` row limits found **none** on Leads,
-My Leads, My Day Upcoming/Done, Lead Sources or Overview. The eight hard caps recorded in the earlier
-comparison audit belonged to the **donor branch**, which this tree does not contain. My Day Done is
-bounded at 50 by a documented observation window ("don't scan all interaction history"), which is a
-design choice, not an inaccessible-data defect.
+My Leads, My Day Upcoming/Done, Lead Sources or Overview. My Day Done is bounded at 50 by a documented
+observation window ("don't scan all interaction history"), which is a design choice, not an
+inaccessible-data defect. The A03 harness now proves the boundary rather than inferring it from source.
 
-**Not verified:** the boundary matrix at exactly 1 / 5 / 6 / 21 / 25 / 26+ records with a `pageSize`
-override. The seeded business has 21 leads against `PAGE_SIZE` 25, so the pager renders one page and the
-override was not exercised end to end. Recorded as `PARTIAL`.
+### Two defects this baseline found and fixed on Leads
+
+| Defect | Symptom | Fix |
+| --- | --- | --- |
+| **Quick-filter chip links** | Every chip sent its key with the value `1`. "Replied" and "Dormant" therefore linked to `?status=1` and returned **0 rows while advertising 2 and 1** — a chip that told the operator there was work and then showed an empty table. Their own active-state checks looked for `status === 'replied'` / `'dormant'`, so neither could ever be highlighted either | The row is now data (`apps/web/src/lib/quick-filter-chips.ts`); a boolean filter is the flag `1` and a status filter carries the status. `chipIsActive` derives the highlight from the same payload that builds the link, so the two cannot disagree. 10 regression tests |
+| **Companion list `limit`** (found on Leads-adjacent code) | `GET /api/v1/companion/leads` and `/companion/search` read an absent `limit` as `0` and clamped it to **1**, so the Companion's list answered `200 {"total":24,"leads":[one row]}` | `optionalLimit` distinguishes absent from zero; 11 regression tests. See §8 |
 
 ---
 
@@ -236,9 +241,10 @@ deleted (see `DEPLOYMENT_READINESS.md` §4 for the full history).
 | Extension unit tests | PASS — 9 |
 | Real panel boot in Chromium | **PASS** — 420 × 820, extension id `aioglcndcbbdfallibppohnfakadieki` |
 | Real-origin API connectivity | **PASS** — preflight from `chrome-extension://…` returns 204 with `ACAO: *` |
-| Real-origin E2E (Playwright) | **PASS** — **38 passed, 0 failed, 0 skipped**, exit 0 |
+| Real-origin E2E (Playwright) | **PASS** — **38 passed, 0 failed, 0 skipped**, exit 0, re-run at this build |
 | Flow verification (binding, leads, today, search, Add to CRM, connection, reply/note, DNC, list restore) | **PASS** |
-| Visual comparison against frames U22–U30 (420 × 820) | **PARTIAL** — U22 compared and differs; U23–U30 `BLOCKED` (no captures) |
+| Two-stage bind conflict flow driven for real | **PASS** — binding an identity another profile holds answered **409** naming the holder; `Transfer to this browser` then answered **200** |
+| Visual comparison against frames U22–U30 (420 × 820) | **PASS_WITH_MINOR_VISUAL_GAPS** — 9 of 10 states captured; 5 match structurally, 4 differ compositionally, U28 blocked with a named cause |
 
 The full per-flow and per-frame detail is in `_extension-acceptance-section.md`. Summary:
 
@@ -247,13 +253,23 @@ The full per-flow and per-frame detail is in `_extension-acceptance-section.md`.
   and handles a revoked token by returning to sign-in.
 - **Both previously-skipped cases now pass**, including `a Do-Not-Contact lead is shown as suppressed
   and offers no outreach` — suppression is a safety control, so its UI verification matters.
+- **U29 (Reply & Notes) and U30 (Dormant & Reactivation) were captured this baseline.** The earlier run
+  walked only tab-level navigation; both are lead-focus states one level deeper. U30 shows the dormant
+  alert with the stored `reactivationDueAt` and the `Open reactivation` control; U29 shows the verbatim
+  exact-reply area, all nine outcomes, a separate internal note and the pause/DNC notice.
 - **One real visual deviation (U22):** the live frame draws credential sign-in and browser binding as
   two stages of a **single** panel; the built panel shows only the credential form and puts the
   persistent business/ICP/sender selectors in the CRM view. The binding functionality exists and is
   covered by eight E2E tests, so this is a **composition** defect, not missing function. The header
-  also shows `Companion` where the frame shows the operator's identity, and the panel leaves a large
-  empty lower half where the frame places the binding controls.
-- **U23–U30 are `BLOCKED`, not passed** — no side-panel captures were produced for those states.
+  also shows `Companion` where the frame shows the operator's identity.
+- **U28 (Follow-up Focus) is `BLOCKED`, with the cause established rather than assumed:** the frame
+  renders only when `currentMessage` exists and is not the connection step, and every seeded lead sits
+  on the connection step. `mark-connection-sent` succeeds (200, recorded in the lead's history) but no
+  due `Message 1` instance exists for any seeded lead, so no lead can render it. This is demo-content
+  reach, not a broken control — the follow-up view is covered by the E2E suite and the
+  `sequence-lifecycle` database cases.
+- **One minor defect recorded, not fixed:** the panel's Business selector truncates its selected value
+  to `Zemnas Creati`, so the operator cannot read the active business at 420px.
 
 Status: `PASS_WITH_MINOR_VISUAL_GAPS`.
 
@@ -436,25 +452,43 @@ own permissions rather than at the real failure.
 
 ## 10. Summary
 
+Re-verified at commit `d3b7e72`. Test counts are from that build: 409 tests across five packages
+(`@nexus/core` 88, `@nexus/db` 82, `@nexus/extension` 9, `@nexus/web` 230).
+
 | Area | Status |
 | --- | --- |
-| Build gates (typecheck, lint, tests, web build, extension build, DB) | **PASS** |
+| Build gates (typecheck, lint, 409 tests, web build, extension build, DB) | **PASS** |
 | Admin shell / navigation | **PASS** |
 | Route reachability (28/28) | **PASS** |
 | Leads composition + bulk actions | **PASS** |
-| Leads pagination boundary matrix | **PARTIAL** |
+| Leads pagination boundary matrix | **PASS** — 43/43 via `a03-leads-verify.mjs` |
+| Leads quick-filter chips | **PASS** — defect found and fixed this baseline |
 | Lead Detail composition + real sequence state + full history | **PASS** |
 | Business lifecycle | **PASS** |
 | Identity lifecycle | **PASS** |
-| DeepSeek AI (mocked) | **PASS** |
-| DeepSeek AI (live provider) | **PENDING_HOST_ENV** |
+| DeepSeek AI (mocked / provider contract) | **PASS** |
+| DeepSeek AI (live provider) | **PENDING_HOST_ENV** — no `DEEPSEEK_API_KEY` in this environment |
 | Companion CORS | **PASS** |
 | Chrome Companion UI / E2E | **PASS** — 38 passed, 0 failed, 0 skipped |
-| Chrome Companion visual (U22–U30) | **PARTIAL** — U22 differs; U23–U30 not captured |
-| MCP / API running-endpoint verification | **PARTIAL** — 149 of 167 cases pass |
-| Auth / RBAC / RLS regression | **PASS** — 26 database-level cases as a non-owner role (§9) |
-| Ingestion / dedupe / invariants | **PASS** — 22 database-level cases (§9) |
+| Chrome Companion visual (U22–U30) | **PASS_WITH_MINOR_VISUAL_GAPS** — 9 of 10 states captured; 5 match, 4 differ compositionally, U28 blocked with a named cause |
+| MCP / API running-endpoint verification | **PASS with one engine limit** — 158 of 167 cases pass; every non-pass traced to F-2, the embedded-PGlite RLS case |
+| Auth / RBAC / RLS regression | **PASS** — 27 database-level cases as a non-owner role (§9) |
+| Ingestion / dedupe / invariants | **PASS** — 20 database-level cases (§9) |
 | Sequence / message invariants | **PASS** — 8 database-level cases + immutability and DNC suites (§9) |
+
+### The two findings that remain open, and what each waits on
+
+| Ref | Status | What it waits on |
+| --- | --- | --- |
+| F-2 (= F-6) | **OPEN, deliberately unpatched** | Confirmation against **real PostgreSQL**. The predicates are satisfied and the insert is still refused by the embedded PGlite engine; the failure reduces to a multi-term policy expression on a throwaway table with no product triggers. A permissive `WITH CHECK` that evaluates true cannot deny an insert in PostgreSQL, so the conclusion is an engine limitation. Changing a security policy to satisfy a possibly-buggy local engine would be the wrong trade. See `API_BASELINE_VERIFICATION.md` §5 |
+| F-8 | **OPEN, accepted** | Nothing — the ambiguity is real: `nexus.get_today_queue` answers an unknown user with `{"items":[]}`, so an agent cannot distinguish "nothing due" from "no such user". Recorded; not a defect |
+| F-9 | Advisory | Nothing — the gateway scope vocabulary and the database scope vocabulary are disjoint, so a token must be granted both. Recorded as context for F-2/F-6 |
+| U28 | **BLOCKED** | A seeded lead with a due `Message 1`. `mark-connection-sent` succeeds but creates no message instance for any seeded lead, so no lead leaves the connection step |
+| Business-selector truncation | **Recorded, not fixed** | A styling change to the panel's `Select` so a long business name is readable at 420px |
+
+**No dead control is claimed.** Where a control exists it reaches a real server action or repository
+call; where a surface is uncertified this document says so, and where a previously-reported defect was
+not one, that is recorded as a correction rather than dropped.
 
 **No dead control is claimed.** Where a control exists it reaches a real server action or repository
 call; where a surface is uncertified this document says so.

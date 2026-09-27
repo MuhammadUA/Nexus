@@ -1,10 +1,10 @@
 # MCP Baseline Verification
 
-Generated 2026-09-27T19:42:27.718Z against the **running** MCP gateway at `http://127.0.0.1:3000/api/v1/mcp` (tree `E:\CRM\CRM-integration`, branch `integration/final`), embedded PGlite database seeded by `apps/web/scripts/seed-demo.ts`.
+Generated 2026-09-27T20:49:38.409Z against the **running** MCP gateway at `http://127.0.0.1:3000/api/v1/mcp` (tree `E:\CRM\CRM-integration`, branch `integration/final`), embedded PGlite database seeded by `apps/web/scripts/seed-demo.ts`.
 
 Transport is JSON-RPC 2.0 over HTTP. Raw request/response pairs are in `scripts/baseline-verify/results.json`. Verdicts are `PASS` / `FAIL` / `PARTIAL` / `BLOCKED`. **Returned results were asserted, not merely the HTTP status**: a `200` whose `result.isError` was true, or whose `structuredContent` carried a `null` id, is recorded as a failure or a block and never as a pass.
 
-**Run provenance.** This report was generated from a `results.json` that does not record tree state (produced by an older harness). Re-run `scripts/baseline-verify/harness.mjs` to attach provenance.
+**Run provenance.** The build under test was **frozen for the whole run** — the hash of the tracked source was identical before and after execution (`a19614228b92611d` at commit `d3b7e723bcc822085ed031a75d49ddfe92465a91`), and no file outside the harness's own `results.json` changed. Every result below therefore describes one frozen build.
 
 ## 1. Declared tools and their JSON schemas
 
@@ -90,11 +90,11 @@ A *missing* token and an *unknown* token are both `-32001`; a *deactivated* serv
 
 | Case | Evidence |
 | --- | --- |
-| MCP-IDEM-FIRST | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"d6eec1c2-acc4-4ad7-b590-b03bb24d588c\"}"}],"structuredContent":{"… — **PASS** |
-| MCP-IDEM-REPLAY | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"d6eec1c2-acc4-4ad7-b590-b03bb24d588c\"}"}],"structuredContent":{"… — **PASS** |
-| MCP-IDEM-DIFFERENT-PAYLOAD | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key mcp-idem-1790538146368 was already used for nexus.c… — **PASS** |
+| MCP-IDEM-FIRST | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"5343df38-1925-42b7-88c5-911610915f11\"}"}],"structuredContent":{"… — **PASS** |
+| MCP-IDEM-REPLAY | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"5343df38-1925-42b7-88c5-911610915f11\"}"}],"structuredContent":{"… — **PASS** |
+| MCP-IDEM-DIFFERENT-PAYLOAD | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key mcp-idem-1790542176994 was already used for nexus.c… — **PASS** |
 | MCP-IDEM-KEY-REQUIRED | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key is required for nexus.submit_candidate"}]}} — **PASS** |
-| MCP-IDEM-PER-BUSINESS | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"85789d17-2d36-4a7a-8d0a-4ba9aa67ad9f\"}"}],"structuredContent":{"… — **PASS** |
+| MCP-IDEM-PER-BUSINESS | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"0addf6dc-e5cc-40b8-a849-82b44fe40d6c\"}"}],"structuredContent":{"… — **PASS** |
 | MCP-NO-KEY-READONLY-REPEAT | n/a (empty body) — **PASS** |
 | MCP-MUTATION-WITHOUT-KEY-INSERTS | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key is required for nexus.add_note"}]}} — **PARTIAL** |
 
@@ -106,15 +106,15 @@ Same key + same payload replays the **first result** with `idempotent: true` and
 | --- | --- |
 | MCP-NO-KEY-READONLY-REPEAT | n/a (empty body) — **PASS** |
 | MCP-MUTATION-WITHOUT-KEY-INSERTS | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key is required for nexus.add_note"}]}} — **PARTIAL** |
-| MCP-OK-nexus.create_signal | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"090a10a8-de57-407c-801d-fd053e044ea7\"}"}],"structuredContent":{"… — **PASS** |
-| MCP-OK-nexus.add_note | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"note_id\":\"8803ae0f-92b8-42d2-8c50-e86ca14610c0\"}"}],"structuredContent":{"no… — **PASS** |
-| MCP-OK-nexus.create_task | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"task_id\":\"855fd758-7c98-4e96-a5bf-6bd95c1814e0\"}"}],"structuredContent":{"ta… — **PASS** |
-| MCP-OK-nexus.submit_research | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"research_snapshot_id\":\"5f9ea3ab-3171-4ec9-b1f1-f341d8fa4f56\"}"}],"structured… — **PASS** |
-| MCP-OK-nexus.finish_agent_run | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"agent_run_id\":\"218340cc-82b6-491e-8055-8384f84221be\"}"}],"structuredContent"… — **PASS** |
-| MCP-OK-nexus.submit_message_draft | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"message_version_id\":\"9cbb5b3c-94a4-4eda-bb89-c3f88da97f2d\"}"}],"structuredCo… — **PASS** |
+| MCP-OK-nexus.create_signal | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"3ddcfbd3-045a-423a-96ab-2bb4bdf141a3\"}"}],"structuredContent":{"… — **PASS** |
+| MCP-OK-nexus.add_note | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"note_id\":\"26fe6d0e-6873-4d90-90a1-26cadfc6cf1f\"}"}],"structuredContent":{"no… — **PASS** |
+| MCP-OK-nexus.create_task | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"task_id\":\"e15ec966-3355-4e0a-a460-8db39ee9930a\"}"}],"structuredContent":{"ta… — **PASS** |
+| MCP-OK-nexus.submit_research | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"research_snapshot_id\":\"4f6a61d2-4bd4-43d2-881a-43d9a54d5890\"}"}],"structured… — **PASS** |
+| MCP-OK-nexus.finish_agent_run | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"agent_run_id\":\"c3e46452-47df-49de-8c8a-9bd62e25d691\"}"}],"structuredContent"… — **PASS** |
+| MCP-OK-nexus.submit_message_draft | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"message_version_id\":\"c7c8fd3e-3387-4651-849e-108b6ff28fc1\"}"}],"structuredCo… — **PASS** |
 | MCP-OK-nexus.assign_lead | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"lead_id\":\"8ae8809a-e236-40b1-b419-fc8227b33150\",\"owner_user_id\":\"d0000001… — **PASS** |
 | MCP-OK-nexus.capture_reply | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"lead_id\":\"8ae8809a-e236-40b1-b419-fc8227b33150\",\"captured\":true}"}],"struc… — **PASS** |
-| MCP-OK-nexus.add_source_evidence | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"evidence_id\":\"07a493de-ae91-4602-bd3e-b8209f4245f0\",\"deduplicated\":false}"… — **PASS** |
+| MCP-OK-nexus.add_source_evidence | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"evidence_id\":\"ec9cab3d-5e52-4d6d-bcd3-9091e79cf83d\",\"deduplicated\":false}"… — **PASS** |
 | MCP-OK-nexus.get_today_queue | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"items\":[{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000005\",\"item_busi… — **PASS** |
 
 Read-only tools are marked non-mutating and return identical `structuredContent` on repetition. Write tools that are exempt from a key (`nexus.add_source_evidence` dedupes on `(business_id, content_hash)`) stay idempotent by construction. `nexus.submit_message_draft` appends a **new** `message_versions` row rather than overwriting, and `nexus.finish_agent_run` records a run — both produced fresh real ids.
@@ -208,7 +208,7 @@ The route defaults `state` to `'completed'`, but the column only permits `runnin
 
 - **Request:** `POST /api/v1/mcp tools/call nexus.finish_agent_run with { business_id, agent_name } and no state`
 - **Response:** `HTTP 200, result.isError = true, "new row for relation \"agent_runs\" violates check constraint \"agent_runs_state_check\"". Passing state:"succeeded" succeeds.`
-- **Evidence cases:** MCP-OK-nexus.finish_agent_run: — — **PASS** result asserted: agent_run_id=218340cc-82b6-491e-8055-8384f84221be
+- **Evidence cases:** MCP-OK-nexus.finish_agent_run: — — **PASS** result asserted: agent_run_id=c3e46452-47df-49de-8c8a-9bd62e25d691
 
 **Resolution.**
 

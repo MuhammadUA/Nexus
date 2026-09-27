@@ -1,10 +1,10 @@
 # API Baseline Verification
 
-Generated 2026-09-27T19:42:27.718Z against a **running** server at `http://127.0.0.1:3000` (tree `E:\CRM\CRM-integration`, branch `integration/final`), embedded PGlite database seeded by `apps/web/scripts/seed-demo.ts`.
+Generated 2026-09-27T20:49:38.409Z against a **running** server at `http://127.0.0.1:3000` (tree `E:\CRM\CRM-integration`, branch `integration/final`), embedded PGlite database seeded by `apps/web/scripts/seed-demo.ts`.
 
 Every row was produced by a real HTTP request from `scripts/baseline-verify/harness.mjs`. The complete request/response pairs are preserved in `scripts/baseline-verify/results.json`; the excerpts below are copied from it. Verdicts are `PASS` / `FAIL` / `PARTIAL` / `BLOCKED`, and nothing is marked `PASS` that was not executed.
 
-**Run provenance.** This report was generated from a `results.json` that does not record tree state (produced by an older harness). Re-run `scripts/baseline-verify/harness.mjs` to attach provenance.
+**Run provenance.** The build under test was **frozen for the whole run** — the hash of the tracked source was identical before and after execution (`a19614228b92611d` at commit `d3b7e723bcc822085ed031a75d49ddfe92465a91`), and no file outside the harness's own `results.json` changed. Every result below therefore describes one frozen build.
 
 ## 1. Endpoint inventory
 
@@ -210,7 +210,7 @@ The route defaults `state` to `'completed'`, but the column only permits `runnin
 
 - **Request:** `POST /api/v1/mcp tools/call nexus.finish_agent_run with { business_id, agent_name } and no state`
 - **Response:** `HTTP 200, result.isError = true, "new row for relation \"agent_runs\" violates check constraint \"agent_runs_state_check\"". Passing state:"succeeded" succeeds.`
-- **Evidence cases:** MCP-OK-nexus.finish_agent_run: — — **PASS** result asserted: agent_run_id=218340cc-82b6-491e-8055-8384f84221be
+- **Evidence cases:** MCP-OK-nexus.finish_agent_run: — — **PASS** result asserted: agent_run_id=c3e46452-47df-49de-8c8a-9bd62e25d691
 
 **Resolution.**
 
