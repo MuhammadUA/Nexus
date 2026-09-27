@@ -12,7 +12,8 @@ import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
 import { REPLY_OUTCOMES, LEAD_STATES } from '@nexus/core';
-import { draftMessageForLead } from '@/lib/ai/drafting';
+import { acceptDraftVersion, draftMessageForLead } from '@/lib/ai/drafting';
+import type { DraftErrorCode } from '@/lib/ai/draft-outcome';
 import { formString, formStringOrNull } from '@/lib/form-data';
 import { authorizeAction } from '@/lib/route-guard';
 import {
@@ -36,6 +37,31 @@ export interface ActionResult {
   readonly message?: string;
 }
 
+/**
+ * `ActionResult` plus the detail a drafting control needs, following the contract's rule that a
+ * refusal which is really a different screen state carries a stable code (§2.1).
+ *
+ * `errorCode` is the closed `DraftErrorCode` vocabulary from `lib/ai/draft-outcome`, which also owns
+ * how each code reads to the operator. Nothing here can carry a secret: `error` is the provider
+ * layer's operator-safe sentence, `issues` names schema fields and rule codes only, and no field holds
+ * a key, a base URL or an upstream body.
+ */
+export interface DraftActionResult extends ActionResult {
+  /** Present whenever the refusal is a state the control renders differently. */
+  readonly errorCode?: DraftErrorCode;
+  /** Whether another attempt could plausibly succeed. */
+  readonly retryable?: boolean;
+  /** Rule/field codes when the model's answer was unusable. Never content. */
+  readonly issues?: readonly string[];
+  /** The version the draft was stored as, so the operator can accept it. */
+  readonly draft?: {
+    readonly body: string;
+    readonly wordCount: number;
+    readonly model: string;
+    readonly messageVersionId: string;
+  };
+}
+
 const notSignedIn: ActionResult = { ok: false, error: 'Your session has expired. Sign in again.' };
 
 async function withViewer(
@@ -54,6 +80,48 @@ async function withViewer(
     revalidatePath('/my-day');
   }
   return result;
+}
+
+/**
+ * `withViewer` for the drafting actions, whose result carries more than `ActionResult`.
+ *
+ * A separate helper rather than a generic `withViewer`: the signed-out result of a generic version
+ * would need a type assertion to satisfy the caller's narrower result type, and asserting here is
+ * exactly the kind of shortcut that hides a real mismatch later.
+ */
+async function withDraftViewer(
+  businessSlug: string,
+  leadId: string,
+  fn: (viewer: NonNullable<Awaited<ReturnType<typeof currentViewer>>>) => Promise<DraftActionResult>,
+): Promise<DraftActionResult> {
+  const viewer = await currentViewer();
+  if (viewer === null) {
+    return { ok: false, error: 'Your session has expired. Sign in again.', errorCode: 'session_expired' };
+  }
+
+  const result = await fn(viewer);
+  if (result.ok) {
+    revalidatePath(`/b/${businessSlug}/leads/${leadId}`);
+    revalidatePath(`/b/${businessSlug}/leads`);
+    revalidatePath('/my-day');
+  }
+  return result;
+}
+
+/**
+ * The route requirement the drafting actions repeat.
+ *
+ * Resolved from the same matrix the page uses, so the control is offered to exactly the viewers the
+ * action will serve. `businessId` comes from the form and is only ever *checked* against the grant; a
+ * missing one denies rather than falling back to the union of the operator's businesses.
+ */
+const LEAD_DETAIL_ROUTE = '/b/:businessSlug/leads/:leadId';
+
+async function draftRouteRefusal(businessId: string): Promise<{ readonly ok: false; readonly error: string } | null> {
+  return authorizeAction(null, {
+    route: LEAD_DETAIL_ROUTE,
+    businessId: businessId.length > 0 ? businessId : null,
+  });
 }
 
 const leadIdSchema = z.string().uuid();
@@ -304,33 +372,103 @@ export async function reactivateAction(_previous: ActionResult, formData: FormDa
  *
  * The generated body is validated against the messaging rules before anything is written, so a draft
  * that asserts an unapproved claim or misses its personalization signal is rejected rather than
- * stored. Refusals are reported with the provider's own reason, because "the AI is rate limited" and
- * "the AI is not configured" need different responses from the operator.
+ * stored. Every refusal is returned with the provider's own `kind`, because "the AI is rate limited",
+ * "the AI is not configured" and "the model wrote something unusable" need different responses from
+ * the operator — and, for the last two, the reassurance that nothing was stored.
+ *
+ * Context is loaded server-side from the ids in the form: the business, the lead, the message
+ * instance and its step, the personalization signal, and the approved/AI-usable knowledge assets.
+ * Nothing secret travels in either direction.
  */
-export async function draftMessageAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+export async function draftMessageAction(
+  _previous: DraftActionResult,
+  formData: FormData,
+): Promise<DraftActionResult> {
   const leadId = formString(formData, 'leadId', '');
   const messageInstanceId = formString(formData, 'messageInstanceId', '');
   const businessId = formString(formData, 'businessId', '');
 
   if (!leadIdSchema.safeParse(leadId).success || !leadIdSchema.safeParse(messageInstanceId).success) {
-    return { ok: false, error: 'That message is not available for drafting.' };
+    return { ok: false, error: 'That message is not available for drafting.', errorCode: 'invalid_input' };
   }
 
   // A Server Action is a public endpoint, so it repeats the check its page performs. The business
   // scope is required: `lead.view_all` for one business must not authorise drafting in another.
-  const refusal = await authorizeAction(null, {
-    route: '/b/:businessSlug/leads/:leadId',
-    businessId: businessId.length > 0 ? businessId : null,
-  });
-  if (refusal !== null) return { ok: false, error: refusal.error };
+  const refusal = await draftRouteRefusal(businessId);
+  if (refusal !== null) return { ok: false, error: refusal.error, errorCode: 'permission_denied' };
 
-  return withViewer(formString(formData, 'businessSlug', ''), leadId, async (viewer) => {
+  return withDraftViewer(formString(formData, 'businessSlug', ''), leadId, async (viewer) => {
     const outcome = await draftMessageForLead(viewer, { messageInstanceId });
-    if (!outcome.ok) return { ok: false, error: outcome.error };
+    if (!outcome.ok) {
+      return {
+        ok: false,
+        error: outcome.error,
+        errorCode: outcome.kind,
+        retryable: outcome.retryable,
+        ...(outcome.issues === undefined ? {} : { issues: outcome.issues }),
+      };
+    }
+
+    // The generation succeeded but the version was not written: the instance became SENT between the
+    // read and the write. Reported as a refusal rather than a success, because the body the model
+    // produced exists nowhere the operator can send it from.
+    if (outcome.messageVersionId === null) {
+      return {
+        ok: false,
+        error: 'This message has already been sent, so the draft was not stored.',
+        errorCode: 'invalid_input',
+      };
+    }
+
     return {
       ok: true,
       error: null,
-      message: `Draft generated (${String(outcome.draft.wordCount)} words, ${outcome.draft.provenance.model}).`,
+      message: `Draft stored as a new version (${String(outcome.draft.wordCount)} words, ${outcome.draft.provenance.model}). Accept it, or regenerate for another.`,
+      draft: {
+        body: outcome.draft.body,
+        wordCount: outcome.draft.wordCount,
+        model: outcome.draft.provenance.model,
+        messageVersionId: outcome.messageVersionId,
+      },
+    };
+  });
+}
+
+/**
+ * Records the operator's acceptance of a generated draft.
+ *
+ * The body is already a stored version — generation writes it and repoints the instance — so this
+ * action adds the durable, attributed record that a person accepted the AI's wording, which is the
+ * part a later audit needs. It refuses when the version is no longer current, so an acceptance cannot
+ * be attached to a draft that has since been replaced or sent.
+ */
+export async function acceptDraftAction(
+  _previous: DraftActionResult,
+  formData: FormData,
+): Promise<DraftActionResult> {
+  const leadId = formString(formData, 'leadId', '');
+  const messageInstanceId = formString(formData, 'messageInstanceId', '');
+  const messageVersionId = formString(formData, 'messageVersionId', '');
+  const businessId = formString(formData, 'businessId', '');
+
+  if (
+    !leadIdSchema.safeParse(leadId).success ||
+    !leadIdSchema.safeParse(messageInstanceId).success ||
+    !leadIdSchema.safeParse(messageVersionId).success
+  ) {
+    return { ok: false, error: 'That draft is not available.', errorCode: 'invalid_input' };
+  }
+
+  const refusal = await draftRouteRefusal(businessId);
+  if (refusal !== null) return { ok: false, error: refusal.error, errorCode: 'permission_denied' };
+
+  return withDraftViewer(formString(formData, 'businessSlug', ''), leadId, async (viewer) => {
+    const result = await acceptDraftVersion(viewer, { instanceId: messageInstanceId, versionId: messageVersionId });
+    if (!result.ok) return { ok: false, error: result.error, errorCode: 'invalid_input' };
+    return {
+      ok: true,
+      error: null,
+      message: 'Draft accepted and kept as the current version. Recorded in the audit trail.',
     };
   });
 }

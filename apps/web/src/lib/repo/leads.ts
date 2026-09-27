@@ -61,12 +61,29 @@ export interface LeadFilter {
   readonly identityId?: string;
   readonly status?: string;
   readonly sourceType?: string;
-  readonly ownerUserId?: string;
+  /**
+   * Owner filter.
+   *
+   * `null` means "no owner" rather than "any owner": `undefined` is the absence of a
+   * filter, so a separate sentinel is needed for the unassigned list the Owner select
+   * offers. Treating `null` as "no filter" would silently widen the result set.
+   */
+  readonly ownerUserId?: string | null;
+  /**
+   * Any of these lifecycle states.
+   *
+   * Used by the built-in "Needs attention" view, which is a set of states rather than one.
+   */
+  readonly statusesIn?: readonly string[];
   /** Free text over person name, company name and LinkedIn URL. */
   readonly search?: string;
   /** Includes soft-deleted rows (Trash). Requires the trash permission. */
   readonly includeDeleted?: boolean;
   readonly needsProfileOnly?: boolean;
+  /** Only leads suppressed on every channel (the DNC quick filter). */
+  readonly dncOnly?: boolean;
+  /** Only leads with an outreach step due (the Follow-ups quick filter). */
+  readonly followupsOnly?: boolean;
   readonly sort?: LeadSort;
 }
 
@@ -74,12 +91,41 @@ export type LeadSort = 'recent_activity' | 'name' | 'company' | 'next_action' | 
 
 export interface LeadCounts {
   readonly total: number;
+  /**
+   * Leads with an outreach step due — the A03 `FOLLOW-UPS` quick filter.
+   *
+   * Counted with the same predicate as `LeadFilter.followupsOnly`, so the number on
+   * the chip is the number of rows the chip's own link returns.
+   */
+  readonly followups: number;
   readonly needsProfile: number;
   readonly replied: number;
   readonly dormant: number;
   readonly dnc: number;
   readonly deleted: number;
 }
+
+/**
+ * The one definition of "a follow-up is due", in SQL.
+ *
+ * Shared by the quick-filter count and the quick-filter predicate so the chip can
+ * never advertise a number the filtered list does not show.
+ */
+const FOLLOWUP_DUE_SQL = `(
+  l.status in ('followup_due', 'connection_due', 'message_due', 'cooldown', 'reactivation_due')
+  or l.next_action_at is not null
+)`;
+
+/** The `status` values "Needs attention" treats as needing an operator. */
+export const NEEDS_ATTENTION_STATUSES: readonly string[] = [
+  'needs_profile',
+  'connection_due',
+  'message_due',
+  'followup_due',
+  'cooldown',
+  'reactivation_due',
+  'replied',
+];
 
 export interface LeadDetail extends LeadListItem {
   readonly linkedinUrl: string | null;
@@ -203,11 +249,19 @@ function leadWhere(filter: LeadFilter): { clause: string; params: unknown[] } {
     params.push(filter.sourceType);
     conditions.push(`l.source_type = $${String(params.length)}`);
   }
-  if (filter.ownerUserId !== undefined) {
+  if (filter.ownerUserId === null) {
+    conditions.push('l.owner_user_id is null');
+  } else if (filter.ownerUserId !== undefined) {
     params.push(filter.ownerUserId);
     conditions.push(`l.owner_user_id = $${String(params.length)}`);
   }
+  if (filter.statusesIn !== undefined && filter.statusesIn.length > 0) {
+    params.push([...filter.statusesIn]);
+    conditions.push(`l.status = any($${String(params.length)}::text[])`);
+  }
   if (filter.needsProfileOnly === true) conditions.push('l.needs_profile = true');
+  if (filter.dncOnly === true) conditions.push('l.is_dnc = true');
+  if (filter.followupsOnly === true) conditions.push(FOLLOWUP_DUE_SQL);
 
   if (filter.search !== undefined && filter.search.trim().length > 0) {
     params.push(`%${filter.search.trim()}%`);
@@ -223,20 +277,29 @@ function leadWhere(filter: LeadFilter): { clause: string; params: unknown[] } {
   };
 }
 
+/**
+ * The `order by` clause, always ended with `l.id`.
+ *
+ * Every sort is a *total* order, not merely a deterministic one. Paging with `limit`/
+ * `offset` over a non-total order is unsound: two leads that tie on the visible key can
+ * be returned in either order, so a row can appear on two pages or on none — the exact
+ * "records 6-25 are unreachable" defect in a subtler form. `l.id` is unique, so the
+ * order is total and the pages partition the result set exactly.
+ */
 function leadOrderBy(sort: LeadSort | undefined): string {
   switch (sort) {
     case 'name':
-      return 'order by p.full_name';
+      return 'order by p.full_name, l.id';
     case 'company':
-      return 'order by c.name nulls last, p.full_name';
+      return 'order by c.name nulls last, p.full_name, l.id';
     case 'next_action':
       // Nulls last so leads with no scheduled action do not crowd the top.
-      return 'order by l.next_action_at asc nulls last';
+      return 'order by l.next_action_at asc nulls last, l.id';
     case 'created':
-      return 'order by l.created_at desc';
+      return 'order by l.created_at desc, l.id';
     case 'recent_activity':
     default:
-      return 'order by l.last_activity_at desc nulls last, l.created_at desc';
+      return 'order by l.last_activity_at desc nulls last, l.created_at desc, l.id';
   }
 }
 
@@ -280,6 +343,7 @@ export async function getLeadCounts(actor: Actor, businessId?: string): Promise<
     const result = await sql.query<Row>(
       `select
          count(*) filter (where l.deleted_at is null) as total,
+         count(*) filter (where l.deleted_at is null and ${FOLLOWUP_DUE_SQL}) as followups,
          count(*) filter (where l.deleted_at is null and l.needs_profile) as needs_profile,
          count(*) filter (where l.deleted_at is null and l.status = 'replied') as replied,
          count(*) filter (where l.deleted_at is null and l.status = 'dormant') as dormant,
@@ -292,6 +356,7 @@ export async function getLeadCounts(actor: Actor, businessId?: string): Promise<
     const row = result.rows[0];
     return {
       total: asNumber(row?.total),
+      followups: asNumber(row?.followups),
       needsProfile: asNumber(row?.needs_profile),
       replied: asNumber(row?.replied),
       dormant: asNumber(row?.dormant),

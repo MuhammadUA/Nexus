@@ -1,0 +1,106 @@
+/*
+ * A10 — Businesses hub, composition additions.
+ *
+ * Scope: the row action menu and nothing else. It is the same affordance the Leads table uses, so the
+ * markup in `components/business-lifecycle-forms.tsx` carries the same class names as
+ * `apps/web/src/app/b/[slug]/leads/leads.css` and the rules below are that file's row-menu block,
+ * copied rather than shared.
+ *
+ * Two reasons for a separate file rather than `.nx-row-menu` moving into
+ * `packages/ui/src/styles.css`: the design system is owned elsewhere this turn, and the leads route
+ * file is still being written by another workstream. Once either is free, this block should be
+ * deleted in favour of the single shared definition — the two copies are deliberately identical, so
+ * consolidating them is a move, not a merge.
+ *
+ * Every value is an existing token; no colour, radius or spacing is invented here.
+ */
+
+/* ---------------------------------------------------------- row actions -- */
+
+.nx-row-menu {
+  position: relative;
+  display: inline-block;
+}
+
+/* The summary is a real button surface, so it is reachable and focused like one. */
+.nx-row-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0 var(--nx-space-sm);
+  font-size: var(--nx-font-size-base);
+  line-height: 1;
+  color: var(--nx-text-secondary);
+  background: transparent;
+  border: var(--nx-border-width) solid transparent;
+  border-radius: var(--nx-radius-control);
+  cursor: pointer;
+  list-style: none;
+}
+
+.nx-row-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nx-row-menu > summary:hover {
+  background: var(--nx-action-ghost-hover);
+  color: var(--nx-text-primary);
+}
+
+.nx-row-menu[open] > summary,
+.nx-row-menu > summary:focus-visible {
+  border-color: var(--nx-border-color-strong);
+  color: var(--nx-text-primary);
+}
+
+.nx-row-menu__panel {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  min-width: 190px;
+  padding: var(--nx-space-xs);
+  margin-top: var(--nx-space-xs);
+  background: var(--nx-surface-card);
+  border: var(--nx-border-width) solid var(--nx-border-color);
+  border-radius: var(--nx-radius-control);
+  box-shadow: var(--nx-shadow-card);
+}
+
+.nx-row-menu__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nx-row-menu__item {
+  display: block;
+  width: 100%;
+  padding: var(--nx-space-xs) var(--nx-space-sm);
+  font-family: inherit;
+  font-size: var(--nx-font-size-sm);
+  text-align: left;
+  text-decoration: none;
+  color: var(--nx-text-primary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  cursor: pointer;
+}
+
+.nx-row-menu__item:hover {
+  background: var(--nx-action-ghost-hover);
+}
+
+.nx-row-menu__item:disabled {
+  color: var(--nx-text-muted);
+  cursor: not-allowed;
+}
+
+.nx-row-menu__item--danger {
+  color: var(--nx-accent-red-fg);
+}

@@ -19,6 +19,14 @@ export interface DueMessage {
   readonly stepKind: string;
   readonly state: 'DYNAMIC' | 'LOCKED' | 'SENT';
   readonly content: string | null;
+  /**
+   * The version `content` came from.
+   *
+   * Carried because a control that acts *on* the stored draft — accepting a generated one — needs to
+   * name the exact version, and re-deriving it in the browser would be a second, weaker source of
+   * truth than the row itself.
+   */
+  readonly currentVersionId: string | null;
   readonly dueAt: string | null;
   readonly sentAt: string | null;
   readonly snoozedUntil: string | null;
@@ -34,7 +42,7 @@ export async function dueMessageForLead(actor: Actor, leadId: string): Promise<D
   return read(actor, async (sql) => {
     const pending = await sql.query<Row>(
       `select m.id, m.step_order, m.step_kind, m.state, m.due_at, m.sent_at, m.snoozed_until,
-              mv.content
+              m.current_version_id, mv.content
          from public.message_instances m
          left join public.message_versions mv on mv.id = m.current_version_id
         where m.lead_id = $1
@@ -50,7 +58,7 @@ export async function dueMessageForLead(actor: Actor, leadId: string): Promise<D
       (
         await sql.query<Row>(
           `select m.id, m.step_order, m.step_kind, m.state, m.due_at, m.sent_at, m.snoozed_until,
-                  mv.content
+                  m.current_version_id, mv.content
              from public.message_instances m
              left join public.message_versions mv on mv.id = m.current_version_id
             where m.lead_id = $1 and m.state = 'SENT'
@@ -69,6 +77,7 @@ export async function dueMessageForLead(actor: Actor, leadId: string): Promise<D
       stepKind: asString(row.step_kind, 'message'),
       state: state === 'SENT' || state === 'LOCKED' ? state : 'DYNAMIC',
       content: asStringOrNull(row.content),
+      currentVersionId: asStringOrNull(row.current_version_id),
       dueAt: asIso(row.due_at),
       sentAt: asIso(row.sent_at),
       snoozedUntil: asIso(row.snoozed_until),

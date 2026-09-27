@@ -12,6 +12,10 @@
  *
  * The `confirmed` checkbox is a confirmation, not an authorization: removing it from
  * the form would only produce a refusal from the repository.
+ *
+ * Assignment names a recipient, and only a recipient. An empty `toUserId` used to stand for
+ * "unassign" and was funnelled through `assignIdentityManager`; releasing an identity now has its own
+ * action (`unassignIdentityAction`) and this one rejects anything that is not a user id.
  */
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -207,9 +211,16 @@ export async function revokeBusinessAction(
 
 const assignSchema = z.object({
   identityId: uuid,
-  // The empty string is the "unassign" sentinel, because an HTML select cannot
-  // submit `null`.
-  toUserId: z.union([uuid, z.literal('')]),
+  /*
+   * A real user, always.
+   *
+   * This used to accept `''` as an "unassign" sentinel, because an HTML select cannot submit
+   * `null`. That made releasing an identity a *transfer to nobody*: it went through
+   * `assignIdentityManager`, which records an `identity_transfers` row — a table whose rows name a
+   * recipient. Releasing is `unassignIdentityAction` below, which audits `identity_unassign` and
+   * deliberately writes no transfer row, so the sentinel is gone rather than merely unused.
+   */
+  toUserId: uuid,
   note: z.string().trim().max(2000).nullish(),
   confirmed: z.boolean(),
 });
@@ -225,7 +236,7 @@ export async function assignIdentityManagerAction(
   const note = formStringOrNull(formData, 'note');
   const parsed = assignSchema.safeParse({
     identityId: formStringOrNull(formData, 'identityId'),
-    toUserId: formString(formData, 'toUserId', ''),
+    toUserId: formStringOrNull(formData, 'toUserId'),
     note: typeof note === 'string' ? note : undefined,
     confirmed: checkbox(formData, 'confirmed'),
   });
@@ -234,15 +245,10 @@ export async function assignIdentityManagerAction(
   const viewer = await currentViewer();
   if (viewer === null) return NOT_SIGNED_IN;
 
-  const result = await assignIdentityManager(
-    viewer,
-    parsed.data.identityId,
-    parsed.data.toUserId === '' ? null : parsed.data.toUserId,
-    {
-      confirmed: parsed.data.confirmed ?? undefined,
-      note: parsed.data.note == null || parsed.data.note.length === 0 ? null : parsed.data.note,
-    },
-  );
+  const result = await assignIdentityManager(viewer, parsed.data.identityId, parsed.data.toUserId, {
+    confirmed: parsed.data.confirmed ?? undefined,
+    note: parsed.data.note == null || parsed.data.note.length === 0 ? null : parsed.data.note,
+  });
 
   if (result.ok) {
     revalidatePath(`/identities/${parsed.data.identityId}`);

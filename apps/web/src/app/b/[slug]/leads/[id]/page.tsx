@@ -33,7 +33,9 @@ import {
   SoftDeleteAction,
   TaskForm,
 } from '@/components/lead-forms';
+import { AiDraftControl } from '@/components/ai-draft-control';
 import { LeadActionWorkspace } from '@/components/lead-action-workspace';
+import { canAccessRoute } from '@/lib/route-guard';
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
 import {
   getLead,
@@ -95,6 +97,15 @@ export default async function LeadDetailPage({
   const canCaptureReply = context.permissions.has('lead.capture_reply');
   const canDelete = context.permissions.has('lead.soft_delete');
   const defaultIdentityId = lead.outreachIdentityId ?? identities[0]?.value ?? '';
+
+  // AI drafting is offered only to a viewer the server action will serve. The action re-checks this
+  // same route requirement against this same business (`draftMessageAction`), so a control that
+  // renders here and a call that is accepted cannot disagree — a user-surface reader of the shared
+  // lead screen still gets the whole page, just not a control that would be refused.
+  const canDraftWithAi = canAccessRoute(context, {
+    route: '/b/:businessSlug/leads/:leadId',
+    businessId: business.id,
+  });
 
   // The most recent recorded outcome, shown next to the history: it is the answer to "how did
   // this reply land?", which is otherwise only inferable by reading the timeline backwards.
@@ -342,12 +353,30 @@ export default async function LeadDetailPage({
               {dueMessage.state === 'SENT' ? (
                 <ImmutableNotice />
               ) : (
-                <MessageSentAction
-                  leadId={lead.id}
-                  businessSlug={business.key}
-                  messageInstanceId={dueMessage.id}
-                  defaultIdentityId={defaultIdentityId}
-                />
+                <>
+                  {/*
+                    The AI drafting control invokes the real `draftMessageAction` for this instance. A
+                    stored draft becomes the message's current version, so it reappears above in the
+                    MessageBlock on the next render; the control previews the same body and carries the
+                    accept/regenerate choice.
+                  */}
+                  {canDraftWithAi && (
+                    <AiDraftControl
+                      leadId={lead.id}
+                      businessSlug={business.key}
+                      businessId={business.id}
+                      messageInstanceId={dueMessage.id}
+                      messageVersionId={dueMessage.currentVersionId}
+                      hasStoredContent={dueMessage.content !== null}
+                    />
+                  )}
+                  <MessageSentAction
+                    leadId={lead.id}
+                    businessSlug={business.key}
+                    messageInstanceId={dueMessage.id}
+                    defaultIdentityId={defaultIdentityId}
+                  />
+                </>
               )}
             </Stack>
           </Card>

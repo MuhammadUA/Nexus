@@ -599,6 +599,51 @@ export async function persistDraftVersion(
   });
 }
 
+/**
+ * Records that an operator accepted a generated draft as the message to keep.
+ *
+ * The body is already stored: generation appended a version and repointed the instance, so acceptance
+ * writes no content. What it has to make durable is *who stood behind the AI text* — the question a
+ * later audit asks about wording nobody typed. It therefore appends an `ai_draft_accepted` audit
+ * event, and it refuses when the version is no longer the instance's current one, so an acceptance
+ * can never be attributed to a draft that has since been replaced.
+ *
+ * The business is read from the instance row rather than taken from the caller: an action's form
+ * field is untrusted, and an audit row filed against the wrong business would be invisible to the
+ * business that owns the message.
+ */
+export async function acceptDraftVersion(
+  viewer: Viewer,
+  input: { readonly instanceId: string; readonly versionId: string },
+): Promise<{ readonly ok: true } | { readonly ok: false; readonly error: string }> {
+  return withActor(viewer.actor, async (sql) => {
+    // RLS is the tenancy boundary: an instance the actor cannot see yields no row here.
+    const live = await sql.query<Record<string, unknown>>(
+      `select state, current_version_id, business_id from public.message_instances where id = $1`,
+      [input.instanceId],
+    );
+    const row = live.rows[0];
+    if (row === undefined) return { ok: false, error: 'That message is not available.' };
+    if (textOf(row, 'state') === 'SENT') {
+      return { ok: false, error: 'That message has already been sent, so it can no longer be accepted.' };
+    }
+    if (textOf(row, 'current_version_id') !== input.versionId) {
+      return { ok: false, error: 'That draft has been replaced by a newer version. Generate or review the current one.' };
+    }
+
+    await sql.query(
+      `select public.enqueue_audit(
+         'message_version', $1, 'ai_draft_accepted', $2, null,
+         jsonb_build_object('message_instance_id', $3::text),
+         'server_action'
+       )`,
+      [input.versionId, String(row['business_id']), input.instanceId],
+    );
+
+    return { ok: true };
+  });
+}
+
 /* ------------------------------------------------------- profile extract -- */
 
 export interface AiProfileFields {

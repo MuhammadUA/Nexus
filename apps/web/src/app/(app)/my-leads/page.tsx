@@ -25,18 +25,30 @@ import {
   type LeadListItem,
 } from '@/lib/repo/leads';
 import { listSavedViews, viewHref } from '@/lib/repo/saved-views';
+import { filterHref } from '@/lib/filter-url';
 import { LeadFilterBar } from '@/components/lead-filter-bar';
 import { deleteLeadViewAction, saveLeadViewAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 interface SearchParams {
+  /**
+   * Any further query key.
+   *
+   * A Next.js `searchParams` object carries every key in the URL, including ones this screen does not
+   * model. The index signature is what lets the object satisfy `SearchParamRecord`, so the shared
+   * filter bar can copy unmodelled keys through into the links it builds instead of silently dropping
+   * them — the same reason `filterHref` preserves what it does not own.
+   */
+  readonly [key: string]: string | string[] | undefined;
   readonly business?: string;
   readonly icp?: string;
   readonly identity?: string;
   readonly status?: string;
   readonly source?: string;
   readonly owner?: string;
+  /** "Owner · Unassigned" is a second URL key rather than a magic option value. */
+  readonly ownerNone?: string;
   readonly q?: string;
   readonly sort?: string;
   readonly page?: string;
@@ -269,11 +281,22 @@ export default async function MyLeadsPage({
 
       <LeadFilterBar
         action="/my-leads"
+        query={query}
         icps={icps}
         identities={identities}
         owners={owners}
+        needsAttentionHref={filterHref('/my-leads', query, {
+          clear: ['status', 'view', 'needsProfile', 'dnc', 'followups'],
+          set: { needsAttention: '1' },
+        })}
         current={{
           icp: query.icp ?? '',
+          // Owner, saved view and the "Unassigned" variant are part of the shared filter model, so
+          // the bar can render its selects with the correct selection. Omitting them left the owner
+          // select blank even when an owner filter was active in the URL.
+          owner: query.owner ?? '',
+          ownerNone: query.ownerNone === '1',
+          view: query.view ?? '',
           identity: query.identity ?? '',
           status: query.status ?? '',
           source: query.source ?? '',

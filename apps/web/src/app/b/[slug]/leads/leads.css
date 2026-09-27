@@ -1,0 +1,316 @@
+/*
+ * A03 — Leads, composition additions.
+ *
+ * Scope: only what the Figma frame needs and the shared `nx-` vocabulary does not
+ * already express — the five-select filter row, the quick-filter chip strip, the row
+ * action menu and the bulk-actions bar. Everything visible here is built from the
+ * existing tokens in `packages/ui/src/tokens.ts`; no colour, radius or spacing value is
+ * invented, so the screen stays on the shared design language.
+ *
+ * Deliberately a separate file rather than an edit to `packages/ui/src/styles.css`: the
+ * design system is owned elsewhere this turn.
+ */
+
+/* ------------------------------------------------------------ chip strip -- */
+
+.nx-chip-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nx-space-sm);
+}
+
+/*
+ * A chip that is a link. Colour is never the only signal: the active state also
+ * carries `aria-current`, and the label plus count are always present as text.
+ */
+.nx-chip-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nx-space-xs);
+  padding: 2px var(--nx-space-sm);
+  font-size: var(--nx-font-size-xs);
+  font-weight: var(--nx-font-weight-medium);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  border: var(--nx-border-width) solid var(--nx-accent-neutral-border);
+  border-radius: var(--nx-radius-pill);
+  background: var(--nx-accent-neutral-fill);
+  color: var(--nx-accent-neutral-fg);
+  transition: border-color var(--nx-motion-fast) var(--nx-motion-ease);
+}
+
+.nx-chip-link:hover {
+  border-color: var(--nx-text-placeholder);
+}
+
+.nx-chip-link:focus-visible {
+  outline: 2px solid var(--nx-accent-indigo-border);
+  outline-offset: 2px;
+}
+
+.nx-chip-link--cyan {
+  background: var(--nx-accent-cyan-fill);
+  color: var(--nx-accent-cyan-fg);
+  border-color: var(--nx-accent-cyan-border);
+}
+.nx-chip-link--green {
+  background: var(--nx-accent-green-fill);
+  color: var(--nx-accent-green-fg);
+  border-color: var(--nx-accent-green-border);
+}
+.nx-chip-link--amber {
+  background: var(--nx-accent-amber-fill);
+  color: var(--nx-accent-amber-fg);
+  border-color: var(--nx-accent-amber-border);
+}
+.nx-chip-link--red {
+  background: var(--nx-accent-red-fill);
+  color: var(--nx-accent-red-fg);
+  border-color: var(--nx-accent-red-border);
+}
+.nx-chip-link--indigo {
+  background: var(--nx-accent-indigo-fill);
+  color: var(--nx-accent-indigo-fg);
+  border-color: var(--nx-accent-indigo-border);
+}
+
+.nx-chip-link[aria-current='true'] {
+  border-color: var(--nx-text-secondary);
+  box-shadow: inset 0 0 0 1px var(--nx-text-secondary);
+}
+
+.nx-chip-link__count {
+  font-weight: var(--nx-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------- filtering -- */
+
+/*
+ * The frame's filter row: five labelled selects across the top, then a second row for
+ * search, source and sort. `auto-fit` rather than a fixed column count so the row
+ * reflows instead of overflowing at narrower widths.
+ */
+.nx-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--nx-space-md);
+  align-items: end;
+}
+
+.nx-filter-grid--secondary {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+/* A compact inline form (the page-head search). */
+.nx-inline-form {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-sm);
+}
+
+.nx-input--sm,
+.nx-select--sm {
+  min-height: 30px;
+  font-size: var(--nx-font-size-sm);
+}
+
+/*
+ * Progressive enhancement: the filter selects navigate on change, so their submit
+ * button is only needed without JavaScript. `:focus-within` keeps it reachable by
+ * keyboard, which `display: none` would not.
+ */
+.nx-noscript-submit {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.nx-noscript-submit:focus-within {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+}
+
+/* ---------------------------------------------------------- row actions -- */
+
+.nx-row-menu {
+  position: relative;
+  display: inline-block;
+}
+
+/* The summary is a real button surface, so it is reachable and focused like one. */
+.nx-row-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0 var(--nx-space-sm);
+  font-size: var(--nx-font-size-base);
+  line-height: 1;
+  color: var(--nx-text-secondary);
+  background: transparent;
+  border: var(--nx-border-width) solid transparent;
+  border-radius: var(--nx-radius-control);
+  cursor: pointer;
+  list-style: none;
+}
+
+.nx-row-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nx-row-menu > summary:hover {
+  background: var(--nx-action-ghost-hover);
+  color: var(--nx-text-primary);
+}
+
+.nx-row-menu[open] > summary,
+.nx-row-menu > summary:focus-visible {
+  border-color: var(--nx-border-color-strong);
+  color: var(--nx-text-primary);
+}
+
+.nx-row-menu__panel {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  min-width: 190px;
+  padding: var(--nx-space-xs);
+  margin-top: var(--nx-space-xs);
+  background: var(--nx-surface-card);
+  border: var(--nx-border-width) solid var(--nx-border-color);
+  border-radius: var(--nx-radius-control);
+  box-shadow: var(--nx-shadow-card);
+}
+
+.nx-row-menu__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nx-row-menu__item {
+  display: block;
+  width: 100%;
+  padding: var(--nx-space-xs) var(--nx-space-sm);
+  font-family: inherit;
+  font-size: var(--nx-font-size-sm);
+  text-align: left;
+  text-decoration: none;
+  color: var(--nx-text-primary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  cursor: pointer;
+}
+
+.nx-row-menu__item:hover {
+  background: var(--nx-action-ghost-hover);
+}
+
+.nx-row-menu__item:disabled {
+  color: var(--nx-text-muted);
+  cursor: not-allowed;
+}
+
+.nx-row-menu__item--danger {
+  color: var(--nx-accent-red-fg);
+}
+
+.nx-row-menu__form {
+  margin: 0;
+}
+
+.nx-row-menu__result {
+  padding: var(--nx-space-xs) var(--nx-space-sm);
+  font-size: var(--nx-font-size-xs);
+  color: var(--nx-accent-green-fg);
+}
+
+.nx-row-menu__result--error {
+  color: var(--nx-accent-red-fg);
+}
+
+/* ------------------------------------------------- table selection/actions -- */
+
+.nx-table__select {
+  width: 34px;
+}
+
+.nx-table__actions {
+  width: 48px;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------- bulk bar -- */
+
+/*
+ * The highlighted bar under the table. Cyan is the design system's "informational,
+ * in-progress" accent and matches the frame's tinted band.
+ */
+.nx-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--nx-space-md);
+  padding: var(--nx-space-md) var(--nx-space-lg);
+  background: var(--nx-accent-cyan-fill);
+  border: var(--nx-border-width) solid var(--nx-accent-cyan-border);
+  border-radius: var(--nx-radius-card);
+}
+
+.nx-bulk-bar__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--nx-space-md);
+  width: 100%;
+}
+
+.nx-bulk-bar__title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nx-space-xs);
+  margin-right: auto;
+}
+
+.nx-bulk-bar__count {
+  font-size: var(--nx-font-size-base);
+  font-weight: var(--nx-font-weight-semibold);
+  color: var(--nx-text-primary);
+}
+
+.nx-bulk-bar__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nx-space-xs);
+  min-width: 170px;
+}
+
+.nx-bulk-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nx-space-sm);
+}
+
+.nx-bulk-bar__result {
+  flex-basis: 100%;
+}

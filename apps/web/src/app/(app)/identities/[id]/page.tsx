@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import {
   Alert,
@@ -19,6 +19,7 @@ import { notFound } from 'next/navigation';
 import {
   GrantBusinessForm,
   IdentityEditForm,
+  IdentityLifecyclePanel,
   IdentityTransferForm,
   RevokeBusinessButton,
 } from '@/components/identity-forms';
@@ -363,6 +364,29 @@ export default async function IdentityDetailPage({
               )}
             </Stack>
           </Card>
+
+          {canManage && (
+            <Card
+              title="Lifecycle"
+              actions={<Chip accent={identity.status === 'retired' ? 'neutral' : 'amber'}>retirement is terminal</Chip>}
+              footer={
+                <span className="nx-hint">
+                  Unassign is not a transfer: it records an <code>identity_unassign</code> audit event and deliberately
+                  writes no <code>identity_transfers</code> row, because every row in that table names a recipient.
+                  Deleting an identity is refused whenever history references it; the refusal names what would be lost
+                  and offers retirement instead. There is no restore, because <code>retired</code> is terminal.
+                </span>
+              }
+            >
+              <IdentityLifecyclePanel
+                identityId={identity.id}
+                displayName={identity.displayName}
+                status={identity.status}
+                assigned={identity.managedByUserId !== null}
+                currentManagerName={identity.managerName}
+              />
+            </Card>
+          )}
 
           <Card title="Conversation ownership">
             <Stack size="sm">
