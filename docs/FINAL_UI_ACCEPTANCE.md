@@ -320,7 +320,7 @@ database level, which is stronger than a UI observation would be.
 | F-4 | MEDIUM | Idempotency metadata contradicted the enforced catalogue on five tools | **FIXED** |
 | F-1 | HIGH | Companion today-queue returned 500 for a permission refusal | **FIXED** |
 | F-7 | MEDIUM | `mark-connection-sent` / `mark-message-sent` / `reactivate` refused an admin token | **RESOLVED — not a defect** |
-| F-6 | MEDIUM | `submit_profile_capture` refused for a token the HTTP route accepts | **OPEN — same fixture class as F-7, needs re-test** |
+| F-6 | MEDIUM | `submit_profile_capture` refused for a token the HTTP route accepts | **SAME ROOT CAUSE AS F-2 — see below** |
 | F-8 | LOW | `get_today_queue` returns `{items:[]}` for an unknown user | OPEN |
 | F-9 | MEDIUM | Gateway scope vocabulary disjoint from the RLS scope vocabulary | OPEN |
 
@@ -397,6 +397,31 @@ correctly on Postgres, no code change is warranted and this is a limitation of t
 
 **No fix was applied**, deliberately: changing a security policy to satisfy a possibly-buggy local
 engine would be the wrong trade.
+
+### F-6 is the same root cause as F-2 — not a separate defect
+
+F-6 was reported as "`submit_profile_capture` refused for a token that the identical repository path
+accepts from the companion HTTP route with an admin session". Reading the implementation explains it:
+`submitProfileCapture` (`apps/web/src/lib/repo/profile-capture.ts`) creates the extracted company
+before updating the person:
+
+```sql
+insert into public.companies (name, normalized_name, created_by)
+values ($1, $2, $3) returning id      -- line 91
+```
+
+`companies` is exactly the table F-2 is about. So the capture fails only when the extracted company is
+**new**; when the company already matches by `normalized_name` the code takes the `existing.rows[0]`
+branch and never inserts. That is why the same call succeeds from a session whose actor inserts
+cleanly and fails for a service token — and it is why this looked like a profile-capture permission bug
+when it is the same RLS behaviour.
+
+**Consequence for the fix:** F-2 and F-6 are one item, not two. Resolving the `companies` INSERT path
+fixes both, and no profile-capture change is warranted.
+
+It also means the operator-facing message is misleading in both cases: a `42501` from an internal
+insert is surfaced as *"You do not have permission to do that."*, which points the operator at their
+own permissions rather than at the real failure.
 
 ---
 
