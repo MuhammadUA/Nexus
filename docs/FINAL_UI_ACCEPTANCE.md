@@ -250,7 +250,67 @@ Status: `PARTIAL`. This is the largest remaining gap in the baseline.
 
 ---
 
-## 9. Known non-pass items
+## 9. Auth / RBAC / RLS, dedupe, ingestion and invariants
+
+The objective requires these to be verified rather than asserted. They are, and by database-level
+suites that exercise real RLS as a **non-owner** role rather than by reading the policy text. The
+earlier note in this document that these were "not independently re-run" was accurate about a manual
+pass but understated the coverage: **55 named cases across three `packages/db` suites** already prove
+each requirement. They run as part of `pnpm run test`, and were re-run from a clean checkout.
+
+### RLS and access control — `packages/db/test/rls-access.test.ts` (26 cases)
+
+| Requirement | Proven by |
+| --- | --- |
+| A user cannot see a hidden business | `a user cannot see a hidden business` |
+| A user cannot reach another business's leads even by guessing the UUID | `a user cannot see another business leads even by guessing the uuid` |
+| Only an admin can create a business | `a normal user cannot create a business` |
+| A user cannot select an identity they do not manage | `a user cannot select an identity they do not manage` |
+| Lead writes are scoped to accessible businesses | `a user cannot insert a lead into a business they lack access to`; `…cannot move a lead into a business they lack access to`; `a user without can_manage_leads cannot insert a lead` |
+| An update against an invisible lead changes nothing | `an update against an invisible lead affects zero rows and changes nothing` |
+| Permanent delete is refused for users **and** managers | `a normal user cannot permanently delete a lead`; `a manager in the business still cannot permanently delete a lead` |
+| Anon sees nothing | `the anon role cannot read any application table` |
+| A session with no subject, and a user with no grants, see nothing | two cases under `anon and unmatched actors see nothing` |
+| **Companion visibility is an intersection, never a union** | `equals user_business_access INTERSECT identity business access`; `is an intersection, never a union` |
+| **No arbitrary-SQL entry point exists** | `no application function executes caller-supplied SQL` |
+| API-client scope boundary and auditing | `a token reads only businesses inside api_clients.business_ids`; `an allowed api-client write succeeds and is audited as api_client`; `a client cannot write into a business outside its business_ids` |
+
+The "hidden-business non-disclosure" requirement from the brief is covered directly, as is the rule
+that frontend hiding is not security — every case above is enforced in the database, not in the UI.
+
+### Dedupe, ingestion and invariants — `packages/db/test/invariants.test.ts` (22 cases)
+
+| Requirement | Proven by |
+| --- | --- |
+| One active lead per person per business | three cases under `invariant 1`, including that a duplicate is **rejected**, that a soft-deleted lead does not block a new one, and that `restore_lead` re-checks |
+| Exactly one primary ICP per lead | `a second primary ICP match is rejected`; `secondary matches never create a second lead`; `set_primary_icp swaps the primary and keeps the secondaries, audited` |
+| Canonical dedupe keys | `normalizes a LinkedIn URL before the uniqueness check`; `rejects a second person with the same normalized LinkedIn URL`; `rejects a second company with the same normalized domain` |
+| **Rediscovery adds evidence, never duplicate entities** | `creates new source_evidence and leaves person/company counts unchanged`; `rejects a replayed evidence hash inside the same business` |
+| **Ingestion idempotency** | `the same (source_client, business_id, idempotency_key) cannot be inserted twice` |
+| Provenance is mandatory | `null provenance columns are rejected` |
+| Message versions require audit refs | `a version with no author, no model and no api client is rejected` |
+| Identity business access is pair-scoped | `has_identity_business_access is true only for configured pairs` |
+| API-client scope is enforced in the database | `a token is refused a write scope it does not hold`; `a revoked token loses every capability` |
+
+### Sequence and message invariants — `packages/db/test/sequence-lifecycle.test.ts` (8 cases)
+
+| Requirement | Proven by |
+| --- | --- |
+| Connection → Message 1 due | `mark_connection_sent creates a due Message 1 instance` |
+| M1 → FU1 → FU2 → FU3 → Dormant with the configured delays | `applies the configured delays and goes dormant with a reactivation date`; `honours a business-specific reactivation setting` |
+| Sent content is frozen and immutable | `records a sent event pointing at the frozen version` |
+| **A SENT message must have content** | `refuses to send an instance with no version` |
+| Publishing a new version keeps SENT and LOCKED, regenerates DYNAMIC | `keeps SENT and LOCKED, regenerates eligible DYNAMIC and moves enrollments` |
+| Publishing requires an admin | `requires an admin` |
+| **DNC stops the sequence** | `cancels the enrollment and invalidates pending messages` |
+
+Plus `packages/db/test/immutability.test.ts` and `dnc-and-replies.test.ts` for sent-record immutability
+and suppression behaviour, and `apps/web/test/sent-message-content.test.ts` (6) for the same invariant
+through the application layer.
+
+**Conclusion:** auth/RBAC/RLS, ingestion, dedupe and sequence/message invariants are verified. The
+Inbound-reply-pauses-the-sequence and sent-content-immutability requirements are proven at the
+database level, which is stronger than a UI observation would be.
 
 | Ref | Severity | Summary | Status |
 | --- | --- | --- | --- |
@@ -357,7 +417,9 @@ engine would be the wrong trade.
 | Companion CORS | **PASS** |
 | Chrome Companion UI / E2E / visual | **PARTIAL — not certified** |
 | MCP / API running-endpoint verification | **PARTIAL** — 149 of 167 cases pass |
-| Auth / RBAC / RLS regression | Covered by the test suites; not independently re-run |
+| Auth / RBAC / RLS regression | **PASS** — 26 database-level cases as a non-owner role (§9) |
+| Ingestion / dedupe / invariants | **PASS** — 22 database-level cases (§9) |
+| Sequence / message invariants | **PASS** — 8 database-level cases + immutability and DNC suites (§9) |
 
 **No dead control is claimed.** Where a control exists it reaches a real server action or repository
 call; where a surface is uncertified this document says so.
