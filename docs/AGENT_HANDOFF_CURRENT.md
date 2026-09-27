@@ -9,12 +9,19 @@ the document that holds the detail.
 | --- | --- |
 | Repository | `E:\CRM\CRM-integration` |
 | Branch | `integration/final` — **pushed** to `origin` |
-| HEAD at this handoff | `f93bff4` |
+| HEAD at this handoff | `82ca3bd` (documentation only) |
+| **Commit every gate was verified at** | **`f93bff4`** — this is what the tag names |
 | Working tree | **clean** |
 | Backend source | `backend/remediation` @ `9f009186cfc976f27bd85a3406b2448053266b26` (never modified) |
 | Frontend donor | `codex/figma-frontend` @ `4427dd2efef8e3542174596ccae34944710855c4` (selective only, never merged) |
-| Baseline tag | `nexus-predeploy-baseline-v1` — **moved to `f93bff4`** and pushed; see §5 |
+| Baseline tag | `nexus-predeploy-baseline-v1` → **`f93bff4`**, pushed; see §5 |
 | Deployment | **not performed**, and no provider was chosen |
+
+> **`HEAD` and the tag differ by documentation-only commits, deliberately.** The gate was run at
+> `f93bff4`; the commits after it correct these documents to describe what was actually done. **No code
+> or configuration differs between `f93bff4` and `HEAD`** — verify with
+> `git diff --stat f93bff4..HEAD`, which lists only files under `docs/`. The tag therefore names the
+> exact commit the gates were run against, and the documentation is honest about it.
 
 ## 1. What this baseline is
 
