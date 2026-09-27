@@ -158,6 +158,78 @@ export interface ReactivationCandidate {
 }
 
 /**
+ * One scheduled step of the lead's sequence, as the Sequence panel renders it.
+ *
+ * The final Figma draws the Sequence card as a list of steps — `Message 1 · SENT`,
+ * `Follow-up 1 · CANCELLED` — rather than a single summary row. Those rows must come from
+ * `message_instances`, because that table is the only record of what was actually scheduled and
+ * sent; deriving them from the sequence definition would show steps that were never created for
+ * this lead (a reply cancels the pending ones, and a cancelled step still exists as a row).
+ *
+ * A cancelled step is a `LOCKED` instance whose `due_at` has passed while unsent, which is how
+ * `advance_sequence` parks it. It is surfaced as its own state so the panel can show the step as
+ * cancelled instead of silently omitting it.
+ */
+export interface SequenceStep {
+  readonly id: string;
+  readonly stepOrder: number;
+  readonly stepKind: string;
+  readonly label: string;
+  readonly state: 'DYNAMIC' | 'LOCKED' | 'SENT' | 'CANCELLED';
+  readonly dueAt: string | null;
+  readonly sentAt: string | null;
+}
+
+/** Every scheduled step for a lead, in sequence order. */
+export async function sequenceStepsForLead(actor: Actor, leadId: string): Promise<readonly SequenceStep[]> {
+  return read(actor, async (sql) => {
+    const result = await sql.query<Row>(
+      `select m.id, m.step_order, m.step_kind, m.state, m.due_at, m.sent_at
+         from public.message_instances m
+        where m.lead_id = $1
+        order by m.step_order`,
+      [leadId],
+    );
+
+    return result.rows.map((row: Row) => {
+      const rawState = asString(row.state, 'DYNAMIC');
+      const sentAt = asIso(row.sent_at);
+      const dueAt = asIso(row.due_at);
+      const stepOrder = asNumber(row.step_order);
+
+      // Cancelled when the step is unsent and locked: `advance_sequence` locks rather than deletes
+      // the steps a reply overtook, so an unsent LOCKED row with a past due date is a cancelled
+      // step. An unsent LOCKED row with no due date (or a future one) is still simply locked.
+      const isCancelled =
+        rawState === 'LOCKED' &&
+        sentAt === null &&
+        dueAt !== null &&
+        new Date(dueAt).getTime() < Date.now();
+
+      const state: SequenceStep['state'] =
+        sentAt !== null
+          ? 'SENT'
+          : isCancelled
+            ? 'CANCELLED'
+            : rawState === 'LOCKED'
+              ? 'LOCKED'
+              : 'DYNAMIC';
+
+      return {
+        id: asString(row.id),
+        stepOrder,
+        stepKind: asString(row.step_kind, 'message'),
+        label: stepOrder <= 1 ? 'Message 1' : `Follow-up ${String(stepOrder - 1)}`,
+        state,
+        dueAt,
+        sentAt,
+      };
+    });
+  });
+}
+
+
+/**
  * Dormant leads whose review is due, plus those already flagged.
  *
  * spec `lead_lifecycle.reactivation`: "Prefer a fresh buying signal/new angle. Do

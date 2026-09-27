@@ -43,7 +43,13 @@ import {
   listOwnerOptions,
   type TimelineEntry,
 } from '@/lib/repo/leads';
-import { dueMessageForLead, openTasksForLead } from '@/lib/repo/sequence';
+import {
+  dueMessageForLead,
+  openTasksForLead,
+  sequenceStateForLead,
+  sequenceStepsForLead,
+  type SequenceStep,
+} from '@/lib/repo/sequence';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,13 +80,15 @@ export default async function LeadDetailPage({
   // Rendering "not found" rather than "forbidden" avoids confirming it exists.
   if (lead === null || lead.businessId !== business.id) notFound();
 
-  const [timeline, icps, identities, owners, tasks, dueMessage] = await Promise.all([
+  const [timeline, icps, identities, owners, tasks, dueMessage, sequence, steps] = await Promise.all([
     getLeadTimeline(context.viewer.actor, id),
     listIcpOptions(context.viewer.actor, business.id),
     listIdentityOptions(context.viewer.actor, business.id),
     listOwnerOptions(context.viewer.actor, business.id),
     openTasksForLead(context.viewer.actor, id),
     dueMessageForLead(context.viewer.actor, id),
+    sequenceStateForLead(context.viewer.actor, id),
+    sequenceStepsForLead(context.viewer.actor, id),
   ]);
 
   const canEdit = context.permissions.has('lead.update');
@@ -151,6 +159,103 @@ export default async function LeadDetailPage({
 
       <div style={{ height: 'var(--nx-space-lg)' }} />
 
+      <Grid split>
+        <Card
+          title="Lead control"
+          actions={
+            <Row wrap>
+              {lead.primaryIcpName !== null && <Chip accent="indigo">{lead.primaryIcpName}</Chip>}
+            </Row>
+          }
+        >
+          <Stack size="sm">
+            <Row between>
+              <span className="nx-hint">Owner</span>
+              <span>{lead.ownerName ?? 'Unassigned'}</span>
+            </Row>
+            <Row between>
+              <span className="nx-hint">LinkedIn sender</span>
+              <span>{lead.identityName ?? 'Not bound'}</span>
+            </Row>
+            <Row between>
+              <span className="nx-hint">Primary ICP</span>
+              <span>{lead.primaryIcpName ?? 'Unmatched'}</span>
+            </Row>
+            <Row between>
+              <span className="nx-hint">Status</span>
+              <LeadStatusChip state={lead.status} />
+            </Row>
+            <Row between>
+              <span className="nx-hint">Source</span>
+              <span>{lead.sourceType?.replace(/_/g, ' ') ?? '—'}</span>
+            </Row>
+            <Row between>
+              <span className="nx-hint">Added</span>
+              <span>{lead.createdAt?.slice(0, 10) ?? '—'}</span>
+            </Row>
+            {lead.sourceUrl !== null && (
+              <a className="nx-hint" href={lead.sourceUrl} target="_blank" rel="noreferrer noopener">
+                {lead.sourceUrl}
+              </a>
+            )}
+          </Stack>
+        </Card>
+
+        {/**
+         * The Sequence panel, as the live Figma frames draw it: one row per scheduled step with
+         * that step's real state.
+         *
+         * The rows come from `message_instances` via `sequenceStepsForLead`, which is the only
+         * record of what was actually scheduled and sent for this lead. The panel used to show a
+         * single summary row derived from `dueMessageForLead`; the frames show the step list, and a
+         * step list built from the sequence *definition* would wrongly show steps that were never
+         * created for this lead. `CANCELLED` is a real stored state (an unsent locked step that a
+         * reply overtook), not a rendered literal.
+         */}
+        <Card
+          title="Sequence"
+          actions={
+            sequence.state === null ? (
+              <Chip accent="neutral">not enrolled</Chip>
+            ) : (
+              <Chip accent={sequence.state === 'active' ? 'green' : 'amber'}>
+                {sequence.state.replace(/_/g, ' ')}
+              </Chip>
+            )
+          }
+        >
+          <Stack size="sm">
+            <Row between>
+              <span className="nx-hint">Sequence</span>
+              <span>{sequence.sequenceName ?? 'None'}</span>
+            </Row>
+            {steps.length === 0 ? (
+              <span className="nx-hint">
+                No message has been scheduled for this lead yet.
+              </span>
+            ) : (
+              steps.map((step) => (
+                <Row key={step.id} between>
+                  <span>{step.label}</span>
+                  <Chip accent={stepAccent(step.state)}>{step.state}</Chip>
+                </Row>
+              ))
+            )}
+            {sequence.reactivationDueAt !== null && (
+              <Row between>
+                <span className="nx-hint">Reactivation due</span>
+                <span className="nx-table__mono">{sequence.reactivationDueAt.slice(0, 10)}</span>
+              </Row>
+            )}
+            <p className="nx-hint">
+              Sent messages stay immutable. Replies pause the remaining sequence.
+            </p>
+          </Stack>
+        </Card>
+      </Grid>
+
+      <div style={{ height: 'var(--nx-space-lg)' }} />
+
       <LeadActionWorkspace
         {...(canEdit ? {
           edit: (
@@ -196,6 +301,61 @@ export default async function LeadDetailPage({
 
       <div style={{ height: 'var(--nx-space-lg)' }} />
 
+      {/*
+        The message the operator should act on now. The frames place the message body inside the
+        history, but the send/resume controls need a home, and a SENT instance must show its real
+        immutable content — never "not generated".
+      */}
+      {dueMessage !== null && (
+        <>
+          <Card
+            title="Current action"
+            actions={
+              <Row wrap>
+                <MessageStateChip state={dueMessage.state} />
+                {dueMessage.dueAt !== null && (
+                  <span className="nx-hint">due {dueMessage.dueAt.slice(0, 16)}</span>
+                )}
+              </Row>
+            }
+          >
+            <Stack>
+              <Row wrap>
+                <Chip accent="cyan">
+                  {dueMessage.stepOrder <= 1 ? 'Message 1' : `Follow-up ${String(dueMessage.stepOrder - 1)}`}
+                </Chip>
+                <span className="nx-hint">
+                  Next action {lead.nextActionAt === null ? 'not scheduled' : lead.nextActionAt.slice(0, 16)}
+                </span>
+              </Row>
+
+              <MessageBlock
+                direction="outbound"
+                immutable={dueMessage.state === 'SENT'}
+                meta={<span>{dueMessage.state === 'SENT' ? 'Sent (immutable)' : 'Draft — editable before sending'}</span>}
+              >
+                {dueMessage.content ?? (dueMessage.state === 'SENT'
+                  ? 'Sent content is unavailable in this record.'
+                  : 'This message has not been generated yet.')}
+              </MessageBlock>
+
+              {dueMessage.state === 'SENT' ? (
+                <ImmutableNotice />
+              ) : (
+                <MessageSentAction
+                  leadId={lead.id}
+                  businessSlug={business.key}
+                  messageInstanceId={dueMessage.id}
+                  defaultIdentityId={defaultIdentityId}
+                />
+              )}
+            </Stack>
+          </Card>
+
+          <div style={{ height: 'var(--nx-space-lg)' }} />
+        </>
+      )}
+
       <Grid split>
         <Stack size="lg">
           {/*
@@ -205,52 +365,7 @@ export default async function LeadDetailPage({
           <DuplicateCheck lead={lead} identities={identities} />
 
           <Card
-            title="Current action"
-            actions={dueMessage === null ? <Chip accent="neutral">no step due</Chip> : <MessageStateChip state={dueMessage.state} />}
-          >
-            {dueMessage === null ? (
-              <span className="nx-hint">
-                Nothing is due on this lead right now. Its next action is{' '}
-                {lead.nextActionAt === null ? 'not scheduled' : lead.nextActionAt.slice(0, 16)}.
-              </span>
-            ) : (
-              <Stack>
-                <Row wrap>
-                  <Chip accent="cyan">
-                    {dueMessage.stepOrder <= 1 ? 'Message 1' : `Follow-up ${String(dueMessage.stepOrder - 1)}`}
-                  </Chip>
-                  <MessageStateChip state={dueMessage.state} />
-                  {dueMessage.dueAt !== null && (
-                    <span className="nx-hint">due {dueMessage.dueAt.slice(0, 16)}</span>
-                  )}
-                </Row>
-
-                <MessageBlock
-                  direction="outbound"
-                  immutable={dueMessage.state === 'SENT'}
-                  meta={<span>{dueMessage.state === 'SENT' ? 'Sent (immutable)' : 'Draft — editable before sending'}</span>}
-                >
-                  {dueMessage.content ?? (dueMessage.state === 'SENT'
-                    ? 'Sent content is unavailable in this record.'
-                    : 'This message has not been generated yet.')}
-                </MessageBlock>
-
-                {dueMessage.state === 'SENT' ? (
-                  <ImmutableNotice />
-                ) : (
-                  <MessageSentAction
-                    leadId={lead.id}
-                    businessSlug={business.key}
-                    messageInstanceId={dueMessage.id}
-                    defaultIdentityId={defaultIdentityId}
-                  />
-                )}
-              </Stack>
-            )}
-          </Card>
-
-          <Card
-            title="History"
+            title="Conversation, replies & notes"
             actions={
               <Row wrap>
                 <Chip accent="neutral">{timeline.length} events</Chip>
@@ -258,43 +373,29 @@ export default async function LeadDetailPage({
               </Row>
             }
           >
-            <Timeline label="Lead history">
-              {timeline.map((entry) => (
-                <TimelineItem key={entry.id} dot={dotFor(entry)} meta={metaFor(entry)}>
-                  {entry.body ?? entry.summary ?? ''}
-                </TimelineItem>
-              ))}
-            </Timeline>
+            {/*
+              Every event is rendered. There is deliberately no `.slice()` here: a stored inbound
+              reply that the operator cannot read on the screen built to show it is a functional
+              defect, so the list is bounded by the container's own scroll rather than by dropping
+              rows. `nx-timeline` scrolls when it overflows.
+            */}
+            {timeline.length === 0 ? (
+              <span className="nx-hint">No history recorded for this lead yet.</span>
+            ) : (
+              <div style={{ maxHeight: '32rem', overflowY: 'auto' }}>
+                <Timeline label="Lead history">
+                  {timeline.map((entry) => (
+                    <TimelineItem key={entry.id} dot={dotFor(entry)} meta={metaFor(entry)}>
+                      {entry.body ?? entry.summary ?? ''}
+                    </TimelineItem>
+                  ))}
+                </Timeline>
+              </div>
+            )}
           </Card>
         </Stack>
 
         <Stack size="lg">
-          <Card title="Lead details">
-            <Stack size="sm">
-              <Row between>
-                <span className="nx-hint">Owner</span>
-                <span>{lead.ownerName ?? 'Unassigned'}</span>
-              </Row>
-              <Row between>
-                <span className="nx-hint">Sender identity</span>
-                <span>{lead.identityName ?? 'Not bound'}</span>
-              </Row>
-              <Row between>
-                <span className="nx-hint">Source</span>
-                <span>{lead.sourceType?.replace(/_/g, ' ') ?? '—'}</span>
-              </Row>
-              <Row between>
-                <span className="nx-hint">Added</span>
-                <span>{lead.createdAt?.slice(0, 10) ?? '—'}</span>
-              </Row>
-              {lead.sourceUrl !== null && (
-                <a className="nx-hint" href={lead.sourceUrl} target="_blank" rel="noreferrer noopener">
-                  {lead.sourceUrl}
-                </a>
-              )}
-            </Stack>
-          </Card>
-
           <Card title="ICPs" actions={<Chip accent="indigo">one primary</Chip>}>
             <DataTable
               columns={[
@@ -325,15 +426,6 @@ export default async function LeadDetailPage({
             </p>
           </Card>
 
-          <Card title="Sequence" actions={<LeadStatusChip state={lead.status} />}>
-            <Stack size="sm">
-              <Row between><span className="nx-hint">Current step</span><span>{dueMessage === null ? 'No step due' : dueMessage.stepOrder <= 1 ? 'Message 1' : `Follow-up ${String(dueMessage.stepOrder - 1)}`}</span></Row>
-              <Row between><span className="nx-hint">Message state</span>{dueMessage === null ? <Chip>none</Chip> : <MessageStateChip state={dueMessage.state} />}</Row>
-              <Row between><span className="nx-hint">Next action</span><span className="nx-table__mono">{lead.nextActionAt?.slice(0, 16) ?? '—'}</span></Row>
-              <p className="nx-hint">Sent messages stay immutable. Replies pause the remaining sequence.</p>
-            </Stack>
-          </Card>
-
           <Card title="Tasks" actions={<Chip>{tasks.length} open</Chip>}>
             <DataTable
               columns={taskColumns}
@@ -347,6 +439,25 @@ export default async function LeadDetailPage({
       </Grid>
     </>
   );
+}
+
+/**
+ * Colour for a step state.
+ *
+ * `CANCELLED` is rendered with its own accent so a cancelled step is visually distinct from one that
+ * is still merely locked and waiting.
+ */
+function stepAccent(state: SequenceStep['state']): 'green' | 'amber' | 'neutral' | 'red' {
+  switch (state) {
+    case 'SENT':
+      return 'green';
+    case 'DYNAMIC':
+      return 'amber';
+    case 'CANCELLED':
+      return 'red';
+    case 'LOCKED':
+      return 'neutral';
+  }
 }
 
 function dotFor(entry: TimelineEntry): 'outbound' | 'inbound' | 'task' | 'system' | 'danger' {
