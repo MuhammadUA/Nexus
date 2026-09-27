@@ -24,6 +24,24 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3000';
  * and turns into a permanent, false disclaimer.
  */
 const repoRoot = path.resolve(here, '..', '..');
+
+/**
+ * What the tree looked like, for provenance.
+ *
+ * The harness writes `results.json` into this same repository, so a plain `git status` after the run
+ * always reports that one file as modified — the harness's own output, not a change to the build
+ * under test. Reporting "the tree moved during the run" because of it would be a false alarm, so the
+ * harness's own artifacts are excluded from the comparison.
+ *
+ * The source hash is what actually matters: it covers every tracked file EXCEPT the harness's own
+ * output, so if the code the server is running had changed mid-run the hash would differ even when
+ * `git status` looked unchanged.
+ */
+const HARNESS_OUTPUT = [
+  'scripts/baseline-verify/results.json',
+  'scripts/baseline-verify/secrets.json',
+];
+
 function gitState() {
   const run = (args) => {
     try {
@@ -32,7 +50,31 @@ function gitState() {
       return `<git failed: ${error instanceof Error ? error.message : String(error)}>`;
     }
   };
-  return { head: run(['rev-parse', 'HEAD']), status: run(['status', '--porcelain']) };
+  const status = run(['status', '--porcelain'])
+    .split('\n')
+    .filter((line) => line.trim().length > 0)
+    .filter((line) => !HARNESS_OUTPUT.some((file) => line.includes(file)))
+    .join('\n');
+
+  /*
+   * A hash of the tracked file list plus their blob hashes, taken from the INDEX. That is what
+   * actually identifies "the code under test": it changes when a file is added, edited or staged,
+   * and it does not change merely because the harness rewrote its own results file.
+   */
+  let sourceHash = '';
+  try {
+    const listed = execFileSync('git', ['ls-files', '-s'], { cwd: repoRoot, encoding: 'utf8' });
+    const filtered = listed
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
+      .filter((line) => !HARNESS_OUTPUT.some((file) => line.includes(file)))
+      .join('\n');
+    sourceHash = execFileSync('git', ['hash-object', '--stdin'], { cwd: repoRoot, encoding: 'utf8', input: filtered }).trim();
+  } catch (error) {
+    sourceHash = `<hash failed: ${error instanceof Error ? error.message : String(error)}>`;
+  }
+
+  return { head: run(['rev-parse', 'HEAD']), status, sourceHash };
 }
 
 const treeBefore = gitState();
@@ -1489,9 +1531,16 @@ async function main() {
   const treeAfter = gitState();
   const treeState = {
     head: treeAfter.head,
-    cleanDuringRun: treeBefore.status === '' && treeAfter.status === '',
+    /*
+     * The build under test was frozen if the tracked-source hash is unchanged AND no non-harness file
+     * changed. The harness's own `results.json` is rewritten by every run and is deliberately not
+     * counted, so this is a statement about the code, not about the report.
+     */
+    cleanDuringRun: treeBefore.sourceHash === treeAfter.sourceHash && treeAfter.status === '',
     statusBefore: treeBefore.status,
     statusAfter: treeAfter.status,
+    sourceHashBefore: treeBefore.sourceHash,
+    sourceHashAfter: treeAfter.sourceHash,
   };
 
   const payload = {
@@ -1528,8 +1577,8 @@ async function main() {
   console.log(`TOKEN-SCRUB: removed ${rawTokenCount} credential-shaped string(s); 0 residual in results.json`);
   console.log(
     treeState.cleanDuringRun
-      ? `TREE: clean and unchanged for the whole run at ${treeState.head}`
-      : `TREE: MODIFIED DURING RUN at ${treeState.head} — before=${JSON.stringify(treeState.statusBefore)} after=${JSON.stringify(treeState.statusAfter)}`,
+      ? `TREE: frozen for the whole run — tracked source hash ${treeState.sourceHashAfter.slice(0, 16)} at ${treeState.head}`
+      : `TREE: SOURCE CHANGED DURING RUN at ${treeState.head} — before=${JSON.stringify(treeState.statusBefore)} after=${JSON.stringify(treeState.statusAfter)} hash ${treeState.sourceHashBefore.slice(0, 12)} -> ${treeState.sourceHashAfter.slice(0, 12)}`,
   );
 }
 

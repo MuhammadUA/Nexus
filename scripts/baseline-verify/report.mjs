@@ -30,9 +30,9 @@ function concurrencyNote() {
     return '**Run provenance.** This report was generated from a `results.json` that does not record tree state (produced by an older harness). Re-run `scripts/baseline-verify/harness.mjs` to attach provenance.';
   }
   if (state.cleanDuringRun === true) {
-    return `**Run provenance.** The working tree was **clean and unchanged for the whole run** — verified by comparing \`git status --porcelain\` immediately before and after execution (both empty), at commit \`${state.head ?? 'unknown'}\`. Every result below therefore describes one frozen build.`;
+    return `**Run provenance.** The build under test was **frozen for the whole run** — the hash of the tracked source was identical before and after execution (\`${String(state.sourceHashAfter ?? '').slice(0, 16)}\` at commit \`${state.head ?? 'unknown'}\`), and no file outside the harness's own \`results.json\` changed. Every result below therefore describes one frozen build.`;
   }
-  return `**Run provenance — the tree moved during this run.** \`git status --porcelain\` differed between the start and the end of the run at commit \`${state.head ?? 'unknown'}\`:\n\n\`\`\`\nbefore: ${(state.statusBefore ?? '').trim() || '(clean)'}\nafter:  ${(state.statusAfter ?? '').trim() || '(clean)'}\n\`\`\`\n\nThe results below describe the build that was serving, and any case that touches a file listed above must be re-confirmed against a frozen tree.`;
+  return `**Run provenance — the source changed during this run.** The tracked-source hash differed between the start and the end of the run at commit \`${state.head ?? 'unknown'}\` (\`${String(state.sourceHashBefore ?? '').slice(0, 12)}\` → \`${String(state.sourceHashAfter ?? '').slice(0, 12)}\`):\n\n\`\`\`\nbefore: ${(state.statusBefore ?? '').trim() || '(clean)'}\nafter:  ${(state.statusAfter ?? '').trim() || '(clean)'}\n\`\`\`\n\nThe results below describe the build that was serving, and any case that touches a file listed above must be re-confirmed against a frozen tree.`;
 }
 const CONCURRENCY_NOTE = concurrencyNote();
 

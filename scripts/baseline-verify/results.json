@@ -1,11 +1,11 @@
 {
   "base": "http://127.0.0.1:3000",
-  "generatedAt": "2026-09-27T19:45:42.831Z",
+  "generatedAt": "2026-09-27T20:49:02.056Z",
   "treeState": {
-    "head": "1e866b08775528d47b6b48d0d978b25408b31f45",
+    "head": "ebf7014437dcb846a0f6442773ffba2dcd35605f",
     "cleanDuringRun": false,
-    "statusBefore": "M apps/web/scripts/serve.mjs\n M docs/API_BASELINE_VERIFICATION.md\n M docs/MCP_BASELINE_VERIFICATION.md\n M docs/_baseline-api-mcp-summary.json\n M scripts/baseline-verify/a03-leads-verify.mjs\n M scripts/baseline-verify/db-setup.mjs\n M scripts/baseline-verify/harness.mjs\n M scripts/baseline-verify/report.mjs\n M scripts/baseline-verify/results.json",
-    "statusAfter": "M apps/web/scripts/serve.mjs\n M docs/API_BASELINE_VERIFICATION.md\n M docs/MCP_BASELINE_VERIFICATION.md\n M docs/_baseline-api-mcp-summary.json\n M scripts/baseline-verify/a03-leads-verify.mjs\n M scripts/baseline-verify/db-setup.mjs\n M scripts/baseline-verify/harness.mjs\n M scripts/baseline-verify/report.mjs\n M scripts/baseline-verify/results.json"
+    "statusBefore": "M scripts/baseline-verify/results.json",
+    "statusAfter": "M scripts/baseline-verify/results.json"
   },
   "summary": {
     "PASS": 158,
@@ -690,7 +690,7 @@
         ]
       }
     ],
-    "leadCount": 34,
+    "leadCount": 38,
     "sampleLead": {
       "id": "d0000012-0000-4000-8000-000000000001",
       "business_id": "d0000002-0000-4000-8000-000000000001",
@@ -717,7 +717,7 @@
       "headers": {
         "allow": "POST",
         "connection": "keep-alive",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -743,7 +743,7 @@
       "status": 303,
       "headers": {
         "connection": "keep-alive",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "location": "/login?error=Email+or+password+is+incorrect.&email=admin%40nexus.local",
         "referrer-policy": "strict-origin-when-cross-origin",
@@ -769,7 +769,7 @@
       "status": 303,
       "headers": {
         "connection": "keep-alive",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "location": "/login?error=Email+or+password+is+incorrect.&email=admin%40nexus.local",
         "referrer-policy": "strict-origin-when-cross-origin",
@@ -796,7 +796,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "text/plain;charset=UTF-8",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -830,7 +830,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -872,7 +872,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -905,7 +905,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -941,7 +941,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -973,7 +973,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1012,7 +1012,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1045,7 +1045,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1078,7 +1078,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1111,7 +1111,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1149,7 +1149,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1182,7 +1182,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1215,7 +1215,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1248,7 +1248,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1332,7 +1332,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1386,7 +1386,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1418,7 +1418,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:58 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1488,7 +1488,7 @@
       "group": "api/v1/companion/leads",
       "title": "GET leads for zemnas as admin",
       "verdict": "PASS",
-      "note": "200, total=23 returned=5",
+      "note": "200, total=25 returned=5",
       "request": {
         "method": "GET",
         "path": "/api/v1/companion/leads?businessId=d0000002-0000-4000-8000-000000000001&limit=5",
@@ -1502,7 +1502,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1510,62 +1510,10 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"total\":23,\"leads\":[{\"id\":\"d0000012-0000-4000-8000-000000000020\",\"personName\":\"Rashid Al Nuaimi\",\"companyName\":\"Gulf Systems\",\"jobTitle\":\"IT Director\",\"status\":\"followup_due\",\"isDnc\":false,\"needsProfile\":false,\"linkedinUrl\":\"https://www.linkedin.com/in/rashid-al-nuaimi\",\"identityName\":\"Bisma - Lavish\",\"nextActionType\":\"followup_3\",\"nextActionAt\":\"2026-09-24T19:42:08.665Z\"},{\"id\":\"d0000012-0000-4000-8000-000000000009\",\"personName\":\"Klaus Vogel\",\"companyName\":\"Berlin Retail Group\",\"jobTitle\":\"Category Manager\",\"status\":\"followup_due\",\"isDnc\":false,\"needsProfile\":false,\"linkedinUrl\":\"https://www.linkedin.com/in/klaus-vogel\",\"identityName\":\"Osama - Zemnas\",\"nextActionType\":\"followup_2\",\"nextActionAt\":\"2026-09-26T19:42:08.293Z\"},{\"id\":\"d0000012-0000-4000-8000-000000000002\",\"personName\":\"Sarah Smith\",\"companyName\":\"ABC Media\",\"jobTitle\":\"Content Lead\",\"status\":\"needs_profile\",\"isDnc\":false,\"needsProfile\":true,\"linkedinUrl\":\"https://www.linkedin.com/in/sarah-smith\",\"identityName\":\"Osama - Zemnas\",\"nextActionType\":\"capture_profile\",\"nextActionAt\":\"2026-09-27T19:42:08.050Z\"},{\"id\":\"d0000012-0000-4000-8000-000000000003\",\"personName\":\"Mia Becker\",\"companyName\":\"Kite Studio\",\"jobTitle\":\"Creative Director\",\"status\":\"ready\",\"isDnc\":false,\"needsProfile\":false,\"linkedinUrl\":\"https://www.linkedin.com/in/mia-becker\",\"identityName\":\"Osama - Zemnas\",\"nextActionType\":\"connection\",\"nextActionAt\":\"2026-09-27T19:42:08.065Z\"},{\"id\":\"d0000012-0000-4000-8000-000000000004\",\"personName\":\"Jon Davies\",\"companyName\":\"Frame House\",\"jobTitle\":\"Producer\",\"status\":\"connection_due\",\"isDnc\":false,\"needsProfile\":false,\"linkedinUrl\":\"https://www.linkedin.com/in/jon-davies\",\"identityName\":\"Osama - Zemnas\",\"nextActionType\":\"connection\",\"nextActionAt\":\"2026-09-27T19:42:08.084Z\"}]}",
+      "bodyText": "{\"total\":25,\"leads\":[{\"id\":\"d0000012-0000-4000-8000-000000000004\",\"personName\":\"Jon Davies\",\"companyName\":\"Frame House\",\"jobTitle\":\"Producer\",\"status\":\"connection_due\",\"isDnc\":false,\"needsProfile\":false,\"linkedinUrl\":\"https://www.linkedin.com/in/jon-davies\",\"identityName\":\"Osama - Zemnas\",\"nextActionType\":\"connection\",\"nextActionAt\":\"2026-09-27T19:42:08.084Z\"},{\"id\":\"d0000012-0000-4000-8000-000000000006\",\"personName\":\"Lisa Weber\",\"companyName\":\"Nova Haus\",\"jobTitle\":\"Head of Brand\",\"status\":\"connection_accepted\",\"isDnc\":false,\"needsProfile\":false,\"linkedinUrl\":\"https://www.linkedin.com/in/lisa-weber\",\"identityName\":\"Osama - Zemnas\",\"nextActionType\":\"message_1\",\"nextActionAt\":\"2026-09-27T19:42:08.161Z\"},{\"id\":\"d0000012-0000-4000-8000-000000000007\",\"personName\":\"Owen Clarke\",\"companyName\":\"Studio 8\",\"jobTitle\":\"Managing Director\",\"status\":\"message_due\",\"isDnc\":false,\"needsProfile\":false,\"linkedinUrl\":\"https://www.linkedin.com/in/owen-clarke\",\"identityName\":\"Osama - Zemnas\",\"nextActionType\":\"message_1\",\"nextActionAt\":\"2026-09-27T19:42:08.216Z\"},{\"id\":\"d0000012-0000-4000-8000-000000000008\",\"personName\":\"Priya Nair\",\"companyName\":\"Rhine Distributors\",\"jobTitle\":\"Procurement Lead\",\"status\":\"followup_due\",\"isDnc\":false,\"needsProfile\":false,\"linkedinUrl\":\"https://www.linkedin.com/in/priya-nair\",\"identityName\":\"Osama - Zemnas\",\"nextActionType\":\"followup_1\",\"nextActionAt\":\"2026-09-27T19:42:08.268Z\"},{\"id\":\"d0000012-0000-4000-8000-000000000010\",\"personName\":\"Amir Haddad\",\"companyName\":\"Gulf Systems\",\"jobTitle\":\"CTO\",\"status\":\"interested\",\"isDnc\":false,\"needsProfile\":false,\"linkedinUrl\":\"https://www.linkedin.com/in/amir-haddad\",\"identityName\":\"Osama - Zemnas\",\"nextActionType\":\"review\",\"nextActionAt\":\"2026-09-27T19:42:08.390Z\"}]}",
       "body": {
-        "total": 23,
+        "total": 25,
         "leads": [
-          {
-            "id": "d0000012-0000-4000-8000-000000000020",
-            "personName": "Rashid Al Nuaimi",
-            "companyName": "Gulf Systems",
-            "jobTitle": "IT Director",
-            "status": "followup_due",
-            "isDnc": false,
-            "needsProfile": false,
-            "linkedinUrl": "https://www.linkedin.com/in/rashid-al-nuaimi",
-            "identityName": "Bisma - Lavish",
-            "nextActionType": "followup_3",
-            "nextActionAt": "2026-09-24T19:42:08.665Z"
-          },
-          {
-            "id": "d0000012-0000-4000-8000-000000000009",
-            "personName": "Klaus Vogel",
-            "companyName": "Berlin Retail Group",
-            "jobTitle": "Category Manager",
-            "status": "followup_due",
-            "isDnc": false,
-            "needsProfile": false,
-            "linkedinUrl": "https://www.linkedin.com/in/klaus-vogel",
-            "identityName": "Osama - Zemnas",
-            "nextActionType": "followup_2",
-            "nextActionAt": "2026-09-26T19:42:08.293Z"
-          },
-          {
-            "id": "d0000012-0000-4000-8000-000000000002",
-            "personName": "Sarah Smith",
-            "companyName": "ABC Media",
-            "jobTitle": "Content Lead",
-            "status": "needs_profile",
-            "isDnc": false,
-            "needsProfile": true,
-            "linkedinUrl": "https://www.linkedin.com/in/sarah-smith",
-            "identityName": "Osama - Zemnas",
-            "nextActionType": "capture_profile",
-            "nextActionAt": "2026-09-27T19:42:08.050Z"
-          },
-          {
-            "id": "d0000012-0000-4000-8000-000000000003",
-            "personName": "Mia Becker",
-            "companyName": "Kite Studio",
-            "jobTitle": "Creative Director",
-            "status": "ready",
-            "isDnc": false,
-            "needsProfile": false,
-            "linkedinUrl": "https://www.linkedin.com/in/mia-becker",
-            "identityName": "Osama - Zemnas",
-            "nextActionType": "connection",
-            "nextActionAt": "2026-09-27T19:42:08.065Z"
-          },
           {
             "id": "d0000012-0000-4000-8000-000000000004",
             "personName": "Jon Davies",
@@ -1578,6 +1526,58 @@
             "identityName": "Osama - Zemnas",
             "nextActionType": "connection",
             "nextActionAt": "2026-09-27T19:42:08.084Z"
+          },
+          {
+            "id": "d0000012-0000-4000-8000-000000000006",
+            "personName": "Lisa Weber",
+            "companyName": "Nova Haus",
+            "jobTitle": "Head of Brand",
+            "status": "connection_accepted",
+            "isDnc": false,
+            "needsProfile": false,
+            "linkedinUrl": "https://www.linkedin.com/in/lisa-weber",
+            "identityName": "Osama - Zemnas",
+            "nextActionType": "message_1",
+            "nextActionAt": "2026-09-27T19:42:08.161Z"
+          },
+          {
+            "id": "d0000012-0000-4000-8000-000000000007",
+            "personName": "Owen Clarke",
+            "companyName": "Studio 8",
+            "jobTitle": "Managing Director",
+            "status": "message_due",
+            "isDnc": false,
+            "needsProfile": false,
+            "linkedinUrl": "https://www.linkedin.com/in/owen-clarke",
+            "identityName": "Osama - Zemnas",
+            "nextActionType": "message_1",
+            "nextActionAt": "2026-09-27T19:42:08.216Z"
+          },
+          {
+            "id": "d0000012-0000-4000-8000-000000000008",
+            "personName": "Priya Nair",
+            "companyName": "Rhine Distributors",
+            "jobTitle": "Procurement Lead",
+            "status": "followup_due",
+            "isDnc": false,
+            "needsProfile": false,
+            "linkedinUrl": "https://www.linkedin.com/in/priya-nair",
+            "identityName": "Osama - Zemnas",
+            "nextActionType": "followup_1",
+            "nextActionAt": "2026-09-27T19:42:08.268Z"
+          },
+          {
+            "id": "d0000012-0000-4000-8000-000000000010",
+            "personName": "Amir Haddad",
+            "companyName": "Gulf Systems",
+            "jobTitle": "CTO",
+            "status": "interested",
+            "isDnc": false,
+            "needsProfile": false,
+            "linkedinUrl": "https://www.linkedin.com/in/amir-haddad",
+            "identityName": "Osama - Zemnas",
+            "nextActionType": "review",
+            "nextActionAt": "2026-09-27T19:42:08.390Z"
           }
         ]
       }
@@ -1602,7 +1602,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1635,7 +1635,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1668,7 +1668,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1702,7 +1702,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:39 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1736,7 +1736,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1769,7 +1769,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1847,7 +1847,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1880,7 +1880,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1913,7 +1913,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1946,7 +1946,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -1978,7 +1978,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2056,7 +2056,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2101,7 +2101,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2134,7 +2134,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2167,7 +2167,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2212,7 +2212,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2245,7 +2245,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2278,7 +2278,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2311,7 +2311,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2344,7 +2344,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2377,7 +2377,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2419,7 +2419,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2452,7 +2452,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2485,7 +2485,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2521,7 +2521,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2557,7 +2557,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2590,7 +2590,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2623,7 +2623,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2642,19 +2642,19 @@
       "group": "api/v1/companion/bind",
       "title": "POST bind a free identity from a fresh browser profile",
       "verdict": "PASS",
-      "note": "409 reason=identity_in_use — a decision, not a failure",
+      "note": "200, binding present, transferredFrom=0",
       "request": {
         "method": "POST",
         "path": "/api/v1/companion/bind",
         "auth": "Bearer bisma",
         "body": {
-          "installId": "baseline-install-1790538340585",
+          "installId": "baseline-install-1790542139708",
           "identityId": "d0000005-0000-4000-8000-000000000002",
           "defaultBusinessId": "d0000002-0000-4000-8000-000000000003",
           "transfer": false
         }
       },
-      "status": 409,
+      "status": 200,
       "headers": {
         "access-control-allow-headers": "authorization, content-type",
         "access-control-allow-methods": "GET, POST, OPTIONS",
@@ -2662,7 +2662,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2670,21 +2670,23 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"error\":\"This LinkedIn identity is currently active in another of your browser profiles.\",\"action\":\"warn\",\"reason\":\"identity_in_use\",\"canTransfer\":false,\"blocked\":false,\"conflicts\":[{\"sessionId\":\"fda8c771-7151-4949-8da7-7cd2e14aad06\",\"operatorName\":\"Bisma Sender\",\"lastActiveAt\":\"2026-09-27T19:42:25.612Z\",\"isSelf\":true}]}",
+      "bodyText": "{\"binding\":{\"id\":\"81086342-30fd-403b-ac32-8b9305f3cbda\",\"installId\":\"baseline-install-1790542139708\",\"identityId\":\"d0000005-0000-4000-8000-000000000002\",\"defaultBusinessId\":\"d0000002-0000-4000-8000-000000000003\",\"boundAt\":\"2026-09-27T20:48:59.742Z\"},\"transferredFrom\":0,\"concurrency\":{\"action\":\"allow\",\"reason\":\"no conflicting session detected\",\"canTransfer\":false,\"blocked\":false,\"conflicts\":[]}}",
       "body": {
-        "error": "This LinkedIn identity is currently active in another of your browser profiles.",
-        "action": "warn",
-        "reason": "identity_in_use",
-        "canTransfer": false,
-        "blocked": false,
-        "conflicts": [
-          {
-            "sessionId": "fda8c771-7151-4949-8da7-7cd2e14aad06",
-            "operatorName": "Bisma Sender",
-            "lastActiveAt": "2026-09-27T19:42:25.612Z",
-            "isSelf": true
-          }
-        ]
+        "binding": {
+          "id": "81086342-30fd-403b-ac32-8b9305f3cbda",
+          "installId": "baseline-install-1790542139708",
+          "identityId": "d0000005-0000-4000-8000-000000000002",
+          "defaultBusinessId": "d0000002-0000-4000-8000-000000000003",
+          "boundAt": "2026-09-27T20:48:59.742Z"
+        },
+        "transferredFrom": 0,
+        "concurrency": {
+          "action": "allow",
+          "reason": "no conflicting session detected",
+          "canTransfer": false,
+          "blocked": false,
+          "conflicts": []
+        }
       }
     },
     {
@@ -2693,7 +2695,7 @@
       "group": "api/v1/companion/bind",
       "title": "POST bind an identity already held by another live profile, without transfer",
       "verdict": "PASS",
-      "note": "409 reason=identity_in_use, conflicts=[{\"sessionId\":\"98753a4a-47fb-4172-8b2c-e7aee20dee74\",\"operatorName\":\"Osama Sender\",\"lastActiveAt\":\"2026-09-27T19:45:40.546Z\",\"isSelf\":false}]",
+      "note": "409 reason=identity_in_use, conflicts=[{\"sessionId\":\"7a720623-7525-4ecd-bdb6-c2e137b073fb\",\"operatorName\":\"Nexus Administrator\",\"lastActiveAt\":\"2026-09-27T20:47:48.162Z\",\"isSelf\":true}]",
       "request": {
         "method": "POST",
         "path": "/api/v1/companion/bind",
@@ -2712,7 +2714,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2720,19 +2722,19 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"error\":\"This LinkedIn identity is currently active elsewhere.\",\"action\":\"warn\",\"reason\":\"identity_in_use\",\"canTransfer\":true,\"blocked\":false,\"conflicts\":[{\"sessionId\":\"98753a4a-47fb-4172-8b2c-e7aee20dee74\",\"operatorName\":\"Osama Sender\",\"lastActiveAt\":\"2026-09-27T19:45:40.546Z\",\"isSelf\":false}]}",
+      "bodyText": "{\"error\":\"This LinkedIn identity is currently active in another of your browser profiles.\",\"action\":\"warn\",\"reason\":\"identity_in_use\",\"canTransfer\":true,\"blocked\":false,\"conflicts\":[{\"sessionId\":\"7a720623-7525-4ecd-bdb6-c2e137b073fb\",\"operatorName\":\"Nexus Administrator\",\"lastActiveAt\":\"2026-09-27T20:47:48.162Z\",\"isSelf\":true}]}",
       "body": {
-        "error": "This LinkedIn identity is currently active elsewhere.",
+        "error": "This LinkedIn identity is currently active in another of your browser profiles.",
         "action": "warn",
         "reason": "identity_in_use",
         "canTransfer": true,
         "blocked": false,
         "conflicts": [
           {
-            "sessionId": "98753a4a-47fb-4172-8b2c-e7aee20dee74",
-            "operatorName": "Osama Sender",
-            "lastActiveAt": "2026-09-27T19:45:40.546Z",
-            "isSelf": false
+            "sessionId": "7a720623-7525-4ecd-bdb6-c2e137b073fb",
+            "operatorName": "Nexus Administrator",
+            "lastActiveAt": "2026-09-27T20:47:48.162Z",
+            "isSelf": true
           }
         ]
       }
@@ -2761,7 +2763,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2794,7 +2796,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2827,7 +2829,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2859,7 +2861,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2867,19 +2869,19 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"error\":\"This LinkedIn identity is currently active elsewhere.\",\"action\":\"warn\",\"reason\":\"identity_in_use\",\"canTransfer\":true,\"blocked\":false,\"conflicts\":[{\"sessionId\":\"98753a4a-47fb-4172-8b2c-e7aee20dee74\",\"operatorName\":\"Osama Sender\",\"lastActiveAt\":\"2026-09-27T19:45:40.546Z\",\"isSelf\":false}]}",
+      "bodyText": "{\"error\":\"This LinkedIn identity is currently active in another of your browser profiles.\",\"action\":\"warn\",\"reason\":\"identity_in_use\",\"canTransfer\":true,\"blocked\":false,\"conflicts\":[{\"sessionId\":\"7a720623-7525-4ecd-bdb6-c2e137b073fb\",\"operatorName\":\"Nexus Administrator\",\"lastActiveAt\":\"2026-09-27T20:47:48.162Z\",\"isSelf\":true}]}",
       "body": {
-        "error": "This LinkedIn identity is currently active elsewhere.",
+        "error": "This LinkedIn identity is currently active in another of your browser profiles.",
         "action": "warn",
         "reason": "identity_in_use",
         "canTransfer": true,
         "blocked": false,
         "conflicts": [
           {
-            "sessionId": "98753a4a-47fb-4172-8b2c-e7aee20dee74",
-            "operatorName": "Osama Sender",
-            "lastActiveAt": "2026-09-27T19:45:40.546Z",
-            "isSelf": false
+            "sessionId": "7a720623-7525-4ecd-bdb6-c2e137b073fb",
+            "operatorName": "Nexus Administrator",
+            "lastActiveAt": "2026-09-27T20:47:48.162Z",
+            "isSelf": true
           }
         ]
       }
@@ -2901,7 +2903,7 @@
           "businessId": "d0000002-0000-4000-8000-000000000001",
           "icpId": null,
           "autoMatch": true,
-          "idempotencyKey": "baseline-add-1790538340660"
+          "idempotencyKey": "baseline-add-1790542139812"
         }
       },
       "status": 200,
@@ -2912,7 +2914,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2945,7 +2947,7 @@
           "businessId": "d0000002-0000-4000-8000-000000000001",
           "icpId": null,
           "autoMatch": true,
-          "idempotencyKey": "baseline-add-1790538340660"
+          "idempotencyKey": "baseline-add-1790542139812"
         }
       },
       "status": 200,
@@ -2956,7 +2958,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -2995,7 +2997,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3032,7 +3034,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3065,7 +3067,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3098,7 +3100,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3134,7 +3136,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3172,7 +3174,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:48:59 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3210,7 +3212,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3243,7 +3245,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3280,7 +3282,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3317,7 +3319,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3350,7 +3352,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3389,7 +3391,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3428,7 +3430,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3461,7 +3463,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3487,7 +3489,7 @@
         "auth": "Bearer admin",
         "body": {
           "leadId": "8ae8809a-e236-40b1-b419-fc8227b33150",
-          "until": "2026-10-04T19:45:40.801Z",
+          "until": "2026-10-04T20:48:59.997Z",
           "reason": "baseline verification"
         }
       },
@@ -3499,7 +3501,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3537,7 +3539,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:40 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3570,7 +3572,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3606,7 +3608,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3642,7 +3644,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3675,7 +3677,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3713,7 +3715,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3751,7 +3753,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3784,7 +3786,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3817,7 +3819,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3850,7 +3852,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3886,7 +3888,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3915,20 +3917,20 @@
           "business_key_or_id": "zemnas",
           "payload_type": "candidate",
           "payload": {
-            "full_name": "Baseline Ingest Person 1790538341156",
+            "full_name": "Baseline Ingest Person 1790542140353",
             "job_title": "Content Lead",
-            "company_name": "Northstar 1790538341156",
-            "linkedin_url": "https://www.linkedin.com/in/baseline-ingest-1790538341156"
+            "company_name": "Northstar 1790542140353",
+            "linkedin_url": "https://www.linkedin.com/in/baseline-ingest-1790542140353"
           },
-          "idempotency_key": "baseline-ingest-1790538341156",
-          "observed_at": "2026-09-27T19:45:41.156Z"
+          "idempotency_key": "baseline-ingest-1790542140353",
+          "observed_at": "2026-09-27T20:49:00.353Z"
         }
       },
       "status": 400,
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3958,7 +3960,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -3987,7 +3989,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4006,7 +4008,7 @@
       "group": "api/v1/ingest",
       "title": "POST ingest with a user (companion) token",
       "verdict": "PASS",
-      "note": "201 — \"accepted (user token bypasses the service scope list by design) leadId=826c5a32-340c-414d-aba7-9c87d18824a1\"",
+      "note": "201 — \"accepted (user token bypasses the service scope list by design) leadId=e9dec982-c95c-443e-9fab-9491301ed52c\"",
       "request": {
         "method": "POST",
         "path": "/api/v1/ingest",
@@ -4016,7 +4018,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4024,7 +4026,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"idempotent\":false,\"stages\":[\"validate\",\"normalize\",\"dedupe\",\"persist_source_evidence\",\"apply_business_icp_rules\",\"create_or_update_lead\",\"audit\"],\"leadId\":\"826c5a32-340c-414d-aba7-9c87d18824a1\",\"personId\":\"2ce05d81-d95f-42fb-9e42-8cfd0ae923bd\",\"companyId\":\"dbffa9c5-cb63-4faf-9684-eb582f5b7619\"}",
+      "bodyText": "{\"idempotent\":false,\"stages\":[\"validate\",\"normalize\",\"dedupe\",\"persist_source_evidence\",\"apply_business_icp_rules\",\"create_or_update_lead\",\"audit\"],\"leadId\":\"e9dec982-c95c-443e-9fab-9491301ed52c\",\"personId\":\"96c2f96d-19ce-43fb-8145-fd638dbc6684\",\"companyId\":\"02e9ed3b-5ef0-4b8f-ae87-71cfbd213f2f\"}",
       "body": {
         "idempotent": false,
         "stages": [
@@ -4036,9 +4038,9 @@
           "create_or_update_lead",
           "audit"
         ],
-        "leadId": "826c5a32-340c-414d-aba7-9c87d18824a1",
-        "personId": "2ce05d81-d95f-42fb-9e42-8cfd0ae923bd",
-        "companyId": "dbffa9c5-cb63-4faf-9684-eb582f5b7619"
+        "leadId": "e9dec982-c95c-443e-9fab-9491301ed52c",
+        "personId": "96c2f96d-19ce-43fb-8145-fd638dbc6684",
+        "companyId": "02e9ed3b-5ef0-4b8f-ae87-71cfbd213f2f"
       }
     },
     {
@@ -4057,7 +4059,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4089,7 +4091,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4121,7 +4123,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4153,7 +4155,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4182,7 +4184,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4211,7 +4213,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4247,7 +4249,7 @@
         "access-control-max-age": "600",
         "allow": "GET, HEAD, OPTIONS",
         "connection": "keep-alive",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch",
@@ -4279,7 +4281,7 @@
         "access-control-max-age": "600",
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4309,7 +4311,7 @@
       "status": 405,
       "headers": {
         "connection": "keep-alive",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4342,7 +4344,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4382,7 +4384,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4422,7 +4424,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4455,7 +4457,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4506,7 +4508,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4548,7 +4550,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4594,7 +4596,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4632,7 +4634,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -4672,7 +4674,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -5267,7 +5269,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -5862,7 +5864,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6462,7 +6464,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6507,7 +6509,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6550,7 +6552,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6588,7 +6590,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6626,7 +6628,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6664,7 +6666,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6702,7 +6704,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6743,7 +6745,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6782,7 +6784,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6861,7 +6863,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6907,7 +6909,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -6964,7 +6966,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7006,7 +7008,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7067,7 +7069,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7114,7 +7116,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7122,7 +7124,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"companies\\\":[{\\\"id\\\":\\\"d0000010-0000-4000-8000-000000000002\\\",\\\"name\\\":\\\"Frame House\\\",\\\"normalized_domain\\\":\\\"framehouse.example\\\"},{\\\"id\\\":\\\"321e95db-037b-4aab-a0f7-e02e4ca37cba\\\",\\\"name\\\":\\\"Frame House\\\",\\\"normalized_domain\\\":null}]}\"}],\"structuredContent\":{\"companies\":[{\"id\":\"d0000010-0000-4000-8000-000000000002\",\"name\":\"Frame House\",\"normalized_domain\":\"framehouse.example\"},{\"id\":\"321e95db-037b-4aab-a0f7-e02e4ca37cba\",\"name\":\"Frame House\",\"normalized_domain\":null}]}}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"companies\\\":[{\\\"id\\\":\\\"d0000010-0000-4000-8000-000000000002\\\",\\\"name\\\":\\\"Frame House\\\",\\\"normalized_domain\\\":\\\"framehouse.example\\\"},{\\\"id\\\":\\\"22e57bef-c8b3-46ec-a15f-b358ff1c83d1\\\",\\\"name\\\":\\\"Frame House\\\",\\\"normalized_domain\\\":null}]}\"}],\"structuredContent\":{\"companies\":[{\"id\":\"d0000010-0000-4000-8000-000000000002\",\"name\":\"Frame House\",\"normalized_domain\":\"framehouse.example\"},{\"id\":\"22e57bef-c8b3-46ec-a15f-b358ff1c83d1\",\"name\":\"Frame House\",\"normalized_domain\":null}]}}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -7130,7 +7132,7 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"companies\":[{\"id\":\"d0000010-0000-4000-8000-000000000002\",\"name\":\"Frame House\",\"normalized_domain\":\"framehouse.example\"},{\"id\":\"321e95db-037b-4aab-a0f7-e02e4ca37cba\",\"name\":\"Frame House\",\"normalized_domain\":null}]}"
+              "text": "{\"companies\":[{\"id\":\"d0000010-0000-4000-8000-000000000002\",\"name\":\"Frame House\",\"normalized_domain\":\"framehouse.example\"},{\"id\":\"22e57bef-c8b3-46ec-a15f-b358ff1c83d1\",\"name\":\"Frame House\",\"normalized_domain\":null}]}"
             }
           ],
           "structuredContent": {
@@ -7141,7 +7143,7 @@
                 "normalized_domain": "framehouse.example"
               },
               {
-                "id": "321e95db-037b-4aab-a0f7-e02e4ca37cba",
+                "id": "22e57bef-c8b3-46ec-a15f-b358ff1c83d1",
                 "name": "Frame House",
                 "normalized_domain": null
               }
@@ -7174,7 +7176,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7221,7 +7223,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7282,7 +7284,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7321,11 +7323,11 @@
           "name": "nexus.submit_candidate",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-cand-1790538341369",
+            "idempotency_key": "mcp-cand-1790542140558",
             "full_name": "Baseline MCP Candidate",
             "job_title": "Head of Production",
             "company_name": "Northstar",
-            "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-candidate-1790538341369"
+            "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-candidate-1790542140558"
           }
         }
       },
@@ -7333,7 +7335,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:00 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7372,7 +7374,7 @@
           "name": "nexus.submit_candidate",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-cand-bad-1790538341369",
+            "idempotency_key": "mcp-cand-bad-1790542140558",
             "full_name": ""
           }
         }
@@ -7381,7 +7383,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7410,7 +7412,7 @@
       "group": "mcp/tools-call",
       "title": "nexus.create_signal happy path",
       "verdict": "PASS",
-      "note": "result asserted: signal_id=63b5f481-14b6-40fa-8dac-33ef380b99c1",
+      "note": "result asserted: signal_id=43cacaab-a71c-4790-ad4d-517f9580f2ba",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
@@ -7420,7 +7422,7 @@
           "name": "nexus.create_signal",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-sig-1790538341369",
+            "idempotency_key": "mcp-sig-1790542140558",
             "kind": "hiring",
             "polarity": "positive",
             "strength": 20,
@@ -7433,7 +7435,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7441,7 +7443,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"signal_id\\\":\\\"63b5f481-14b6-40fa-8dac-33ef380b99c1\\\"}\"}],\"structuredContent\":{\"signal_id\":\"63b5f481-14b6-40fa-8dac-33ef380b99c1\"},\"idempotent\":false}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"signal_id\\\":\\\"43cacaab-a71c-4790-ad4d-517f9580f2ba\\\"}\"}],\"structuredContent\":{\"signal_id\":\"43cacaab-a71c-4790-ad4d-517f9580f2ba\"},\"idempotent\":false}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -7449,11 +7451,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"signal_id\":\"63b5f481-14b6-40fa-8dac-33ef380b99c1\"}"
+              "text": "{\"signal_id\":\"43cacaab-a71c-4790-ad4d-517f9580f2ba\"}"
             }
           ],
           "structuredContent": {
-            "signal_id": "63b5f481-14b6-40fa-8dac-33ef380b99c1"
+            "signal_id": "43cacaab-a71c-4790-ad4d-517f9580f2ba"
           },
           "idempotent": false
         }
@@ -7475,7 +7477,7 @@
           "name": "nexus.create_signal",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-sig-bad-1790538341369",
+            "idempotency_key": "mcp-sig-bad-1790542140558",
             "kind": "not_a_kind"
           }
         }
@@ -7484,7 +7486,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7513,7 +7515,7 @@
       "group": "mcp/tools-call",
       "title": "nexus.add_source_evidence happy path",
       "verdict": "PASS",
-      "note": "result asserted: evidence_id=0e34b61a-9353-4970-b135-73c8d74a6edc deduplicated=false",
+      "note": "result asserted: evidence_id=ae9dc095-f061-4604-b9ce-6feb9c952902 deduplicated=false",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
@@ -7523,9 +7525,9 @@
           "name": "nexus.add_source_evidence",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-evi-1790538341369",
+            "idempotency_key": "mcp-evi-1790542140558",
             "source": "Baseline verification",
-            "raw_text_or_json": "baseline evidence 1790538341369",
+            "raw_text_or_json": "baseline evidence 1790542140558",
             "confidence": 0.6
           }
         }
@@ -7534,7 +7536,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7542,7 +7544,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"evidence_id\\\":\\\"0e34b61a-9353-4970-b135-73c8d74a6edc\\\",\\\"deduplicated\\\":false}\"}],\"structuredContent\":{\"evidence_id\":\"0e34b61a-9353-4970-b135-73c8d74a6edc\",\"deduplicated\":false},\"idempotent\":false}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"evidence_id\\\":\\\"ae9dc095-f061-4604-b9ce-6feb9c952902\\\",\\\"deduplicated\\\":false}\"}],\"structuredContent\":{\"evidence_id\":\"ae9dc095-f061-4604-b9ce-6feb9c952902\",\"deduplicated\":false},\"idempotent\":false}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -7550,11 +7552,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"evidence_id\":\"0e34b61a-9353-4970-b135-73c8d74a6edc\",\"deduplicated\":false}"
+              "text": "{\"evidence_id\":\"ae9dc095-f061-4604-b9ce-6feb9c952902\",\"deduplicated\":false}"
             }
           ],
           "structuredContent": {
-            "evidence_id": "0e34b61a-9353-4970-b135-73c8d74a6edc",
+            "evidence_id": "ae9dc095-f061-4604-b9ce-6feb9c952902",
             "deduplicated": false
           },
           "idempotent": false
@@ -7577,7 +7579,7 @@
           "name": "nexus.add_source_evidence",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-evi-bad-1790538341369"
+            "idempotency_key": "mcp-evi-bad-1790542140558"
           }
         }
       },
@@ -7585,7 +7587,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7624,11 +7626,11 @@
           "name": "nexus.create_or_update_lead",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-lead-1790538341369",
+            "idempotency_key": "mcp-lead-1790542140558",
             "full_name": "Baseline MCP Lead Person",
             "company_name": "Studio 8",
             "job_title": "Content Lead",
-            "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-lead-1790538341369"
+            "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-lead-1790542140558"
           }
         }
       },
@@ -7636,7 +7638,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7675,7 +7677,7 @@
           "name": "nexus.create_or_update_lead",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-lead-bad-1790538341369",
+            "idempotency_key": "mcp-lead-bad-1790542140558",
             "linkedin_url": 42
           }
         }
@@ -7684,7 +7686,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7723,7 +7725,7 @@
           "name": "nexus.assign_lead",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-assign-1790538341369",
+            "idempotency_key": "mcp-assign-1790542140558",
             "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
             "owner_user_id": "d0000001-0000-4000-8000-000000000003"
           }
@@ -7733,7 +7735,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7776,7 +7778,7 @@
           "name": "nexus.assign_lead",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-assign-bad-1790538341369",
+            "idempotency_key": "mcp-assign-bad-1790542140558",
             "lead_id": "00000000-0000-4000-8000-0000000000ff",
             "owner_user_id": "d0000001-0000-4000-8000-000000000003"
           }
@@ -7786,7 +7788,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:41 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7825,7 +7827,7 @@
           "name": "nexus.submit_profile_capture",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-cap-1790538341369",
+            "idempotency_key": "mcp-cap-1790542140558",
             "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
             "linkedin_url": "https://www.linkedin.com/in/baseline-verify-person",
             "pasted_content": "Baseline Verify\nHead of Production at Frame House\nMunich, Germany"
@@ -7836,7 +7838,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7875,7 +7877,7 @@
           "name": "nexus.submit_profile_capture",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-cap-bad-1790538341369",
+            "idempotency_key": "mcp-cap-bad-1790542140558",
             "lead_id": "00000000-0000-4000-8000-0000000000ff",
             "linkedin_url": "https://www.linkedin.com/in/x",
             "pasted_content": "x"
@@ -7886,7 +7888,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7925,7 +7927,7 @@
           "name": "nexus.capture_reply",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-reply-1790538341369",
+            "idempotency_key": "mcp-reply-1790542140558",
             "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
             "exact_text": "Thanks, not right now — ping me next quarter.",
             "outcome": "Maybe later"
@@ -7936,7 +7938,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -7979,7 +7981,7 @@
           "name": "nexus.capture_reply",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-reply-bad-1790538341369",
+            "idempotency_key": "mcp-reply-bad-1790542140558",
             "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
             "exact_text": "",
             "outcome": "Maybe later"
@@ -7990,7 +7992,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8019,7 +8021,7 @@
       "group": "mcp/tools-call",
       "title": "nexus.add_note happy path",
       "verdict": "PASS",
-      "note": "result asserted: note_id=6ac93f0e-364b-4344-afbd-fca744b57b50",
+      "note": "result asserted: note_id=6c1e40ae-6a56-4f22-aacb-3b2e65c25e4e",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
@@ -8029,7 +8031,7 @@
           "name": "nexus.add_note",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-note-1790538341369",
+            "idempotency_key": "mcp-note-1790542140558",
             "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
             "body": "Baseline verification note."
           }
@@ -8039,7 +8041,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8047,7 +8049,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"note_id\\\":\\\"6ac93f0e-364b-4344-afbd-fca744b57b50\\\"}\"}],\"structuredContent\":{\"note_id\":\"6ac93f0e-364b-4344-afbd-fca744b57b50\"},\"idempotent\":false}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"note_id\\\":\\\"6c1e40ae-6a56-4f22-aacb-3b2e65c25e4e\\\"}\"}],\"structuredContent\":{\"note_id\":\"6c1e40ae-6a56-4f22-aacb-3b2e65c25e4e\"},\"idempotent\":false}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8055,11 +8057,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"note_id\":\"6ac93f0e-364b-4344-afbd-fca744b57b50\"}"
+              "text": "{\"note_id\":\"6c1e40ae-6a56-4f22-aacb-3b2e65c25e4e\"}"
             }
           ],
           "structuredContent": {
-            "note_id": "6ac93f0e-364b-4344-afbd-fca744b57b50"
+            "note_id": "6c1e40ae-6a56-4f22-aacb-3b2e65c25e4e"
           },
           "idempotent": false
         }
@@ -8081,7 +8083,7 @@
           "name": "nexus.add_note",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-note-bad-1790538341369",
+            "idempotency_key": "mcp-note-bad-1790542140558",
             "lead_id": "00000000-0000-4000-8000-0000000000ff",
             "body": "x"
           }
@@ -8091,7 +8093,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8120,7 +8122,7 @@
       "group": "mcp/tools-call",
       "title": "nexus.create_task happy path",
       "verdict": "PASS",
-      "note": "result asserted: task_id=bfbdca35-35da-46a0-8272-db642226ca36",
+      "note": "result asserted: task_id=b6f50b71-073b-40ce-89d4-f857ee3b6594",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
@@ -8130,7 +8132,7 @@
           "name": "nexus.create_task",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-task-1790538341369",
+            "idempotency_key": "mcp-task-1790542140558",
             "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
             "title": "Baseline verification task",
             "type": "follow_up",
@@ -8142,7 +8144,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8150,7 +8152,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"task_id\\\":\\\"bfbdca35-35da-46a0-8272-db642226ca36\\\"}\"}],\"structuredContent\":{\"task_id\":\"bfbdca35-35da-46a0-8272-db642226ca36\"},\"idempotent\":false}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"task_id\\\":\\\"b6f50b71-073b-40ce-89d4-f857ee3b6594\\\"}\"}],\"structuredContent\":{\"task_id\":\"b6f50b71-073b-40ce-89d4-f857ee3b6594\"},\"idempotent\":false}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8158,11 +8160,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"task_id\":\"bfbdca35-35da-46a0-8272-db642226ca36\"}"
+              "text": "{\"task_id\":\"b6f50b71-073b-40ce-89d4-f857ee3b6594\"}"
             }
           ],
           "structuredContent": {
-            "task_id": "bfbdca35-35da-46a0-8272-db642226ca36"
+            "task_id": "b6f50b71-073b-40ce-89d4-f857ee3b6594"
           },
           "idempotent": false
         }
@@ -8184,7 +8186,7 @@
           "name": "nexus.create_task",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-task-bad-1790538341369",
+            "idempotency_key": "mcp-task-bad-1790542140558",
             "lead_id": "00000000-0000-4000-8000-0000000000ff",
             "title": "x"
           }
@@ -8194,7 +8196,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8241,7 +8243,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8249,7 +8251,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"items\\\":[{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000005\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000005\\\",\\\"person_name\\\":\\\"Nora Schmidt\\\",\\\"company_name\\\":\\\"Northstar\\\",\\\"item_category\\\":\\\"custom_tasks\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"task\\\",\\\"due_at\\\":\\\"2026-09-25T19:42:08.114Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":\\\"open\\\",\\\"task_id\\\":\\\"d0000014-0000-4000-8000-000000000002\\\",\\\"priority\\\":\\\"urgent\\\",\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000001\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000001\\\",\\\"person_name\\\":\\\"Tom Henry\\\",\\\"company_name\\\":\\\"ABC Media\\\",\\\"item_category\\\":\\\"custom_tasks\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"task\\\",\\\"due_at\\\":\\\"2026-09-26T19:42:08.038Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":\\\"open\\\",\\\"task_id\\\":\\\"d0000014-0000-4000-8000-000000000001\\\",\\\"priority\\\":\\\"normal\\\",\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000013\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000013\\\",\\\"person_name\\\":\\\"Danielle Fox\\\",\\\"company_name\\\":\\\"Everafter Films\\\",\\\"item_category\\\":\\\"custom_tasks\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"task\\\",\\\"due_at\\\":\\\"2026-09-26T19:42:08.509Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":\\\"open\\\",\\\"task_id\\\":\\\"d0000014-0000-4000-8000-000000000007\\\",\\\"priority\\\":\\\"normal\\\",\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000003\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000003\\\",\\\"person_name\\\":\\\"Mia Becker\\\",\\\"company_name\\\":\\\"Kite Studio\\\",\\\"item_category\\\":\\\"connections\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"connection\\\",\\\"due_at\\\":\\\"2026-09-27T19:42:08.065Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":null,\\\"task_id\\\":null,\\\"priority\\\":null,\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000004\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000004\\\",\\\"person_name\\\":\\\"Jon Davies\\\",\\\"company_name\\\":\\\"Frame House\\\",\\\"item_category\\\":\\\"connections\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"connection\\\",\\\"due_at\\\":\\\"2026-09-27T19:42:08.084Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":null,\\\"task_id\\\":null,\\\"priority\\\":null,\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000009\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000009\\\",\\\"person_name\\\":\\\"Klaus Vogel\\\",\\\"company_name\\\":\\\"Berlin Retail Group\\\",\\\"item_category\\\":\\\"custom_tasks\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"task\\\",\\\"due_at\\\":\\\"2026-09-27T19:42:08.309Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":\\\"open\\\",\\\"task_id\\\":\\\"d0000014-0000-4000-8000-000000000005\\\",\\\"priority\\\":\\\"normal\\\",\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"8ae8809a-e236-40b1-b419-fc8227b33150\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8…[truncated]",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"items\\\":[{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000005\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000005\\\",\\\"person_name\\\":\\\"Nora Schmidt\\\",\\\"company_name\\\":\\\"Northstar\\\",\\\"item_category\\\":\\\"custom_tasks\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"task\\\",\\\"due_at\\\":\\\"2026-09-25T19:42:08.114Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":\\\"open\\\",\\\"task_id\\\":\\\"d0000014-0000-4000-8000-000000000002\\\",\\\"priority\\\":\\\"urgent\\\",\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000001\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000001\\\",\\\"person_name\\\":\\\"Tom Henry\\\",\\\"company_name\\\":\\\"ABC Media\\\",\\\"item_category\\\":\\\"custom_tasks\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"task\\\",\\\"due_at\\\":\\\"2026-09-26T19:42:08.038Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":\\\"open\\\",\\\"task_id\\\":\\\"d0000014-0000-4000-8000-000000000001\\\",\\\"priority\\\":\\\"normal\\\",\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000013\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000013\\\",\\\"person_name\\\":\\\"Danielle Fox\\\",\\\"company_name\\\":\\\"Everafter Films\\\",\\\"item_category\\\":\\\"custom_tasks\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"task\\\",\\\"due_at\\\":\\\"2026-09-26T19:42:08.509Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":\\\"open\\\",\\\"task_id\\\":\\\"d0000014-0000-4000-8000-000000000007\\\",\\\"priority\\\":\\\"normal\\\",\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000004\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000004\\\",\\\"person_name\\\":\\\"Jon Davies\\\",\\\"company_name\\\":\\\"Frame House\\\",\\\"item_category\\\":\\\"connections\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"connection\\\",\\\"due_at\\\":\\\"2026-09-27T19:42:08.084Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":null,\\\"task_id\\\":null,\\\"priority\\\":null,\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000009\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000009\\\",\\\"person_name\\\":\\\"Klaus Vogel\\\",\\\"company_name\\\":\\\"Berlin Retail Group\\\",\\\"item_category\\\":\\\"custom_tasks\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"task\\\",\\\"due_at\\\":\\\"2026-09-27T19:42:08.309Z\\\",\\\"message_instance_id\\\":null,\\\"sequence_step_id\\\":null,\\\"step_order\\\":0,\\\"step_kind\\\":null,\\\"item_state\\\":\\\"open\\\",\\\"task_id\\\":\\\"d0000014-0000-4000-8000-000000000005\\\",\\\"priority\\\":\\\"normal\\\",\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\\"item_lead_id\\\":\\\"d0000012-0000-4000-8000-000000000009\\\",\\\"item_business_id\\\":\\\"d0000002-0000-4000-8000-000000000001\\\",\\\"item_person_id\\\":\\\"d0000011-0000-4000-8000-000000000009\\\",\\\"person_name\\\":\\\"Klaus Vogel\\\",\\\"company_name\\\":\\\"Berlin Retail Group\\\",\\\"item_category\\\":\\\"accepted_message1\\\",\\\"item_bucket\\\":\\\"today\\\",\\\"action_type\\\":\\\"message_1\\\",\\\"due_at\\\":\\\"2026-09-27T20:27:21.925Z\\\",\\\"message_instance_id\\\":\\\"eab9e5bf-00af-4229-932f-211d6f1494e3\\\",\\\"sequence_step_id\\\":\\\"957fad57-d9c0-4011-aa03-9523394f2939\\\",\\\"step_order\\\":1,\\\"step_kind\\\":\\\"message\\\",\\\"item_state\\\":\\\"DYNAMIC\\\",\\\"task_id\\\":null,\\\"priority\\\":null,\\\"is_overdue\\\":true,\\\"sender_identity_id\\\":\\\"d0000005-0000-4000-8000-000000000001\\\"},{\\…[truncated]",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8257,7 +8259,7 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"items\":[{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000005\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000005\",\"person_name\":\"Nora Schmidt\",\"company_name\":\"Northstar\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":\"2026-09-25T19:42:08.114Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"d0000014-0000-4000-8000-000000000002\",\"priority\":\"urgent\",\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000001\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000001\",\"person_name\":\"Tom Henry\",\"company_name\":\"ABC Media\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":\"2026-09-26T19:42:08.038Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"d0000014-0000-4000-8000-000000000001\",\"priority\":\"normal\",\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000013\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000013\",\"person_name\":\"Danielle Fox\",\"company_name\":\"Everafter Films\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":\"2026-09-26T19:42:08.509Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"d0000014-0000-4000-8000-000000000007\",\"priority\":\"normal\",\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000003\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000003\",\"person_name\":\"Mia Becker\",\"company_name\":\"Kite Studio\",\"item_category\":\"connections\",\"item_bucket\":\"today\",\"action_type\":\"connection\",\"due_at\":\"2026-09-27T19:42:08.065Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":null,\"task_id\":null,\"priority\":null,\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000004\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000004\",\"person_name\":\"Jon Davies\",\"company_name\":\"Frame House\",\"item_category\":\"connections\",\"item_bucket\":\"today\",\"action_type\":\"connection\",\"due_at\":\"2026-09-27T19:42:08.084Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":null,\"task_id\":null,\"priority\":null,\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000009\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000009\",\"person_name\":\"Klaus Vogel\",\"company_name\":\"Berlin Retail Group\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":\"2026-09-27T19:42:08.309Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"d0000014-0000-4000-8000-000000000005\",\"priority\":\"normal\",\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"8ae8809a-e236-40b1-b419-fc8227b33150\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"9a279cdb-623e-46a3-8c2d-3ea199ca717f\",\"person_name\":\"Baseline Verify\",\"company_name\":\"Frame House\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":null,\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"bfbdca35-35da-46a0-8272-db642226ca36\",\"priority\":\"normal\",\"is_overdue\":false,\"sender_identity_id\":null}]}"
+              "text": "{\"items\":[{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000005\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000005\",\"person_name\":\"Nora Schmidt\",\"company_name\":\"Northstar\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":\"2026-09-25T19:42:08.114Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"d0000014-0000-4000-8000-000000000002\",\"priority\":\"urgent\",\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000001\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000001\",\"person_name\":\"Tom Henry\",\"company_name\":\"ABC Media\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":\"2026-09-26T19:42:08.038Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"d0000014-0000-4000-8000-000000000001\",\"priority\":\"normal\",\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000013\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000013\",\"person_name\":\"Danielle Fox\",\"company_name\":\"Everafter Films\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":\"2026-09-26T19:42:08.509Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"d0000014-0000-4000-8000-000000000007\",\"priority\":\"normal\",\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000004\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000004\",\"person_name\":\"Jon Davies\",\"company_name\":\"Frame House\",\"item_category\":\"connections\",\"item_bucket\":\"today\",\"action_type\":\"connection\",\"due_at\":\"2026-09-27T19:42:08.084Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":null,\"task_id\":null,\"priority\":null,\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000009\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000009\",\"person_name\":\"Klaus Vogel\",\"company_name\":\"Berlin Retail Group\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":\"2026-09-27T19:42:08.309Z\",\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"d0000014-0000-4000-8000-000000000005\",\"priority\":\"normal\",\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000009\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"d0000011-0000-4000-8000-000000000009\",\"person_name\":\"Klaus Vogel\",\"company_name\":\"Berlin Retail Group\",\"item_category\":\"accepted_message1\",\"item_bucket\":\"today\",\"action_type\":\"message_1\",\"due_at\":\"2026-09-27T20:27:21.925Z\",\"message_instance_id\":\"eab9e5bf-00af-4229-932f-211d6f1494e3\",\"sequence_step_id\":\"957fad57-d9c0-4011-aa03-9523394f2939\",\"step_order\":1,\"step_kind\":\"message\",\"item_state\":\"DYNAMIC\",\"task_id\":null,\"priority\":null,\"is_overdue\":true,\"sender_identity_id\":\"d0000005-0000-4000-8000-000000000001\"},{\"item_lead_id\":\"8ae8809a-e236-40b1-b419-fc8227b33150\",\"item_business_id\":\"d0000002-0000-4000-8000-000000000001\",\"item_person_id\":\"9a279cdb-623e-46a3-8c2d-3ea199ca717f\",\"person_name\":\"Baseline Verify\",\"company_name\":\"Frame House\",\"item_category\":\"custom_tasks\",\"item_bucket\":\"today\",\"action_type\":\"task\",\"due_at\":null,\"message_instance_id\":null,\"sequence_step_id\":null,\"step_order\":0,\"step_kind\":null,\"item_state\":\"open\",\"task_id\":\"b6f50b71-073b-40ce-89d4-f857ee3b6594\",\"priority\":\"normal\",\"is_overdue\":false,\"sender_identity_id\":null}]}"
             }
           ],
           "structuredContent": {
@@ -8323,26 +8325,6 @@
                 "sender_identity_id": "d0000005-0000-4000-8000-000000000001"
               },
               {
-                "item_lead_id": "d0000012-0000-4000-8000-000000000003",
-                "item_business_id": "d0000002-0000-4000-8000-000000000001",
-                "item_person_id": "d0000011-0000-4000-8000-000000000003",
-                "person_name": "Mia Becker",
-                "company_name": "Kite Studio",
-                "item_category": "connections",
-                "item_bucket": "today",
-                "action_type": "connection",
-                "due_at": "2026-09-27T19:42:08.065Z",
-                "message_instance_id": null,
-                "sequence_step_id": null,
-                "step_order": 0,
-                "step_kind": null,
-                "item_state": null,
-                "task_id": null,
-                "priority": null,
-                "is_overdue": true,
-                "sender_identity_id": "d0000005-0000-4000-8000-000000000001"
-              },
-              {
                 "item_lead_id": "d0000012-0000-4000-8000-000000000004",
                 "item_business_id": "d0000002-0000-4000-8000-000000000001",
                 "item_person_id": "d0000011-0000-4000-8000-000000000004",
@@ -8383,6 +8365,26 @@
                 "sender_identity_id": "d0000005-0000-4000-8000-000000000001"
               },
               {
+                "item_lead_id": "d0000012-0000-4000-8000-000000000009",
+                "item_business_id": "d0000002-0000-4000-8000-000000000001",
+                "item_person_id": "d0000011-0000-4000-8000-000000000009",
+                "person_name": "Klaus Vogel",
+                "company_name": "Berlin Retail Group",
+                "item_category": "accepted_message1",
+                "item_bucket": "today",
+                "action_type": "message_1",
+                "due_at": "2026-09-27T20:27:21.925Z",
+                "message_instance_id": "eab9e5bf-00af-4229-932f-211d6f1494e3",
+                "sequence_step_id": "957fad57-d9c0-4011-aa03-9523394f2939",
+                "step_order": 1,
+                "step_kind": "message",
+                "item_state": "DYNAMIC",
+                "task_id": null,
+                "priority": null,
+                "is_overdue": true,
+                "sender_identity_id": "d0000005-0000-4000-8000-000000000001"
+              },
+              {
                 "item_lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
                 "item_business_id": "d0000002-0000-4000-8000-000000000001",
                 "item_person_id": "9a279cdb-623e-46a3-8c2d-3ea199ca717f",
@@ -8397,7 +8399,7 @@
                 "step_order": 0,
                 "step_kind": null,
                 "item_state": "open",
-                "task_id": "bfbdca35-35da-46a0-8272-db642226ca36",
+                "task_id": "b6f50b71-073b-40ce-89d4-f857ee3b6594",
                 "priority": "normal",
                 "is_overdue": false,
                 "sender_identity_id": null
@@ -8431,7 +8433,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8462,7 +8464,7 @@
       "group": "mcp/tools-call",
       "title": "nexus.submit_research happy path",
       "verdict": "PASS",
-      "note": "result asserted: research_snapshot_id=a0c0451e-4cee-496f-baf9-1f4a51b43c06",
+      "note": "result asserted: research_snapshot_id=56c12316-7ffe-4f27-ba5a-6b3cbf589de4",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
@@ -8472,7 +8474,7 @@
           "name": "nexus.submit_research",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-res-1790538341369",
+            "idempotency_key": "mcp-res-1790542140558",
             "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
             "summary": "Baseline research snapshot.",
             "findings": {
@@ -8485,7 +8487,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8493,7 +8495,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"research_snapshot_id\\\":\\\"a0c0451e-4cee-496f-baf9-1f4a51b43c06\\\"}\"}],\"structuredContent\":{\"research_snapshot_id\":\"a0c0451e-4cee-496f-baf9-1f4a51b43c06\"},\"idempotent\":false}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"research_snapshot_id\\\":\\\"56c12316-7ffe-4f27-ba5a-6b3cbf589de4\\\"}\"}],\"structuredContent\":{\"research_snapshot_id\":\"56c12316-7ffe-4f27-ba5a-6b3cbf589de4\"},\"idempotent\":false}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8501,11 +8503,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"research_snapshot_id\":\"a0c0451e-4cee-496f-baf9-1f4a51b43c06\"}"
+              "text": "{\"research_snapshot_id\":\"56c12316-7ffe-4f27-ba5a-6b3cbf589de4\"}"
             }
           ],
           "structuredContent": {
-            "research_snapshot_id": "a0c0451e-4cee-496f-baf9-1f4a51b43c06"
+            "research_snapshot_id": "56c12316-7ffe-4f27-ba5a-6b3cbf589de4"
           },
           "idempotent": false
         }
@@ -8527,7 +8529,7 @@
           "name": "nexus.submit_research",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-res-bad-1790538341369",
+            "idempotency_key": "mcp-res-bad-1790542140558",
             "lead_id": "00000000-0000-4000-8000-0000000000ff",
             "summary": "x"
           }
@@ -8537,7 +8539,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8566,7 +8568,7 @@
       "group": "mcp/tools-call",
       "title": "nexus.submit_message_draft happy path",
       "verdict": "PASS",
-      "note": "result asserted: message_version_id=cc1acc36-d0bd-4a2f-bdf4-d678110fbd59",
+      "note": "result asserted: message_version_id=6786ef7c-16b1-4eb2-8c45-4fb9b4f3bed2",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
@@ -8576,7 +8578,7 @@
           "name": "nexus.submit_message_draft",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-draft-1790538341369",
+            "idempotency_key": "mcp-draft-1790542140558",
             "message_instance_id": "d0000019-0000-4000-8000-000000000001",
             "content": "Baseline draft content."
           }
@@ -8586,7 +8588,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8594,7 +8596,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"message_version_id\\\":\\\"cc1acc36-d0bd-4a2f-bdf4-d678110fbd59\\\"}\"}],\"structuredContent\":{\"message_version_id\":\"cc1acc36-d0bd-4a2f-bdf4-d678110fbd59\"},\"idempotent\":false}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"message_version_id\\\":\\\"6786ef7c-16b1-4eb2-8c45-4fb9b4f3bed2\\\"}\"}],\"structuredContent\":{\"message_version_id\":\"6786ef7c-16b1-4eb2-8c45-4fb9b4f3bed2\"},\"idempotent\":false}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8602,11 +8604,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"message_version_id\":\"cc1acc36-d0bd-4a2f-bdf4-d678110fbd59\"}"
+              "text": "{\"message_version_id\":\"6786ef7c-16b1-4eb2-8c45-4fb9b4f3bed2\"}"
             }
           ],
           "structuredContent": {
-            "message_version_id": "cc1acc36-d0bd-4a2f-bdf4-d678110fbd59"
+            "message_version_id": "6786ef7c-16b1-4eb2-8c45-4fb9b4f3bed2"
           },
           "idempotent": false
         }
@@ -8628,7 +8630,7 @@
           "name": "nexus.submit_message_draft",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-draft-bad-1790538341369",
+            "idempotency_key": "mcp-draft-bad-1790542140558",
             "message_instance_id": "00000000-0000-4000-8000-0000000000ff",
             "content": ""
           }
@@ -8638,7 +8640,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8667,7 +8669,7 @@
       "group": "mcp/tools-call",
       "title": "nexus.finish_agent_run happy path",
       "verdict": "PASS",
-      "note": "result asserted: agent_run_id=b03803e7-7151-438e-afcb-704a59290c6a",
+      "note": "result asserted: agent_run_id=f1143e0a-9777-44fb-9ef3-4659084f606e",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
@@ -8677,7 +8679,7 @@
           "name": "nexus.finish_agent_run",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-run-1790538341369",
+            "idempotency_key": "mcp-run-1790542140558",
             "agent_name": "baseline-verifier",
             "objective": "Verify the MCP surface",
             "state": "succeeded",
@@ -8689,7 +8691,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8697,7 +8699,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"agent_run_id\\\":\\\"b03803e7-7151-438e-afcb-704a59290c6a\\\"}\"}],\"structuredContent\":{\"agent_run_id\":\"b03803e7-7151-438e-afcb-704a59290c6a\"},\"idempotent\":false}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"agent_run_id\\\":\\\"f1143e0a-9777-44fb-9ef3-4659084f606e\\\"}\"}],\"structuredContent\":{\"agent_run_id\":\"f1143e0a-9777-44fb-9ef3-4659084f606e\"},\"idempotent\":false}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8705,11 +8707,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"agent_run_id\":\"b03803e7-7151-438e-afcb-704a59290c6a\"}"
+              "text": "{\"agent_run_id\":\"f1143e0a-9777-44fb-9ef3-4659084f606e\"}"
             }
           ],
           "structuredContent": {
-            "agent_run_id": "b03803e7-7151-438e-afcb-704a59290c6a"
+            "agent_run_id": "f1143e0a-9777-44fb-9ef3-4659084f606e"
           },
           "idempotent": false
         }
@@ -8731,7 +8733,7 @@
           "name": "nexus.finish_agent_run",
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
-            "idempotency_key": "mcp-run-bad-1790538341369",
+            "idempotency_key": "mcp-run-bad-1790542140558",
             "agent_name": ""
           }
         }
@@ -8740,7 +8742,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8769,14 +8771,14 @@
       "group": "mcp/idempotency",
       "title": "create_signal with a fresh idempotency_key",
       "verdict": "PASS",
-      "note": "signal_id=9113f3cc-c3cd-478f-9d4c-bad00950143b idempotent=false",
+      "note": "signal_id=9de269ac-0d47-461b-a34c-9d7dbcfd65a2 idempotent=false",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
         "auth": "Bearer nxs_…(baseline-full)",
         "body": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-idem-1790538341369",
+          "idempotency_key": "mcp-idem-1790542140558",
           "kind": "hiring",
           "polarity": "positive",
           "strength": 5,
@@ -8788,7 +8790,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8796,7 +8798,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"signal_id\\\":\\\"9113f3cc-c3cd-478f-9d4c-bad00950143b\\\"}\"}],\"structuredContent\":{\"signal_id\":\"9113f3cc-c3cd-478f-9d4c-bad00950143b\"},\"idempotent\":false}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"signal_id\\\":\\\"9de269ac-0d47-461b-a34c-9d7dbcfd65a2\\\"}\"}],\"structuredContent\":{\"signal_id\":\"9de269ac-0d47-461b-a34c-9d7dbcfd65a2\"},\"idempotent\":false}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8804,11 +8806,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"signal_id\":\"9113f3cc-c3cd-478f-9d4c-bad00950143b\"}"
+              "text": "{\"signal_id\":\"9de269ac-0d47-461b-a34c-9d7dbcfd65a2\"}"
             }
           ],
           "structuredContent": {
-            "signal_id": "9113f3cc-c3cd-478f-9d4c-bad00950143b"
+            "signal_id": "9de269ac-0d47-461b-a34c-9d7dbcfd65a2"
           },
           "idempotent": false
         }
@@ -8820,7 +8822,7 @@
       "group": "mcp/idempotency",
       "title": "Same key + same payload is replayed, not re-run",
       "verdict": "PASS",
-      "note": "idempotent=true, same signal_id=9113f3cc-c3cd-478f-9d4c-bad00950143b (no second row)",
+      "note": "idempotent=true, same signal_id=9de269ac-0d47-461b-a34c-9d7dbcfd65a2 (no second row)",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
@@ -8831,7 +8833,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8839,7 +8841,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"signal_id\\\":\\\"9113f3cc-c3cd-478f-9d4c-bad00950143b\\\"}\"}],\"structuredContent\":{\"signal_id\":\"9113f3cc-c3cd-478f-9d4c-bad00950143b\"},\"idempotent\":true}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"signal_id\\\":\\\"9de269ac-0d47-461b-a34c-9d7dbcfd65a2\\\"}\"}],\"structuredContent\":{\"signal_id\":\"9de269ac-0d47-461b-a34c-9d7dbcfd65a2\"},\"idempotent\":true}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8847,11 +8849,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"signal_id\":\"9113f3cc-c3cd-478f-9d4c-bad00950143b\"}"
+              "text": "{\"signal_id\":\"9de269ac-0d47-461b-a34c-9d7dbcfd65a2\"}"
             }
           ],
           "structuredContent": {
-            "signal_id": "9113f3cc-c3cd-478f-9d4c-bad00950143b"
+            "signal_id": "9de269ac-0d47-461b-a34c-9d7dbcfd65a2"
           },
           "idempotent": true
         }
@@ -8863,14 +8865,14 @@
       "group": "mcp/idempotency",
       "title": "Same key + different payload is refused",
       "verdict": "PASS",
-      "note": "result.isError: \"idempotency_key mcp-idem-1790538341369 was already used for nexus.create_signal with different arguments.\"",
+      "note": "result.isError: \"idempotency_key mcp-idem-1790542140558 was already used for nexus.create_signal with different arguments.\"",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
         "auth": "Bearer nxs_…(baseline-full)",
         "body": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-idem-1790538341369",
+          "idempotency_key": "mcp-idem-1790542140558",
           "kind": "hiring",
           "polarity": "positive",
           "strength": 5,
@@ -8882,7 +8884,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8890,7 +8892,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"idempotency_key mcp-idem-1790538341369 was already used for nexus.create_signal with different arguments.\"}]}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"idempotency_key mcp-idem-1790542140558 was already used for nexus.create_signal with different arguments.\"}]}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8899,7 +8901,7 @@
           "content": [
             {
               "type": "text",
-              "text": "idempotency_key mcp-idem-1790538341369 was already used for nexus.create_signal with different arguments."
+              "text": "idempotency_key mcp-idem-1790542140558 was already used for nexus.create_signal with different arguments."
             }
           ]
         }
@@ -8924,7 +8926,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8953,14 +8955,14 @@
       "group": "mcp/idempotency",
       "title": "The same key under a different business is not treated as a replay",
       "verdict": "PASS",
-      "note": "distinct signal_id=e350c60b-666f-4cde-977b-b2828a518e7b idempotent=false",
+      "note": "distinct signal_id=07e3b7bb-5fcf-4b6a-9500-8a143044d83e idempotent=false",
       "request": {
         "method": "POST",
         "path": "/api/v1/mcp",
         "auth": "Bearer nxs_…(baseline-full)",
         "body": {
           "business_id": "d0000002-0000-4000-8000-000000000002",
-          "idempotency_key": "mcp-idem-1790538341369",
+          "idempotency_key": "mcp-idem-1790542140558",
           "kind": "hiring",
           "polarity": "positive",
           "strength": 5,
@@ -8972,7 +8974,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -8980,7 +8982,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"signal_id\\\":\\\"e350c60b-666f-4cde-977b-b2828a518e7b\\\"}\"}],\"structuredContent\":{\"signal_id\":\"e350c60b-666f-4cde-977b-b2828a518e7b\"},\"idempotent\":false}}",
+      "bodyText": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"signal_id\\\":\\\"07e3b7bb-5fcf-4b6a-9500-8a143044d83e\\\"}\"}],\"structuredContent\":{\"signal_id\":\"07e3b7bb-5fcf-4b6a-9500-8a143044d83e\"},\"idempotent\":false}}",
       "body": {
         "jsonrpc": "2.0",
         "id": 1,
@@ -8988,11 +8990,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"signal_id\":\"e350c60b-666f-4cde-977b-b2828a518e7b\"}"
+              "text": "{\"signal_id\":\"07e3b7bb-5fcf-4b6a-9500-8a143044d83e\"}"
             }
           ],
           "structuredContent": {
-            "signal_id": "e350c60b-666f-4cde-977b-b2828a518e7b"
+            "signal_id": "07e3b7bb-5fcf-4b6a-9500-8a143044d83e"
           },
           "idempotent": false
         }
@@ -9027,7 +9029,7 @@
           "arguments": {
             "business_id": "d0000002-0000-4000-8000-000000000001",
             "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
-            "body": "no-key note 1790538341369"
+            "body": "no-key note 1790542140558"
           }
         }
       },
@@ -9035,7 +9037,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -9099,7 +9101,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -9213,7 +9215,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -9298,7 +9300,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -9350,7 +9352,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -9358,7 +9360,7 @@
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY"
       },
-      "bodyText": "[{\"jsonrpc\":\"2.0\",\"id\":301,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"companies\\\":[{\\\"id\\\":\\\"d0000010-0000-4000-8000-000000000002\\\",\\\"name\\\":\\\"Frame House\\\",\\\"normalized_domain\\\":\\\"framehouse.example\\\"},{\\\"id\\\":\\\"321e95db-037b-4aab-a0f7-e02e4ca37cba\\\",\\\"name\\\":\\\"Frame House\\\",\\\"normalized_domain\\\":null}]}\"}],\"structuredContent\":{\"companies\":[{\"id\":\"d0000010-0000-4000-8000-000000000002\",\"name\":\"Frame House\",\"normalized_domain\":\"framehouse.example\"},{\"id\":\"321e95db-037b-4aab-a0f7-e02e4ca37cba\",\"name\":\"Frame House\",\"normalized_domain\":null}]}}}]",
+      "bodyText": "[{\"jsonrpc\":\"2.0\",\"id\":301,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"companies\\\":[{\\\"id\\\":\\\"d0000010-0000-4000-8000-000000000002\\\",\\\"name\\\":\\\"Frame House\\\",\\\"normalized_domain\\\":\\\"framehouse.example\\\"},{\\\"id\\\":\\\"22e57bef-c8b3-46ec-a15f-b358ff1c83d1\\\",\\\"name\\\":\\\"Frame House\\\",\\\"normalized_domain\\\":null}]}\"}],\"structuredContent\":{\"companies\":[{\"id\":\"d0000010-0000-4000-8000-000000000002\",\"name\":\"Frame House\",\"normalized_domain\":\"framehouse.example\"},{\"id\":\"22e57bef-c8b3-46ec-a15f-b358ff1c83d1\",\"name\":\"Frame House\",\"normalized_domain\":null}]}}}]",
       "body": [
         {
           "jsonrpc": "2.0",
@@ -9367,7 +9369,7 @@
             "content": [
               {
                 "type": "text",
-                "text": "{\"companies\":[{\"id\":\"d0000010-0000-4000-8000-000000000002\",\"name\":\"Frame House\",\"normalized_domain\":\"framehouse.example\"},{\"id\":\"321e95db-037b-4aab-a0f7-e02e4ca37cba\",\"name\":\"Frame House\",\"normalized_domain\":null}]}"
+                "text": "{\"companies\":[{\"id\":\"d0000010-0000-4000-8000-000000000002\",\"name\":\"Frame House\",\"normalized_domain\":\"framehouse.example\"},{\"id\":\"22e57bef-c8b3-46ec-a15f-b358ff1c83d1\",\"name\":\"Frame House\",\"normalized_domain\":null}]}"
               }
             ],
             "structuredContent": {
@@ -9378,7 +9380,7 @@
                   "normalized_domain": "framehouse.example"
                 },
                 {
-                  "id": "321e95db-037b-4aab-a0f7-e02e4ca37cba",
+                  "id": "22e57bef-c8b3-46ec-a15f-b358ff1c83d1",
                   "name": "Frame House",
                   "normalized_domain": null
                 }
@@ -9407,7 +9409,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -9449,7 +9451,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
@@ -9491,7 +9493,7 @@
       "headers": {
         "connection": "keep-alive",
         "content-type": "application/json",
-        "date": "Sun, 27 Sep 2026 19:45:42 GMT",
+        "date": "Sun, 27 Sep 2026 20:49:01 GMT",
         "keep-alive": "timeout=5",
         "referrer-policy": "strict-origin-when-cross-origin",
         "transfer-encoding": "chunked",
