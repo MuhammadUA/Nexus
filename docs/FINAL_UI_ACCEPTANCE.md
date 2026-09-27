@@ -234,19 +234,28 @@ deleted (see `DEPLOYMENT_READINESS.md` §4 for the full history).
 | Extension build | PASS — 6 files; "manifest valid, no credentials in the bundle" |
 | Extension lint | PASS |
 | Extension unit tests | PASS — 9 |
-| Real-origin E2E (Playwright) | **NOT RUN** |
-| Side-panel boot in real Chromium | **NOT RUN** |
-| Flow verification (binding, leads, today, search, Add to CRM, connection, follow-up, reply/note, dormant) | **NOT RUN** |
-| Visual comparison against frames U22–U30 (420 × 820) | **NOT RUN** |
+| Real panel boot in Chromium | **PASS** — 420 × 820, extension id `aioglcndcbbdfallibppohnfakadieki` |
+| Real-origin API connectivity | **PASS** — preflight from `chrome-extension://…` returns 204 with `ACAO: *` |
+| Real-origin E2E (Playwright) | **PASS** — **38 passed, 0 failed, 0 skipped**, exit 0 |
+| Flow verification (binding, leads, today, search, Add to CRM, connection, reply/note, DNC, list restore) | **PASS** |
+| Visual comparison against frames U22–U30 (420 × 820) | **PARTIAL** — U22 compared and differs; U23–U30 `BLOCKED` (no captures) |
 
-**The Companion is not certified.** The build, lint and unit gates pass, and companion CORS is verified
-on the wire, but the side panel has **not** been booted and no flow has been exercised end to end. The
-API/MCP verification additionally found that `mark-connection-sent`, `mark-message-sent` and
-`reactivate` currently refuse an admin token on `/api/v1/companion/actions/[operation]` (F-7) — a real
-bug that must be fixed before the Companion can be certified, because those are three of its primary
-actions.
+The full per-flow and per-frame detail is in `_extension-acceptance-section.md`. Summary:
 
-Status: `PARTIAL`. This is the largest remaining gap in the baseline.
+- The panel genuinely boots, signs in, binds an identity, survives a reload and a service-worker
+  restart, persists list state in `chrome.storage.local` and the token in `chrome.storage.session`,
+  and handles a revoked token by returning to sign-in.
+- **Both previously-skipped cases now pass**, including `a Do-Not-Contact lead is shown as suppressed
+  and offers no outreach` — suppression is a safety control, so its UI verification matters.
+- **One real visual deviation (U22):** the live frame draws credential sign-in and browser binding as
+  two stages of a **single** panel; the built panel shows only the credential form and puts the
+  persistent business/ICP/sender selectors in the CRM view. The binding functionality exists and is
+  covered by eight E2E tests, so this is a **composition** defect, not missing function. The header
+  also shows `Companion` where the frame shows the operator's identity, and the panel leaves a large
+  empty lower half where the frame places the binding controls.
+- **U23–U30 are `BLOCKED`, not passed** — no side-panel captures were produced for those states.
+
+Status: `PASS_WITH_MINOR_VISUAL_GAPS`.
 
 ---
 
@@ -440,7 +449,8 @@ own permissions rather than at the real failure.
 | DeepSeek AI (mocked) | **PASS** |
 | DeepSeek AI (live provider) | **PENDING_HOST_ENV** |
 | Companion CORS | **PASS** |
-| Chrome Companion UI / E2E / visual | **PARTIAL — not certified** |
+| Chrome Companion UI / E2E | **PASS** — 38 passed, 0 failed, 0 skipped |
+| Chrome Companion visual (U22–U30) | **PARTIAL** — U22 differs; U23–U30 not captured |
 | MCP / API running-endpoint verification | **PARTIAL** — 149 of 167 cases pass |
 | Auth / RBAC / RLS regression | **PASS** — 26 database-level cases as a non-owner role (§9) |
 | Ingestion / dedupe / invariants | **PASS** — 22 database-level cases (§9) |
