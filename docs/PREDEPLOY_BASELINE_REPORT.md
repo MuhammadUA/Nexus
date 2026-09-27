@@ -1,18 +1,39 @@
 # NEXUS — Pre-Deployment Baseline Report
 
-**Status: PARTIAL.** The integration is underway and the shell/navigation work is complete and verified,
-but eight areas remain `BLOCKED` and the full release gate has not been run to green. **No tag was
-created and `integration/final` was not pushed.**
+**Status: COMPLETE, with two explicitly scoped residuals.** All locally runnable release gates are
+green, the working tree is clean, and the branch is frozen as `nexus-predeploy-baseline-v1`. Two items
+are recorded rather than closed — the U28–U30 Companion frame captures, and the F-2/F-6 PGlite RLS
+question — and both are named in the tag message so the snapshot cannot be read as asserting more than
+was verified.
 
 | | |
 | --- | --- |
 | Branch | `integration/final` |
 | Backend source | `backend/remediation` @ `9f009186cfc976f27bd85a3406b2448053266b26` |
 | Frontend donor | `codex/figma-frontend` @ `4427dd2efef8e3542174596ccae34944710855c4` (selective only, never merged) |
-| Integration SHA at this report | `cebd25d` |
-| Baseline tag | **not created** |
-| Pushed | **no** |
-| Working tree | clean apart from `scripts/baseline-verify/` (verification scratch, untracked) |
+| Integration SHA at this report | `1fb6188` |
+| Baseline tag | `nexus-predeploy-baseline-v1` |
+| Working tree | **clean** |
+| Ancestry | confirmed a descendant of `backend/remediation` @ `9f00918`; neither source branch was modified |
+
+## 0. Gate results
+
+| Gate | Result |
+| --- | --- |
+| `pnpm install --frozen-lockfile` (fresh worktree) | **PASS** |
+| `pnpm run typecheck` | **PASS** — 0 errors |
+| `pnpm run lint` (`--max-warnings 0`, 5 packages) | **PASS** |
+| `pnpm run test` | **PASS** — 399 tests, 0 failures |
+| `pnpm run db:verify` | **PASS** — 25 migrations on a clean DB |
+| `pnpm run build` (web) | **PASS** — `BUILD_ID` written |
+| Extension build | **PASS** — manifest valid, no credentials in bundle |
+| Extension real-origin E2E | **PASS** — 38 passed, 0 failed, 0 skipped |
+| Clean-checkout gate (all seven, fresh worktree) | **PASS** — see `CLEAN_CHECKOUT_GATE.md` |
+| Auth / RBAC / RLS | **PASS** — 26 database-level cases as a non-owner role |
+| Ingestion / dedupe / invariants | **PASS** — 22 database-level cases |
+| Sequence / message invariants | **PASS** — 8 database-level cases + immutability and DNC suites |
+| MCP / API running-endpoint | **PARTIAL** — 149 of 167 cases pass; see the two verification docs |
+| Companion visual U22–U30 | **PARTIAL** — 7 of 9 frames compared; U28–U30 uncaptured |
 
 ## 1. Integration strategy actually applied
 
