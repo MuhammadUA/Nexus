@@ -95,6 +95,35 @@ function numberArg(args: ToolArgs, key: string, fallback: number): number {
 }
 
 /**
+ * The id of a row an `insert ... select ... where <parent>.id = $1` actually wrote.
+ *
+ * Several tools resolve their tenant and person columns by selecting from the parent row —
+ * `insert into notes (...) select l.business_id, l.person_id, ... from leads l where l.id = $1`.
+ * When the referenced parent does not exist (or is invisible under RLS) the SELECT matches zero
+ * rows, the INSERT writes nothing, and `returning id` yields no rows. Returning `rows[0]?.id ?? null`
+ * in that case reported **success with a null id**: the caller was told a note was created and no
+ * note existed, which is silent data loss with no error to retry on.
+ *
+ * This is a caller error, not an empty result, so it throws and the tool answers with `isError`.
+ * The message names the entity and id so the caller can fix the argument, and deliberately does not
+ * distinguish "does not exist" from "not visible to you" — confirming existence of a lead outside
+ * the caller's scope would leak tenancy information.
+ */
+function requireWrittenRow(
+  result: { readonly rows: readonly { readonly id: string }[] },
+  parentId: string,
+  parentKind: string,
+): string {
+  const id = result.rows[0]?.id;
+  if (id === undefined) {
+    throw new Error(
+      `No ${parentKind} found with id ${parentId}, or it is not visible to this caller; nothing was written.`,
+    );
+  }
+  return id;
+}
+
+/**
  * The tool table.
  *
  * Each entry declares the scope it needs and, for ingestion-shaped tools, whether an
@@ -107,8 +136,7 @@ const TOOL_HANDLERS: Readonly<
     McpToolName,
     {
       readonly scope: string;
-      readonly needsIdempotencyKey: boolean;
-      readonly run: (
+          readonly run: (
         credential: UserCredential | ServiceCredential,
         args: ToolArgs,
         businessId: string | null,
@@ -119,7 +147,6 @@ const TOOL_HANDLERS: Readonly<
 > = {
   'nexus.list_accessible_businesses': {
     scope: 'businesses:read',
-    needsIdempotencyKey: false,
     run: async (credential) => {
       const businesses = await listBusinesses(credential.actor);
       return {
@@ -136,7 +163,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.get_business_context': {
     scope: 'context:read',
-    needsIdempotencyKey: false,
     run: async (credential, _args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       return withActor(credential.actor, async (sql) => {
@@ -155,7 +181,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.search_person': {
     scope: 'person:search',
-    needsIdempotencyKey: false,
     run: async (credential, args) => {
       const query = stringArg(args, 'query');
       if (query === null) throw new Error('query is required');
@@ -166,7 +191,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.search_company': {
     scope: 'company:search',
-    needsIdempotencyKey: false,
     run: async (credential, args) => {
       const query = stringArg(args, 'query');
       if (query === null) throw new Error('query is required');
@@ -184,7 +208,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.check_duplicate': {
     scope: 'duplicate:check',
-    needsIdempotencyKey: false,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       const query = stringArg(args, 'query');
@@ -199,13 +222,11 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.submit_candidate': {
     scope: 'candidate:submit',
-    needsIdempotencyKey: true,
     run: submitThroughPipeline,
   },
 
   'nexus.create_signal': {
     scope: 'signal:create',
-    needsIdempotencyKey: true,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       return withActor(credential.actor, async (sql) => {
@@ -241,7 +262,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.add_source_evidence': {
     scope: 'evidence:add',
-    needsIdempotencyKey: true,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       return withActor(credential.actor, async (sql) => {
@@ -280,13 +300,11 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.create_or_update_lead': {
     scope: 'lead:create',
-    needsIdempotencyKey: true,
     run: submitThroughPipeline,
   },
 
   'nexus.assign_lead': {
     scope: 'lead:assign',
-    needsIdempotencyKey: false,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       const leadId = stringArg(args, 'lead_id');
@@ -319,7 +337,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.submit_profile_capture': {
     scope: 'profile:capture',
-    needsIdempotencyKey: false,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       const leadId = stringArg(args, 'lead_id');
@@ -339,7 +356,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.capture_reply': {
     scope: 'reply:capture',
-    needsIdempotencyKey: false,
     run: async (credential, args) => {
       const leadId = stringArg(args, 'lead_id');
       const exactText = stringArg(args, 'exact_text');
@@ -362,7 +378,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.add_note': {
     scope: 'note:add',
-    needsIdempotencyKey: false,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       const leadId = stringArg(args, 'lead_id');
@@ -375,14 +390,13 @@ const TOOL_HANDLERS: Readonly<
            returning id`,
           [leadId, body],
         );
-        return { note_id: result.rows[0]?.id ?? null };
+        return { note_id: requireWrittenRow(result, leadId, 'lead') };
       });
     },
   },
 
   'nexus.create_task': {
     scope: 'task:create',
-    needsIdempotencyKey: false,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       const leadId = stringArg(args, 'lead_id');
@@ -402,14 +416,13 @@ const TOOL_HANDLERS: Readonly<
             stringArg(args, 'priority') ?? 'normal',
           ],
         );
-        return { task_id: result.rows[0]?.id ?? null };
+        return { task_id: requireWrittenRow(result, leadId, 'lead') };
       });
     },
   },
 
   'nexus.get_today_queue': {
     scope: 'today:read',
-    needsIdempotencyKey: false,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       // An API client reading a user's queue is refused by the database function,
@@ -428,7 +441,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.submit_research': {
     scope: 'research:submit',
-    needsIdempotencyKey: true,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       return withActor(credential.actor, async (sql) => {
@@ -443,14 +455,13 @@ const TOOL_HANDLERS: Readonly<
            returning id`,
           [businessId, leadId, summary, JSON.stringify(args['findings'] ?? {}), stringArg(args, 'model')],
         );
-        return { research_snapshot_id: result.rows[0]?.id ?? null };
+        return { research_snapshot_id: requireWrittenRow(result, leadId, 'lead') };
       });
     },
   },
 
   'nexus.submit_message_draft': {
     scope: 'message:draft',
-    needsIdempotencyKey: false,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       const instanceId = stringArg(args, 'message_instance_id');
@@ -484,7 +495,6 @@ const TOOL_HANDLERS: Readonly<
 
   'nexus.finish_agent_run': {
     scope: 'agent:run',
-    needsIdempotencyKey: false,
     run: async (credential, args, businessId) => {
       if (businessId === null) throw new Error('business_id is required');
       return withActor(credential.actor, async (sql) => {
@@ -497,13 +507,18 @@ const TOOL_HANDLERS: Readonly<
             businessId,
             stringArg(args, 'agent_name') ?? 'unknown',
             stringArg(args, 'objective'),
-            stringArg(args, 'state') ?? 'completed',
+            // `agent_runs_state_check` (0009_integrations_audit.sql) permits only
+            // running | succeeded | failed | cancelled. The previous default of 'completed' was not a
+            // member, so every call that omitted `state` failed the check constraint — the tool could
+            // not be used as documented. 'succeeded' is the terminal success state and the correct
+            // meaning of "finish a run".
+            stringArg(args, 'state') ?? 'succeeded',
             stringArg(args, 'summary'),
             JSON.stringify(args['result'] ?? {}),
             JSON.stringify(args['stats'] ?? {}),
           ],
         );
-        return { agent_run_id: result.rows[0]?.id ?? null };
+        return { agent_run_id: requireWrittenRow(result, businessId, 'business') };
       });
     },
   },
