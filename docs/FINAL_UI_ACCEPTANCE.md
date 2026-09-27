@@ -300,11 +300,15 @@ to do that."*, which is what made it look like a permissions failure rather than
 mismatch; surfacing the underlying message for this specific case would be a genuine usability
 improvement.
 
-**A separate, real finding fell out of this:** `start_reactivation` does not exist —
-`select public.start_reactivation($1)` fails with `42883 function public.start_reactivation(unknown)
-does not exist`. The route calls `startReactivation` from the repository, so either the repository
-calls a different function name or the RPC is missing. Worth confirming before `reactivate` is
-certified on any surface.
+**A note on `reactivate`, and a correction to an intermediate observation.** A diagnostic query of
+mine called `select public.start_reactivation($1)` and failed with
+`42883 function public.start_reactivation(unknown) does not exist`. That was **my test's error, not a
+product defect**: `startReactivation` in `apps/web/src/lib/repo/leads.ts` does not call an RPC at all —
+it issues a direct `update public.sequence_enrollments set state = 'reactivation_due' where lead_id =
+$1 and state in ('dormant','completed')` and refuses with a typed message when no row matches. There is
+no `start_reactivation` database function to be missing. The `reactivate` route path is therefore
+**not** implicated by that error, and the only open question for it remains the same F-7 fixture
+question as the other two operations.
 
 ### F-2 investigation summary
 
