@@ -9,6 +9,7 @@ import { expect, test } from '@playwright/test';
 
 import { launchExtension } from './harness.mjs';
 import {
+  API_ORIGIN,
   bind,
   clickButton,
   fill,
@@ -85,7 +86,7 @@ test('loads the manifest the browser accepted, with a narrow permission set', as
 
   expect(manifest.manifest_version).toBe(3);
   expect(manifest.permissions).toEqual(['sidePanel', 'storage', 'tabs', 'alarms']);
-  expect(manifest.host_permissions).toEqual(['https://www.linkedin.com/*', 'http://127.0.0.1:3000/*']);
+  expect(manifest.host_permissions).toEqual(['https://www.linkedin.com/*', `${API_ORIGIN}/*`]);
   expect(manifest.permissions).not.toContain('cookies');
   expect(manifest.permissions).not.toContain('webRequest');
   expect(manifest.permissions).not.toContain('debugger');

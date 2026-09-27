@@ -16,9 +16,11 @@ import {
   openModule,
   optionValues,
   readExtensionStorage,
+  searchAndOpen,
   signInAndBind,
   waitForCrmView,
   waitForDom,
+  waitForFocus,
   waitForShell,
 } from './helpers.mjs';
 
@@ -130,13 +132,17 @@ test('Today lists the work that is actually due', async () => {
 });
 
 test('capturing a reply requires the exact text and records an outcome', async () => {
-  // A replied lead is the one that offers capture.
+  // Reached by name through Search rather than by scanning the Leads list: the list is returned by
+  // `/companion/leads`, whose default page size is currently 1 (see the acceptance report's
+  // `companion-leads-default-page-size-is-1`), so a replied lead is not reliably on it. Search is a
+  // real operator route to the same focus screen, so the screen under test is unchanged.
   await openModule(page, 'Leads');
-  const found = await findLeadWithAction(page, /replied|awaiting/i);
-  if (found === null) test.skip(true, 'no replied lead in the seeded list');
+  const opened = await searchAndOpen(page, 'Danielle Fox');
+  expect(opened, 'the replied lead must be findable by name').not.toBeNull();
+  await waitForFocus(page);
 
-  const opened = await clickButton(page, /^\s*Capture reply\s*$/i);
-  expect(opened).toBe(true);
+  const capture = await clickButton(page, /^\s*Capture reply\s*$/i);
+  expect(capture).toBe(true);
   await waitForDom(page, '#reply-exact');
 
   // Saving with no text must be refused rather than stored empty.
@@ -159,9 +165,12 @@ test('snooze moves the lead out of the due list and offers the presets', async (
 });
 
 test('a Do-Not-Contact lead is shown as suppressed and offers no outreach', async () => {
+  // Reached by name for the same reason as the reply case: the seeded suppressed lead is not
+  // guaranteed to be on the first page of the Leads list.
   await openModule(page, 'Leads');
-  const found = await findLeadWithAction(page, /DNC|do not contact/i);
-  if (found === null) test.skip(true, 'no DNC lead in the seeded list');
+  const opened = await searchAndOpen(page, 'Ines Moreau');
+  expect(opened, 'the suppressed lead must be findable by name').not.toBeNull();
+  await waitForFocus(page);
 
   const body = await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' '));
   // The suppression is stated, and the panel does not offer to message them.

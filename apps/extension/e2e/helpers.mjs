@@ -11,6 +11,16 @@ import { expect } from '@playwright/test';
 export const ADMIN_EMAIL = 'admin@nexus.local';
 export const ADMIN_PASSWORD = 'vXbSm5c4ujtayWGR4ICuXny4';
 
+/**
+ * The Nexus origin the extension under test was built against.
+ *
+ * Read from `NEXUS_API_ORIGIN` rather than written into the test, because the same suite has to be
+ * runnable against the shared development server (the 3000 default) and against an isolated origin
+ * on another port. The build script bakes the same variable into the manifest and the bundle, so a
+ * mismatch is a configuration error rather than a silent pass.
+ */
+export const API_ORIGIN = process.env.NEXUS_API_ORIGIN ?? 'http://127.0.0.1:3000';
+
 /** Waits for the panel's shell, which is the definition of "mounted". */
 export async function waitForShell(page) {
   await page.waitForFunction(() => document.querySelector('.nx-companion') !== null, undefined, {
@@ -185,11 +195,17 @@ export async function bind(page, { identityId, businessId, transfer = false } = 
   // timeout: the button was never found, or the bind was refused for a reason other than a conflict.
   if (!appeared) {
     const state = await page.evaluate(() => ({
+      bound: document.querySelector('.nx-companion__topnav') !== null,
       identity: document.querySelector('#c-identity')?.value ?? null,
       business: document.querySelector('#c-business')?.value ?? null,
       alerts: [...document.querySelectorAll('.nx-alert, [role="alert"]')].map((el) => el.textContent.trim()),
       buttons: [...document.querySelectorAll('button')].map((el) => el.textContent.trim()),
     }));
+    // A bind that is accepted without a conflict warning replaces the binding screen with the CRM
+    // View, so the identity select disappearing is the success signal rather than an empty selector.
+    // Without this check the helper threw on its own happy path whenever the bind settled before the
+    // 8s conflict window closed, which is a race rather than a product failure.
+    if (state.bound) return appeared;
     if (!clicked) throw new Error(`bind: no "Bind this browser" button; panel has ${JSON.stringify(state.buttons)}`);
     if (state.alerts.length > 0) throw new Error(`bind refused: ${state.alerts.join(' | ')}`);
     if (state.identity === null || state.identity === '') {
@@ -282,6 +298,56 @@ export async function openModule(page, label) {
   await page.waitForTimeout(600);
 }
 
+/**
+ * Finds a lead by name through the panel's own Search module and opens it.
+ *
+ * The Leads list is deliberately not the only route to a lead: Search spans every business, so a
+ * case that needs a particular lead (a replied one, a suppressed one) can reach it without depending
+ * on where that lead happens to fall in the list.
+ *
+ * The submit control is identified by *not* being a tab: the module strip's "Search" tab carries the
+ * same label as the button that runs the query.
+ */
+export async function searchAndOpen(page, query) {
+  await openModule(page, 'Search');
+  await fill(page, 'input[aria-label="Search Nexus"]', query);
+
+  const submitted = await page.evaluate(() => {
+    const target = [...document.querySelectorAll('button')].find(
+      (element) => (element.textContent ?? '').trim() === 'Search' && element.getAttribute('role') !== 'tab',
+    );
+    if (target === undefined) return false;
+    target.click();
+    return true;
+  });
+  if (!submitted) throw new Error('searchAndOpen: no Search submit button outside the tab strip');
+
+  const listed = await page
+    .waitForFunction(() => document.querySelectorAll('.nx-companion__list li').length > 0, undefined, {
+      timeout: 20_000,
+    })
+    .then(() => true)
+    .catch(() => false);
+  if (!listed) return null;
+
+  await page.waitForTimeout(300);
+  return page.evaluate(() => {
+    const row = document.querySelector('.nx-companion__list li button, .nx-companion__list li a');
+    if (row === null) return null;
+    const text = (row.textContent ?? '').trim();
+    row.click();
+    return text;
+  });
+}
+
+/** Waits until the focus screen has replaced the list. */
+export async function waitForFocus(page) {
+  await page
+    .waitForFunction(() => document.querySelector('.nx-companion__list') === null, undefined, { timeout: 20_000 })
+    .catch(() => undefined);
+  await page.waitForTimeout(400);
+}
+
 /** The leads currently listed, as text. */
 export async function leadRows(page) {
   return page.evaluate(() =>
@@ -332,14 +398,14 @@ export async function alerts(page) {
  */
 export async function callApi(page, path, { method = 'GET', body, withoutToken = false } = {}) {
   return page.evaluate(
-    async ([target, verb, payload, anonymous]) => {
+    async ([origin, target, verb, payload, anonymous]) => {
       const headers = { 'content-type': 'application/json' };
       if (!anonymous) {
         const stored = await chrome.storage.session.get('nexus.token');
         const token = stored['nexus.token'];
         if (typeof token === 'string') headers.authorization = `Bearer ${token}`;
       }
-      const response = await fetch(`http://127.0.0.1:3000/api/v1${target}`, {
+      const response = await fetch(`${origin}/api/v1${target}`, {
         method: verb,
         headers,
         // A GET/HEAD request with a body is rejected outright by `fetch`, so a body is only attached
@@ -355,7 +421,7 @@ export async function callApi(page, path, { method = 'GET', body, withoutToken =
       }
       return { status: response.status, body: parsed };
     },
-    [path, method, body ?? null, withoutToken],
+    [API_ORIGIN, path, method, body ?? null, withoutToken],
   );
 }
 

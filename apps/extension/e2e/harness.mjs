@@ -39,7 +39,7 @@ export const ARTIFACTS_DIR = path.resolve(import.meta.dirname, '..', '..', '..',
  * panel" and "restart the browser" testable: the identity of the install has to survive.
  */
 export async function launchExtension(options = {}) {
-  const { keepProfile = null, apiOrigin = 'http://127.0.0.1:3000', extraArgs = [] } = options;
+  const { keepProfile = null, apiOrigin = process.env.NEXUS_API_ORIGIN ?? 'http://127.0.0.1:3000', extraArgs = [] } = options;
 
   const profile =
     keepProfile ?? mkdtempSync(path.join(tmpdir(), 'nexus-companion-'));
