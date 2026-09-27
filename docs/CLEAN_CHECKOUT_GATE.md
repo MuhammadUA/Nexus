@@ -7,8 +7,8 @@ records the full release gate executed in a **fresh git worktree at the same com
 | | |
 | --- | --- |
 | Integration worktree | `E:\CRM\CRM-integration` |
-| Clean gate worktree | `E:\CRM\CRM-cleancheck` (git worktree, `--detach`) |
-| Commit under test | `a9db4dc1a7f0fb28eab595a9060ee7aec6d47d1a` |
+| Clean gate worktree | `E:\CRM\CRM-cleancheck-2` (git worktree, `--detach`) |
+| Commit under test | `585d51cdd96285604fb5e7cd188c5f5cf3fe9361` |
 | Started from | pristine tree — verified absent: `node_modules`, `apps/web/node_modules`, `apps/web/.data`, `apps/web/.next`, `apps/extension/dist` |
 
 ## Gate results
@@ -20,7 +20,7 @@ records the full release gate executed in a **fresh git worktree at the same com
 | 3 | Lint | `pnpm run lint` (`--max-warnings 0`) | **PASS** (exit 0) |
 | 4 | Tests | `pnpm run test` | **PASS** (exit 0) |
 | 5 | Database | `pnpm run db:verify` | **PASS** (exit 0) |
-| 6 | Web build | `pnpm run build` | **PASS** (exit 0), `BUILD_ID` written |
+| 6 | Web build | `pnpm run build` | **PASS** (exit 0) — `Compiled successfully` |
 | 7 | Extension build | `pnpm --filter @nexus/extension run build` | **PASS** (exit 0) |
 
 ### Test counts from the clean tree
@@ -30,8 +30,12 @@ records the full release gate executed in a **fresh git worktree at the same com
 | `@nexus/core` | 88 | PASS |
 | `@nexus/db` | 82 | PASS |
 | `@nexus/extension` | 9 | PASS |
-| `@nexus/web` | 220 | PASS |
-| **Total** | **399** | **0 failures** |
+| `@nexus/web` | 241 | PASS |
+| **Total** | **420** | **0 failures** |
+
+The count rose from 399 at the previous gate run because this baseline added 21 regression cases: 10
+for the Leads quick-filter chip defect (`quick-filter-chips.test.ts`) and 11 for the Companion list
+`limit` defect (`api-limit-params.test.ts`).
 
 ### Database from the clean tree
 
@@ -40,39 +44,28 @@ records the full release gate executed in a **fresh git worktree at the same com
 
 ### Extension artefact from the clean tree
 
-6 files emitted; `manifest valid, no credentials in the bundle`. `sidepanel.js` hash differs from the
-integration worktree build (`e58fd6eb10c2e24f` vs `9321183b41667284`) because the API origin baked into
-the bundle is a build input, not a constant — the clean worktree built with the default
-`http://127.0.0.1:3000`, which is expected.
+6 files emitted; `manifest valid, no credentials in the bundle`. `sidepanel.js` hash is
+`e58fd6eb10c2e24f`, which differs from the integration worktree's `9321183b41667284` because the API
+origin baked into the bundle is a build input, not a constant — the clean worktree built with the
+default `http://127.0.0.1:3000`. The other five hashes are identical.
 
-## A defect this gate caught
+## A defect the previous gate run caught, and why this gate exists
 
-**The first gate failed on the first run.** `pnpm install --frozen-lockfile` aborted with:
+The first clean-checkout run **failed on its first command**. `pnpm install --frozen-lockfile` aborted
+with `ERR_PNPM_OUTDATED_LOCKFILE`: an earlier commit had pruned three unused dependencies without
+regenerating `pnpm-lock.yaml`, so the lockfile still described them. Every gate had passed in the
+integration worktree, because its `node_modules` was already installed and pnpm never re-resolved —
+**from a clean checkout the very first command failed.**
 
-```
-ERR_PNPM_OUTDATED_LOCKFILE  Cannot install with "frozen-lockfile" because pnpm-lock.yaml is not up
-to date with <ROOT>\packages\db\package.json
-```
-
-Cause: an earlier commit pruned three unused dependencies from `packages/db/package.json` and
-`apps/extension/package.json` but did not regenerate `pnpm-lock.yaml`, so the lockfile still described
-`@nexus/core` and `zod` for `packages/db`. Every gate passed in the integration worktree, because its
-`node_modules` was already installed and pnpm never re-resolved. **From a clean checkout the very first
-command failed.**
-
-Fixed in `a9db4dc` by regenerating the lockfile (`pnpm install --no-frozen-lockfile`, 9 lines removed),
-after which all seven gates pass.
-
-This is precisely the class of defect the clean-checkout requirement exists to catch, and it would not
-have been visible by any amount of testing in the working tree. It is worth noting that the working
-tree had `node_modules` present throughout every previous "green" run in this session.
+That is precisely the class of defect this gate exists to catch, and it is why the gate is re-run
+whenever the tree moves rather than once per baseline.
 
 ## Reproducing
 
 ```powershell
 cd E:\CRM\CRM-integration
-git worktree add E:\CRM\CRM-cleancheck --detach <commit>
-cd E:\CRM\CRM-cleancheck
+git worktree add E:\CRM\CRM-cleancheck-2 --detach 585d51c
+cd E:\CRM\CRM-cleancheck-2
 pnpm install --frozen-lockfile
 pnpm run typecheck
 pnpm run lint
@@ -82,7 +75,17 @@ pnpm run build
 pnpm --filter @nexus/extension run build
 ```
 
-`serve.mjs` is not used by this gate. It resolves the `next` binary from the workspace root
-`node_modules/.bin`, where it does not exist, and fails with `'next' is not recognized`; the root
-`build` script and the direct `apps/web/node_modules/.bin/next` both work. See
-`DEPLOYMENT_READINESS.md` §1.
+`serve.mjs` is not used by this gate. It previously resolved the `next` binary from the workspace root
+`node_modules/.bin`, where pnpm does not place it, and failed with `'next' is not recognized`; the
+documented root `build` script and the direct `apps/web/node_modules/.bin/next` both work. **That
+wrapper bug is now fixed** — `apps/web/scripts/serve.mjs` searches the app's own `node_modules/.bin`
+first — so `pnpm --filter @nexus/web run start` is usable. See `DEPLOYMENT_READINESS.md` §1.
+
+## Environment notes for whoever re-runs this
+
+- `pnpm` must be invoked as `pnpm.cmd` on this host; the PowerShell shim is blocked by execution
+  policy (`pnpm.ps1 cannot be loaded because running scripts is disabled`).
+- `pnpm exec next build`/`start` intermittently fails in this multi-worktree setup with `ENOENT` on
+  `.next/server/*-manifest.json`. The root `build` script and the app's `start` script both work.
+- The embedded PGlite database is **single-process**. Nothing in this gate opens the integration
+  worktree's data directory, which is why the gate can run while a server is up elsewhere.

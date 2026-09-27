@@ -92,8 +92,18 @@ committed.
 | Feature | Without configuration | Behaviour |
 | --- | --- | --- |
 | AI drafting | no `DEEPSEEK_API_KEY` | A typed `provider_not_configured` result; the UI renders it as a normal deployment state, not an error. The local profile-extraction fallback still works. |
-| External database | no `SUPABASE_DB_URL`/`DATABASE_URL` | Falls back to embedded PGlite, which refuses `NODE_ENV=production` unless explicitly overridden. |
+| External database | no `SUPABASE_DB_URL`/`DATABASE_URL` | Falls back to embedded PGlite, which refuses `NODE_ENV=production` unless explicitly overridden. **See §3 for the service-token ingestion limitation that comes with it.** |
 | Companion preview | `NEXUS_COMPANION_PREVIEW` unset | Route returns 404. |
+
+### ⚠️ The embedded engine is single-process
+
+PGlite is a WASM PostgreSQL and **one data directory supports exactly one process**. Two processes
+opening `apps/web/.data` at once corrupts the cluster — observed during this baseline, where the
+database had to be rebuilt from migrations and the seed. This is why `NODE_ENV=production` refuses the
+embedded engine unless `NEXUS_ALLOW_EMBEDDED_IN_PRODUCTION=1` is set explicitly.
+
+**Operational rule:** stop the server before running anything that opens the data directory directly
+(`scripts/baseline-verify/db-setup.mjs`, `diag-rls.mjs`, the seed, `db:reset`).
 
 ---
 
@@ -127,6 +137,56 @@ policies, the Business and Outreach Identity lifecycle guards (`0023`–`0025`),
   endpoint, because `set local role` and `set_config` are per-transaction and a transaction-pooler can
   move statements between backends.
 
+### ⚠️ Service-token ingestion is not usable on the embedded engine
+
+**This is a deployment constraint, and it is the reason the embedded PGlite mode is recommended only
+for a single-operator review instance, not for a real one.**
+
+A service token (`nxs_…`, i.e. an `api_clients` row) cannot INSERT into the business-less canonical
+tables `public.companies` and `public.people`. The refusal is:
+
+```
+42501 new row violates row-level security policy for table "companies"
+```
+
+That breaks `POST /api/v1/ingest`, `nexus.submit_candidate` and `nexus.create_or_update_lead` whenever
+the pipeline has to create a new Company or Person. An **admin user token succeeds**, which is what
+makes the difference easy to misread as a permissions problem.
+
+**The policy is not the cause, and has deliberately not been changed.** Verified against a freshly
+seeded database at the current commit (`scripts/baseline-verify/diag-rls.mjs`):
+
+1. Inside the gateway's own session shape — `set local role authenticated` plus
+   `set_config('nexus.api_client_id', …)` — `public.acting_api_client_id()` resolves to the token's
+   UUID, `public.api_client_scopes()` returns all 29 granted scopes, and `current_setting` reads back
+   the same value.
+2. The only INSERT policy on `companies` is `companies_insert`; it is `PERMISSIVE`, granted to
+   `authenticated`, and its `WITH CHECK` is
+   `is_admin() OR EXISTS(SELECT 1 FROM user_business_access … can_use_lead_sources) OR acting_api_client_id() IS NOT NULL`.
+3. That same expression is evaluated **in the same transaction** and returns `true`.
+4. The insert is still refused with `42501`. In PostgreSQL, a permissive `WITH CHECK` that evaluates
+   true cannot deny an insert.
+5. `authenticated` holds the INSERT privilege, and the table owner inserts successfully.
+6. The failure reduces to a **throwaway table created inside the diagnostic**: a one-term policy
+   `with check (acting_api_client_id() is not null)` accepts the insert; adding a second disjunct that
+   must also be evaluated makes the same engine refuse it — on a table with no triggers, no foreign
+   keys and no product policy.
+
+**Conclusion:** this is how the **embedded PGlite** engine evaluates a multi-term policy expression
+containing those helper functions. Changing a security policy to satisfy a possibly-buggy local engine
+would be the wrong trade, so the policy stands.
+
+**What to do on a real deployment:**
+
+1. Connect to real **PostgreSQL 15+** (the direct connection, per the note above).
+2. Re-run `POST /api/v1/ingest` with a service token and confirm it returns `200`/`201` with a
+   `leadId`. The two `BLOCKED` cases in `API_BASELINE_VERIFICATION.md` §10 are exactly this check.
+3. If it passes — as it is expected to on PostgreSQL — no code change is needed and this limitation
+   applies only to the embedded engine. If it fails on PostgreSQL, the finding is real and must be
+   fixed before ingestion is relied on.
+
+Until step 2 has been performed and recorded, treat service-token ingestion as **unverified**.
+
 ### The SENT invariant
 
 A message in state `SENT` must have non-blank current content. Migration `0021` enforces it and the
@@ -136,9 +196,10 @@ not weaken `0021` to make a seed or import pass.**
 ### ⚠ Embedded-database caveat (single-process)
 
 PGlite is a WASM Postgres and **one data directory supports exactly one process**. Two instances
-sharing a directory corrupt or deadlock it. This is why `NODE_ENV=production` refuses the embedded
-engine unless `NEXUS_ALLOW_EMBEDDED_IN_PRODUCTION=1` is set explicitly. For any host that runs more
-than one instance, use `SUPABASE_DB_URL`/`DATABASE_URL`.
+sharing a directory corrupt or deadlock it — observed during this baseline, where concurrent access
+forced a rebuild from migrations and the seed. For any host that runs more than one instance, use
+`SUPABASE_DB_URL`/`DATABASE_URL`. The operational rule that follows from it, and the service-token
+ingestion limitation that comes with the embedded engine, are in **§2**.
 
 ---
 
@@ -278,6 +339,8 @@ baseline, and the UI does not claim delivery occurs. See `PREDEPLOY_BASELINE_GAP
 - [ ] `NEXUS_SESSION_SECRET` set to a stable 32-byte value
 - [ ] `SUPABASE_DB_URL` (or `DATABASE_URL`) set to a **direct** Postgres connection, as a **non-BYPASSRLS** role
 - [ ] Migrations applied and `pnpm run db:verify` green against the target database
+- [ ] **`POST /api/v1/ingest` verified with a service token on real PostgreSQL** — this is the F-2/F-6
+      check, and it is the one item the embedded engine cannot answer (see §3)
 - [ ] `NODE_ENV=production`; embedded engine off (or `NEXUS_ALLOW_EMBEDDED_IN_PRODUCTION=1` **and** a persistent volume **and** exactly one instance)
 - [ ] `NEXUS_COMPANION_PREVIEW` unset
 - [ ] HTTPS terminating in front of the app
@@ -285,3 +348,27 @@ baseline, and the UI does not claim delivery occurs. See `PREDEPLOY_BASELINE_GAP
 - [ ] Extension rebuilt with `NEXUS_API_ORIGIN` = the public origin, then reloaded
 - [ ] Health check wired to `GET /api/v1/companion/me` expecting **401**
 - [ ] `logs` confirmed to reveal no secrets (the redaction path is covered by tests)
+
+### Health check
+
+```
+GET /api/v1/companion/me
+```
+
+| Response | Meaning |
+| --- | --- |
+| `401 {"error":"Sign in to Nexus."}` | **Healthy.** The server is up, routing works, and the auth layer answered. |
+| `200` | Also healthy (a valid token was supplied). |
+| connection refused / 5xx | Unhealthy. |
+
+**This endpoint leaks nothing**, and that is deliberate: no secrets, no connection strings, no schema
+or version internals, just a fixed refusal string. Do not add database-version or environment detail
+to it — a public health endpoint is reconnaissance for an attacker.
+
+### Known non-blocking observations
+
+| Observation | Impact |
+| --- | --- |
+| The Companion panel truncates its selected Business name (`Zemnas Creati`) at 420px | Cosmetic; the selector still works |
+| `nexus.get_today_queue` answers an unknown user with an empty queue rather than a refusal (F-8) | An agent cannot distinguish "nothing due" from "no such user". Accepted |
+| Gateway tool scopes and RLS scopes are disjoint vocabularies (F-9) | A service token must be granted both. Recorded as context for F-2/F-6 |
