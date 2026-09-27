@@ -145,6 +145,30 @@ for (const token of TOKENS) {
   );
 }
 
+// ------------------------------------------------- fixture independence ---
+/**
+ * Reset the state a previous verification run left behind, so the run is repeatable.
+ *
+ * Two constraints make an unclean fixture produce a FALSE product failure:
+ *
+ *   * `browser_sessions_active_identity_key` (0010) permits exactly one ACTIVE browser session per
+ *     outreach identity. A previous run's bind therefore makes the next run's `COMP-BIND-OK`
+ *     answer 400 "That record already exists." — which reads like a defect and is the unique index
+ *     doing its job.
+ *   * the seeded demo binding (`demo-install-osama`) is deliberately KEPT: it is what the
+ *     concurrency-conflict case asserts against.
+ *
+ * Only rows this harness itself created are released (`baseline-install-%`), so nothing the demo
+ * seed owns is disturbed.
+ */
+const releasedStaleBindings = await db.query(
+  `update public.browser_sessions
+      set status = 'revoked', revoked_at = now()
+    where status = 'active'
+      and browser_fingerprint_or_install_id like 'baseline-install-%'
+  returning id`,
+);
+
 // ------------------------------------------------------------------ ids ----
 const one = async (text, params = []) => (await db.query(text, params)).rows[0] ?? null;
 const many = async (text, params = []) => (await db.query(text, params)).rows;
@@ -176,9 +200,30 @@ const icps = await many(`select id, business_id, name from public.icps where del
 const tasks = await many(`select id, business_id, lead_id, title from public.tasks limit 5`);
 
 const identities = await many(
-  `select id, platform, display_name, profile_url, managed_by_user_id, status
-     from public.outreach_identities
-    order by status, display_name`,
+  `select oi.id,
+          oi.platform,
+          oi.display_name,
+          oi.profile_url,
+          oi.managed_by_user_id,
+          oi.status,
+          /* The businesses this identity is actually authorized for. A companion bind must use one
+             of these: migration 0017 refuses a browser_session whose default_business_id is not in
+             this set, so asserting against an assumed business tests the fixture, not the product. */
+          coalesce(
+            (select json_agg(b.key order by b.key)
+               from public.outreach_identity_business_access iba
+               join public.businesses b on b.id = iba.business_id
+              where iba.outreach_identity_id = oi.id),
+            '[]'::json
+          ) as business_keys,
+          coalesce(
+            (select json_agg(iba.business_id::text order by iba.business_id)
+               from public.outreach_identity_business_access iba
+              where iba.outreach_identity_id = oi.id),
+            '[]'::json
+          ) as business_ids
+     from public.outreach_identities oi
+    order by oi.status, oi.display_name`,
 );
 
 const out = {
@@ -203,6 +248,7 @@ console.log(
   JSON.stringify(
     {
       ok: true,
+      releasedStaleBindings: releasedStaleBindings.affectedRows ?? releasedStaleBindings.rows.length,
       businesses: businesses.length,
       users: users.length,
       leads: leads.length,

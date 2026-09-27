@@ -68,14 +68,21 @@ if (external.length === 0) {
 
 /** Locates the `next` CLI shipped with this app. */
 function resolveNextBin() {
-  const binDir = path.join(appDir, '..', '..', 'node_modules', '.bin');
-  const candidates =
-    process.platform === 'win32'
-      ? [path.join(binDir, 'next.cmd'), path.join(binDir, 'next.exe'), path.join(binDir, 'next')]
-      : [path.join(binDir, 'next')];
+  /*
+   * pnpm hoists `next` into the consuming workspace's own `node_modules/.bin`, not the
+   * workspace root's — so the app directory must be searched FIRST. Resolving only from the
+   * root found nothing and this wrapper failed with `'next' is not recognized`, which made
+   * the documented `start` script unusable. Both locations are tried so the script keeps
+   * working if the package manager's layout changes.
+   */
+  const binDirs = [path.join(appDir, 'node_modules', '.bin'), path.join(appDir, '..', '..', 'node_modules', '.bin')];
+  const names = process.platform === 'win32' ? ['next.cmd', 'next.exe', 'next'] : ['next'];
 
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate;
+  for (const binDir of binDirs) {
+    for (const name of names) {
+      const candidate = path.join(binDir, name);
+      if (existsSync(candidate)) return candidate;
+    }
   }
   // Fall back to resolving through PATH; `shell` below makes that work on Windows.
   return 'next';

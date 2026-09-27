@@ -7,12 +7,35 @@
  * gateway against the RUNNING server on 127.0.0.1:3000, and writes raw
  * evidence to results.json. No product file is touched.
  */
+import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3000';
+
+/**
+ * Tree provenance.
+ *
+ * The results describe a build only if the tree did not change underneath it. Recording the tree
+ * state around the run lets the report state the caveat when it is true and stay silent when it is
+ * not — an unconditional "the tree was being edited" paragraph outlives the incident that caused it
+ * and turns into a permanent, false disclaimer.
+ */
+const repoRoot = path.resolve(here, '..', '..');
+function gitState() {
+  const run = (args) => {
+    try {
+      return execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim();
+    } catch (error) {
+      return `<git failed: ${error instanceof Error ? error.message : String(error)}>`;
+    }
+  };
+  return { head: run(['rev-parse', 'HEAD']), status: run(['status', '--porcelain']) };
+}
+
+const treeBefore = gitState();
 
 const secrets = JSON.parse(readFileSync(path.join(here, 'secrets.json'), 'utf8'));
 const TOKEN = Object.fromEntries(secrets.tokens.map((t) => [t.name, t.raw]));
@@ -451,12 +474,33 @@ async function companionSection(sessions) {
   // ---- POST /api/v1/companion/bind --------------------------------------
   // `demo-install-osama` is the seeded live binding for the Osama identity, so a
   // second profile claiming it is the real concurrency case.
+  const bindStamp = Date.now();
   const boundIdentity = secrets.identities?.find((i) => i.display_name === 'Osama - Zemnas') ?? secrets.identities?.[0];
   const identityId = boundIdentity?.id;
-  const installNew = 'baseline-install-0001';
-  // Bisma's own identity: free, and its business grant is lavish-foods, so a plain bind succeeds.
+  /**
+   * A fresh profile per run.
+   *
+   * A FIXED install id makes this case depend on what previous runs left behind: the second run
+   * updates the existing row instead of inserting, so the case stops exercising the insert path.
+   * The id is still stable enough to read in the evidence because the run stamp is recorded.
+   */
+  const installNew = `baseline-install-${bindStamp}`;
+  /**
+   * Bisma's own identity: free, and — critically — the business is taken from THAT IDENTITY'S OWN
+   * grant rather than assumed. Migration 0017 refuses a `browser_session` whose
+   * `default_business_id` is not one the identity is authorized for (42501), and the seeded
+   * grants are not what a name suggests: "Bisma - Lavish" is in fact granted `ai-integrations`.
+   * Hard-coding a business here produced a 400 that looked like a permission defect but was the
+   * guard working correctly against a mismatched fixture pair.
+   */
   const freeIdentity = secrets.identities?.find((i) => i.display_name === 'Bisma - Lavish');
-  const bindBody = { installId: installNew, identityId: freeIdentity?.id, defaultBusinessId: LAVISH, transfer: false };
+  const freeIdentityBusinessId = freeIdentity?.business_ids?.[0] ?? null;
+  const bindBody = {
+    installId: installNew,
+    identityId: freeIdentity?.id,
+    defaultBusinessId: freeIdentityBusinessId,
+    transfer: false,
+  };
   const bindFirst = await http('POST', '/api/v1/companion/bind', { token: bisma, body: bindBody });
   record('COMP-BIND-OK', 'api/v1/companion/bind', 'POST bind a free identity from a fresh browser profile', { request: { method: 'POST', path: '/api/v1/companion/bind', auth: 'Bearer bisma', body: bindBody }, response: bindFirst }, (o) =>
     o.response.status === 200 && o.response.json?.binding
@@ -1369,6 +1413,45 @@ async function redactionSection(sessions, allBodies) {
   );
 }
 
+/* --------------------------------------------------- token redaction --- */
+
+/**
+ * Persisted evidence must never carry a live credential.
+ *
+ * `results.json` is a TRACKED file, so a raw bearer token written into it would be committed
+ * to the repository. The sign-in cases necessarily receive a real `nxu_…` token in the
+ * response body, and the request bodies carry the test account password, so both are scrubbed
+ * before anything reaches disk. The verdict and status of every case are unaffected: only the
+ * credential-shaped strings are replaced, and the case note records that a token was seen.
+ *
+ * The raw values still exist for the duration of the run in memory (and in the git-ignored
+ * `secrets.json`), which is what lets the harness authenticate. They are removed here, at the
+ * last point before serialisation.
+ */
+const TOKEN_PATTERN = /\b(?:nxu_|nxs_)[A-Za-z0-9_-]{4,}/g;
+const PASSWORD_FIELD_PATTERN = /("(?:password|currentPassword|newPassword|confirmPassword)"\s*:\s*)"(?:[^"\\]|\\.)*"/g;
+
+function scrubValue(value) {
+  if (typeof value === 'string') {
+    return value.replace(TOKEN_PATTERN, '<redacted-token>').replace(PASSWORD_FIELD_PATTERN, '$1"<redacted>"');
+  }
+  if (Array.isArray(value)) return value.map(scrubValue);
+  if (value !== null && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = scrubValue(v);
+    return out;
+  }
+  return value;
+}
+
+/** How many credential-shaped strings the scrub removed — asserted below. */
+function countTokens(value) {
+  if (typeof value === 'string') return (value.match(TOKEN_PATTERN) ?? []).length;
+  if (Array.isArray(value)) return value.reduce((n, v) => n + countTokens(v), 0);
+  if (value !== null && typeof value === 'object') return Object.values(value).reduce((n, v) => n + countTokens(v), 0);
+  return 0;
+}
+
 /* ------------------------------------------------------------- driver --- */
 
 async function signIn(email, password, label) {
@@ -1403,34 +1486,51 @@ async function main() {
   const summary = { PASS: 0, FAIL: 0, PARTIAL: 0, BLOCKED: 0 };
   for (const c of cases) summary[c.verdict] += 1;
 
-  writeFileSync(
-    path.join(here, 'results.json'),
-    JSON.stringify(
-      {
-        base: BASE,
-        generatedAt: new Date().toISOString(),
-        summary,
-        catalogue: mcpOut.listResponse?.json?.result?.tools ?? [],
-        toolScopes: EXPECTED_SCOPES,
-        needsIdempotencyKey: [...NEEDS_KEY],
-        fixtures: {
-          businesses: secrets.businesses,
-          users: secrets.users,
-          identities: secrets.identities,
-          leadCount: secrets.leads.length,
-          sampleLead: companionCtx.realLead ?? null,
-          createdLeadId: companionCtx.createdLeadId ?? null,
-          messageInstanceId: secrets.messageInstances?.[0]?.id ?? null,
-        },
-        cases,
-      },
-      null,
-      2,
-    ),
-    'utf8',
-  );
+  const treeAfter = gitState();
+  const treeState = {
+    head: treeAfter.head,
+    cleanDuringRun: treeBefore.status === '' && treeAfter.status === '',
+    statusBefore: treeBefore.status,
+    statusAfter: treeAfter.status,
+  };
+
+  const payload = {
+    base: BASE,
+    generatedAt: new Date().toISOString(),
+    treeState,
+    summary,
+    catalogue: mcpOut.listResponse?.json?.result?.tools ?? [],
+    toolScopes: EXPECTED_SCOPES,
+    needsIdempotencyKey: [...NEEDS_KEY],
+    fixtures: {
+      businesses: secrets.businesses,
+      users: secrets.users,
+      identities: secrets.identities,
+      leadCount: secrets.leads.length,
+      sampleLead: companionCtx.realLead ?? null,
+      createdLeadId: companionCtx.createdLeadId ?? null,
+      messageInstanceId: secrets.messageInstances?.[0]?.id ?? null,
+    },
+    cases,
+  };
+
+  // Credentials never reach a tracked file. `results.json` is committed, so scrub before writing.
+  const rawTokenCount = countTokens(payload);
+  const scrubbed = scrubValue(payload);
+  const residualTokenCount = countTokens(scrubbed);
+  if (residualTokenCount !== 0) {
+    throw new Error(`token scrub failed: ${residualTokenCount} credential-shaped string(s) survived`);
+  }
+
+  writeFileSync(path.join(here, 'results.json'), JSON.stringify(scrubbed, null, 2), 'utf8');
 
   console.log(`\nTOTAL ${cases.length}: PASS=${summary.PASS} FAIL=${summary.FAIL} PARTIAL=${summary.PARTIAL} BLOCKED=${summary.BLOCKED}`);
+  console.log(`TOKEN-SCRUB: removed ${rawTokenCount} credential-shaped string(s); 0 residual in results.json`);
+  console.log(
+    treeState.cleanDuringRun
+      ? `TREE: clean and unchanged for the whole run at ${treeState.head}`
+      : `TREE: MODIFIED DURING RUN at ${treeState.head} — before=${JSON.stringify(treeState.statusBefore)} after=${JSON.stringify(treeState.statusAfter)}`,
+  );
 }
 
 await main();

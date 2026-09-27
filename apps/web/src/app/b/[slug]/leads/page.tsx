@@ -18,6 +18,7 @@ import { LeadBulkBar } from '@/components/lead-bulk-actions';
 import { LeadFilterBar } from '@/components/lead-filter-bar';
 import { LeadRowMenu } from '@/components/lead-row-menu';
 import { PAGE_SIZE_PARAM, filterHref, pageHref } from '@/lib/filter-url';
+import { QUICK_FILTER_CHIPS, QUICK_FILTER_KEYS, chipIsActive } from '@/lib/quick-filter-chips';
 import { listSavedViews, viewHref } from '@/lib/repo/saved-views';
 import {
   NEEDS_ATTENTION_STATUSES,
@@ -76,9 +77,6 @@ const MAX_PAGE_SIZE = 100;
 
 /** The id shared by the bulk form and the row checkboxes that submit into it. */
 const BULK_FORM_ID = 'leads-bulk-form';
-
-/** The quick-filter keys a chip replaces, so two chips cannot both read as "on". */
-const CHIP_KEYS = ['status', 'needsProfile', 'dnc', 'followups', 'needsAttention', 'view'] as const;
 
 function parseSort(
   value: string | undefined,
@@ -476,6 +474,10 @@ export default async function LeadsPage({
  * Each chip is a real link that sets exactly one filter key, so the count a chip shows
  * and the list it opens come from the same predicate in the repository. Every count is a
  * `getLeadCounts` aggregate over the database — never a literal.
+ *
+ * The chip definitions live in `@/lib/quick-filter-chips` rather than in this JSX, because the
+ * filter value each chip applies is a correctness fact worth asserting in a unit test — see the
+ * note in that module for the `status=1` defect it prevents.
  */
 function StatusChips({
   counts,
@@ -486,40 +488,24 @@ function StatusChips({
   readonly basePath: string;
   readonly query: LeadsSearchParams;
 }): ReactNode {
-  function chip(
-    key: string,
-    label: string,
-    count: number,
-    accent: string,
-    active: boolean,
-  ): ReactNode {
-    return (
-      <a
-        key={`${key}-${label}`}
-        className={`nx-chip-link${accent.length === 0 ? '' : ` nx-chip-link--${accent}`}`}
-        href={filterHref(basePath, query, { clear: CHIP_KEYS, set: { [key]: '1' } })}
-        aria-current={active ? 'true' : undefined}
-        title={`${label}: ${String(count)} lead${count === 1 ? '' : 's'}`}
-      >
-        {label}
-        <span className="nx-chip-link__count">{count}</span>
-      </a>
-    );
-  }
-
   return (
     <div className="nx-chip-strip" role="group" aria-label="Quick filters">
-      {chip('followups', 'Follow-ups', counts.followups, 'amber', flagged(query.followups))}
-      {chip('status', 'Replied', counts.replied, 'green', query.status === 'replied')}
-      {chip(
-        'needsProfile',
-        'Needs profile',
-        counts.needsProfile,
-        'cyan',
-        flagged(query.needsProfile),
-      )}
-      {chip('status', 'Dormant', counts.dormant, '', query.status === 'dormant')}
-      {chip('dnc', 'DNC', counts.dnc, 'red', flagged(query.dnc))}
+      {QUICK_FILTER_CHIPS.map((definition) => {
+        const count = counts[definition.countKey];
+        const accent = definition.accent;
+        return (
+          <a
+            key={definition.key}
+            className={`nx-chip-link${accent.length === 0 ? '' : ` nx-chip-link--${accent}`}`}
+            href={filterHref(basePath, query, { clear: QUICK_FILTER_KEYS, set: definition.set })}
+            aria-current={chipIsActive(definition, query) ? 'true' : undefined}
+            title={`${definition.label}: ${String(count)} lead${count === 1 ? '' : 's'}`}
+          >
+            {definition.label}
+            <span className="nx-chip-link__count">{count}</span>
+          </a>
+        );
+      })}
     </div>
   );
 }

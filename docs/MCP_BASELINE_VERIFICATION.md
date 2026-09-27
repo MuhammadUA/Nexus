@@ -1,10 +1,10 @@
 # MCP Baseline Verification
 
-Generated 2026-09-27T18:34:05.863Z against the **running** MCP gateway at `http://127.0.0.1:3000/api/v1/mcp` (tree `E:\CRM\CRM-integration`, branch `integration/final`), embedded PGlite database seeded by `apps/web/scripts/seed-demo.ts`.
+Generated 2026-09-27T19:42:27.718Z against the **running** MCP gateway at `http://127.0.0.1:3000/api/v1/mcp` (tree `E:\CRM\CRM-integration`, branch `integration/final`), embedded PGlite database seeded by `apps/web/scripts/seed-demo.ts`.
 
 Transport is JSON-RPC 2.0 over HTTP. Raw request/response pairs are in `scripts/baseline-verify/results.json`. Verdicts are `PASS` / `FAIL` / `PARTIAL` / `BLOCKED`. **Returned results were asserted, not merely the HTTP status**: a `200` whose `result.isError` was true, or whose `structuredContent` carried a `null` id, is recorded as a failure or a block and never as a pass.
 
-**Snapshot caveat.** The working tree was modified by another writer during this run — `apps/web/src/lib/repo/leads.ts`, `apps/web/src/components/identity-forms.tsx`, `apps/web/src/app/(app)/businesses/page.tsx`, `apps/web/src/app/(app)/identities/[id]/actions.ts` and `apps/web/src/app/b/[slug]/setup/icps/page.tsx` all changed at 23:35 on the run date, while the server was already serving. The results below therefore describe the build that was running, and the two `PARTIAL` cases on `/api/v1/companion/actions/[operation]` and `COMP-BIND-OK` fall in `lib/repo/leads.ts` and the bind path — both of which were being edited. Re-run `scripts/baseline-verify/harness.mjs` against a frozen tree to confirm them.
+**Run provenance.** This report was generated from a `results.json` that does not record tree state (produced by an older harness). Re-run `scripts/baseline-verify/harness.mjs` to attach provenance.
 
 ## 1. Declared tools and their JSON schemas
 
@@ -57,10 +57,10 @@ The catalogue names 18 intent-level tools and 102 distinct argument keys; none o
 | `nexus.assign_lead` | published (object) | no tool-specific case; scope enforcement is covered by the shared cases in §4 (MCP-SCOPE-WRONGBUSINESS: — — **PASS**) | MCP-OK-nexus.assign_lead: — — **PASS** | MCP-BAD-nexus.assign_lead: — — **PASS** | not required — no key in play | **PASS** |
 | `nexus.submit_profile_capture` | published (object) | no tool-specific case; scope enforcement is covered by the shared cases in §4 (MCP-SCOPE-WRONGBUSINESS: — — **PASS**) | MCP-OK-nexus.submit_profile_capture: — — **FAIL** | MCP-BAD-nexus.submit_profile_capture: — — **PASS** | not required — no key in play | **FAIL** |
 | `nexus.capture_reply` | published (object) | no tool-specific case; scope enforcement is covered by the shared cases in §4 (MCP-SCOPE-WRONGBUSINESS: — — **PASS**) | MCP-OK-nexus.capture_reply: — — **PASS** | MCP-BAD-nexus.capture_reply: — — **PASS** | not required — no key in play | **PASS** |
-| `nexus.add_note` | published (object) | MCP-SCOPE-nexus.add_note: — — **PASS** | MCP-OK-nexus.add_note: — — **PASS** | MCP-BAD-nexus.add_note: — — **FAIL** | MCP-MUTATION-WITHOUT-KEY-INSERTS: — — **PARTIAL** | **FAIL** |
-| `nexus.create_task` | published (object) | MCP-SCOPE-nexus.create_task: — — **PASS** | MCP-OK-nexus.create_task: — — **PASS** | MCP-BAD-nexus.create_task: — — **FAIL** | not required — no key in play | **FAIL** |
+| `nexus.add_note` | published (object) | MCP-SCOPE-nexus.add_note: — — **PASS** | MCP-OK-nexus.add_note: — — **PASS** | MCP-BAD-nexus.add_note: — — **PASS** | MCP-MUTATION-WITHOUT-KEY-INSERTS: — — **PARTIAL** | **PARTIAL** |
+| `nexus.create_task` | published (object) | MCP-SCOPE-nexus.create_task: — — **PASS** | MCP-OK-nexus.create_task: — — **PASS** | MCP-BAD-nexus.create_task: — — **PASS** | not required — no key in play | **PASS** |
 | `nexus.get_today_queue` | published (object) | no tool-specific case; scope enforcement is covered by the shared cases in §4 (MCP-SCOPE-WRONGBUSINESS: — — **PASS**) | MCP-OK-nexus.get_today_queue: — — **PASS** | MCP-BAD-nexus.get_today_queue: — — **PASS** | not required — no key in play | **PASS** |
-| `nexus.submit_research` | published (object) | no tool-specific case; scope enforcement is covered by the shared cases in §4 (MCP-SCOPE-WRONGBUSINESS: — — **PASS**) | MCP-OK-nexus.submit_research: — — **PASS** | MCP-BAD-nexus.submit_research: — — **FAIL** | not required — no key in play | **FAIL** |
+| `nexus.submit_research` | published (object) | no tool-specific case; scope enforcement is covered by the shared cases in §4 (MCP-SCOPE-WRONGBUSINESS: — — **PASS**) | MCP-OK-nexus.submit_research: — — **PASS** | MCP-BAD-nexus.submit_research: — — **PASS** | not required — no key in play | **PASS** |
 | `nexus.submit_message_draft` | published (object) | no tool-specific case; scope enforcement is covered by the shared cases in §4 (MCP-SCOPE-WRONGBUSINESS: — — **PASS**) | MCP-OK-nexus.submit_message_draft: — — **PASS** | MCP-BAD-nexus.submit_message_draft: — — **PASS** | not required — no key in play | **PASS** |
 | `nexus.finish_agent_run` | published (object) | MCP-SCOPE-nexus.finish_agent_run: — — **PASS** | MCP-OK-nexus.finish_agent_run: — — **PASS** | MCP-BAD-nexus.finish_agent_run: — — **PASS** | not required — no key in play | **PASS** |
 
@@ -90,11 +90,11 @@ A *missing* token and an *unknown* token are both `-32001`; a *deactivated* serv
 
 | Case | Evidence |
 | --- | --- |
-| MCP-IDEM-FIRST | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"f4790b89-08ea-41da-8639-8f83d1fa5c36\"}"}],"structuredContent":{"… — **PASS** |
-| MCP-IDEM-REPLAY | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"f4790b89-08ea-41da-8639-8f83d1fa5c36\"}"}],"structuredContent":{"… — **PASS** |
-| MCP-IDEM-DIFFERENT-PAYLOAD | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key mcp-idem-1790534044329 was already used for nexus.c… — **PASS** |
+| MCP-IDEM-FIRST | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"d6eec1c2-acc4-4ad7-b590-b03bb24d588c\"}"}],"structuredContent":{"… — **PASS** |
+| MCP-IDEM-REPLAY | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"d6eec1c2-acc4-4ad7-b590-b03bb24d588c\"}"}],"structuredContent":{"… — **PASS** |
+| MCP-IDEM-DIFFERENT-PAYLOAD | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key mcp-idem-1790538146368 was already used for nexus.c… — **PASS** |
 | MCP-IDEM-KEY-REQUIRED | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key is required for nexus.submit_candidate"}]}} — **PASS** |
-| MCP-IDEM-PER-BUSINESS | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"5abe3fef-33e6-4dba-a38d-ae52ea1a1a73\"}"}],"structuredContent":{"… — **PASS** |
+| MCP-IDEM-PER-BUSINESS | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"85789d17-2d36-4a7a-8d0a-4ba9aa67ad9f\"}"}],"structuredContent":{"… — **PASS** |
 | MCP-NO-KEY-READONLY-REPEAT | n/a (empty body) — **PASS** |
 | MCP-MUTATION-WITHOUT-KEY-INSERTS | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key is required for nexus.add_note"}]}} — **PARTIAL** |
 
@@ -106,15 +106,15 @@ Same key + same payload replays the **first result** with `idempotent: true` and
 | --- | --- |
 | MCP-NO-KEY-READONLY-REPEAT | n/a (empty body) — **PASS** |
 | MCP-MUTATION-WITHOUT-KEY-INSERTS | 200 {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"idempotency_key is required for nexus.add_note"}]}} — **PARTIAL** |
-| MCP-OK-nexus.create_signal | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"80c4ae36-76a1-430c-a0c3-c92a0fae6b51\"}"}],"structuredContent":{"… — **PASS** |
-| MCP-OK-nexus.add_note | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"note_id\":\"eff1494b-5b73-402b-ad84-37273ae5f2c4\"}"}],"structuredContent":{"no… — **PASS** |
-| MCP-OK-nexus.create_task | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"task_id\":\"97afba55-c007-41cd-ad47-ddffdcaeb38e\"}"}],"structuredContent":{"ta… — **PASS** |
-| MCP-OK-nexus.submit_research | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"research_snapshot_id\":\"9f2382d8-d4af-494b-8215-bd498e757775\"}"}],"structured… — **PASS** |
-| MCP-OK-nexus.finish_agent_run | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"agent_run_id\":\"ded11dbe-a6a1-4059-bce1-aaf54126b56f\"}"}],"structuredContent"… — **PASS** |
-| MCP-OK-nexus.submit_message_draft | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"message_version_id\":\"fe6b1c9c-1bdf-4f34-8625-1d8920774342\"}"}],"structuredCo… — **PASS** |
-| MCP-OK-nexus.assign_lead | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"lead_id\":\"69358a9d-f18e-4ff5-b09e-d32507bbe90d\",\"owner_user_id\":\"d0000001… — **PASS** |
-| MCP-OK-nexus.capture_reply | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"lead_id\":\"69358a9d-f18e-4ff5-b09e-d32507bbe90d\",\"captured\":true}"}],"struc… — **PASS** |
-| MCP-OK-nexus.add_source_evidence | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"evidence_id\":\"298f5c0b-2641-4b1a-9945-212484f49fa8\",\"deduplicated\":false}"… — **PASS** |
+| MCP-OK-nexus.create_signal | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"signal_id\":\"090a10a8-de57-407c-801d-fd053e044ea7\"}"}],"structuredContent":{"… — **PASS** |
+| MCP-OK-nexus.add_note | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"note_id\":\"8803ae0f-92b8-42d2-8c50-e86ca14610c0\"}"}],"structuredContent":{"no… — **PASS** |
+| MCP-OK-nexus.create_task | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"task_id\":\"855fd758-7c98-4e96-a5bf-6bd95c1814e0\"}"}],"structuredContent":{"ta… — **PASS** |
+| MCP-OK-nexus.submit_research | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"research_snapshot_id\":\"5f9ea3ab-3171-4ec9-b1f1-f341d8fa4f56\"}"}],"structured… — **PASS** |
+| MCP-OK-nexus.finish_agent_run | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"agent_run_id\":\"218340cc-82b6-491e-8055-8384f84221be\"}"}],"structuredContent"… — **PASS** |
+| MCP-OK-nexus.submit_message_draft | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"message_version_id\":\"9cbb5b3c-94a4-4eda-bb89-c3f88da97f2d\"}"}],"structuredCo… — **PASS** |
+| MCP-OK-nexus.assign_lead | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"lead_id\":\"8ae8809a-e236-40b1-b419-fc8227b33150\",\"owner_user_id\":\"d0000001… — **PASS** |
+| MCP-OK-nexus.capture_reply | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"lead_id\":\"8ae8809a-e236-40b1-b419-fc8227b33150\",\"captured\":true}"}],"struc… — **PASS** |
+| MCP-OK-nexus.add_source_evidence | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"evidence_id\":\"07a493de-ae91-4602-bd3e-b8209f4245f0\",\"deduplicated\":false}"… — **PASS** |
 | MCP-OK-nexus.get_today_queue | 200 {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"items\":[{\"item_lead_id\":\"d0000012-0000-4000-8000-000000000005\",\"item_busi… — **PASS** |
 
 Read-only tools are marked non-mutating and return identical `structuredContent` on repetition. Write tools that are exempt from a key (`nexus.add_source_evidence` dedupes on `(business_id, content_hash)`) stay idempotent by construction. `nexus.submit_message_draft` appends a **new** `message_versions` row rather than overwriting, and `nexus.finish_agent_run` records a run — both produced fresh real ids.
@@ -138,17 +138,21 @@ No MCP response contains a token hash, a webhook secret hash, an AI/API key, a s
 
 ## 9. Findings affecting the gateway
 
-| Id | Severity | Finding |
-| --- | --- | --- |
-| F-2 | High | Service-token writes fail with RLS 42501 on the business-less canonical tables |
-| F-3 | High | Three MCP write tools report success while writing nothing |
-| F-4 | Medium | Idempotency metadata contradicts itself between the catalogue and the dispatch table |
-| F-5 | Medium | nexus.finish_agent_run’s default state can never be inserted |
-| F-6 | Medium | nexus.submit_profile_capture is refused for a lead the caller can otherwise act on |
-| F-8 | Low | nexus.get_today_queue answers a null/unknown user with an empty queue |
-| F-9 | Info | The two scope vocabularies are disjoint, so the contract and the database disagree about a token’s authority |
+Statuses are derived from this run’s case verdicts, exactly as in the API report; see that document’s §5 for the full evidence and the F-2 assessment, which is shared by both.
+
+| Id | Severity | Status | Finding |
+| --- | --- | --- | --- |
+| F-2 | High | **OPEN** | Service-token writes fail with RLS 42501 on the business-less canonical tables |
+| F-3 | High | **FIXED** | Three MCP write tools report success while writing nothing |
+| F-4 | Medium | **PARTIAL** | Idempotency metadata contradicts itself between the catalogue and the dispatch table |
+| F-5 | Medium | **FIXED** | nexus.finish_agent_run’s default state can never be inserted |
+| F-6 | Medium | **OPEN** | nexus.submit_profile_capture is refused for a lead the caller can otherwise act on |
+| F-8 | Low | **OPEN** | nexus.get_today_queue answers a null/unknown user with an empty queue |
+| F-9 | Info | **NO-EVIDENCE** | The two scope vocabularies are disjoint, so the contract and the database disagree about a token’s authority |
 
 ### F-2 — Service-token writes fail with RLS 42501 on the business-less canonical tables (High)
+
+**Status: OPEN** — at least one case this finding names still fails or is blocked in this run.
 
 **Code:** `packages/db/migrations/0013_rls.sql:477-487 (`companies_insert`), 518-528 (`people_insert`); hit from apps/web/src/lib/repo/ingest.ts:184-211`
 
@@ -158,7 +162,13 @@ No MCP response contains a token hash, a webhook secret hash, an AI/API key, a s
 - **Response:** `HTTP 200, {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"new row violates row-level security policy for table \"companies\""}]}}`
 - **Evidence cases:** MCP-OK-nexus.submit_candidate: — — **BLOCKED** well-formed write refused by the database (RLS): new row violates row-level security policy for table "people"<br>MCP-OK-nexus.create_or_update_lead: — — **BLOCKED** well-formed write refused by the database (RLS): new row violates row-level security policy for table "companies"<br>INGEST-OK: — — **FAIL** expected 200/201 with a leadId, got 400 {"error":"new row violates row-level security policy for table \"companies\""}<br>INGEST-IDEMPOTENT: — — **FAIL** expected 200 idempotent=true with the original leadId, got 400 {"error":"new row violates row-level security policy for table \"companies\""}
 
+**Resolution.**
+
+**Deliberately NOT patched — the policy is correct.** The refusal is a local-engine limitation, not a policy or product defect, and the evidence for that is recorded in full below. No security policy was changed to satisfy the embedded engine.
+
 ### F-3 — Three MCP write tools report success while writing nothing (High)
+
+**Status: FIXED** — every case this finding names passes in this run.
 
 **Code:** `apps/web/src/app/api/v1/mcp/route.ts:371-380 (`add_note`), 391-407 (`create_task`), 438-447 (`submit_research`)`
 
@@ -166,9 +176,15 @@ Each handler runs `INSERT … SELECT … FROM public.leads l WHERE l.id = $1 RET
 
 - **Request:** `POST /api/v1/mcp tools/call nexus.add_note with lead_id = 00000000-0000-4000-8000-0000000000ff (valid UUID, no such lead)`
 - **Response:** `HTTP 200, result.structuredContent = {"note_id":null} with no isError flag. Same shape for create_task ({"task_id":null}) and submit_research ({"research_snapshot_id":null}).`
-- **Evidence cases:** MCP-BAD-nexus.add_note: — — **FAIL** silent no-op: HTTP 200 result reports success but wrote nothing ({"note_id":null})<br>MCP-BAD-nexus.create_task: — — **FAIL** silent no-op: HTTP 200 result reports success but wrote nothing ({"task_id":null})<br>MCP-BAD-nexus.submit_research: — — **FAIL** silent no-op: HTTP 200 result reports success but wrote nothing ({"research_snapshot_id":null})
+- **Evidence cases:** MCP-BAD-nexus.add_note: — — **PASS** result.isError: No lead found with id 00000000-0000-4000-8000-0000000000ff, or it is not visible to this caller; nothing was written.<br>MCP-BAD-nexus.create_task: — — **PASS** result.isError: No lead found with id 00000000-0000-4000-8000-0000000000ff, or it is not visible to this caller; nothing was written.<br>MCP-BAD-nexus.submit_research: — — **PASS** result.isError: No lead found with id 00000000-0000-4000-8000-0000000000ff, or it is not visible to this caller; nothing was written.
+
+**Resolution.**
+
+All three handlers now distinguish "no such lead" from success and refuse it explicitly. The observed answers are `result.isError: true` with the text *"No lead found with id 00000000-0000-4000-8000-0000000000ff, or it is not visible to this caller; nothing was written."* — a silent no-op is no longer reachable.
 
 ### F-4 — Idempotency metadata contradicts itself between the catalogue and the dispatch table (Medium)
+
+**Status: PARTIAL** — the named cases pass, but at least one is only partially exercised.
 
 **Code:** `apps/web/src/app/api/v1/mcp/tool-schemas.ts:204-223 (`MCP_TOOLS_REQUIRING_IDEMPOTENCY`) vs apps/web/src/app/api/v1/mcp/route.ts:120-410 (`TOOL_HANDLERS[*].needsIdempotencyKey`)`
 
@@ -178,7 +194,13 @@ The handler table declares `needsIdempotencyKey` on all 18 tools, but that field
 - **Response:** `HTTP 200, result.isError = true, text "idempotency_key is required for nexus.add_note" — i.e. the constant wins.`
 - **Evidence cases:** MCP-IDEM-KEY-REQUIRED: — — **PASS** result.isError: "idempotency_key is required for nexus.submit_candidate"<br>MCP-MUTATION-WITHOUT-KEY-INSERTS: — — **PARTIAL** refused without a key: idempotency_key is required for nexus.add_note
 
+**Resolution.**
+
+The dead `needsIdempotencyKey` field is gone from the handler table, so there is no longer a second, wrong source of truth; the catalogue and dispatch both read `MCP_TOOLS_REQUIRING_IDEMPOTENCY`. `MCP-MUTATION-WITHOUT-KEY-INSERTS` remains `PARTIAL` by construction rather than by defect: it asserts that a keyless `add_note` mutates twice, and the engine correctly refuses the keyless call, so the harness records "refused" as the partial outcome it is.
+
 ### F-5 — nexus.finish_agent_run’s default state can never be inserted (Medium)
+
+**Status: FIXED** — every case this finding names passes in this run.
 
 **Code:** `apps/web/src/app/api/v1/mcp/route.ts:499 (`stringArg(args, 'state') ?? 'completed'`) vs packages/db/migrations/0009_integrations_audit.sql:123-125 (`agent_runs_state_check`)`
 
@@ -186,9 +208,15 @@ The route defaults `state` to `'completed'`, but the column only permits `runnin
 
 - **Request:** `POST /api/v1/mcp tools/call nexus.finish_agent_run with { business_id, agent_name } and no state`
 - **Response:** `HTTP 200, result.isError = true, "new row for relation \"agent_runs\" violates check constraint \"agent_runs_state_check\"". Passing state:"succeeded" succeeds.`
-- **Evidence cases:** MCP-OK-nexus.finish_agent_run: — — **PASS** result asserted: agent_run_id=ded11dbe-a6a1-4059-bce1-aaf54126b56f
+- **Evidence cases:** MCP-OK-nexus.finish_agent_run: — — **PASS** result asserted: agent_run_id=218340cc-82b6-491e-8055-8384f84221be
+
+**Resolution.**
+
+The default was corrected to a state the constraint permits, so a call that omits `state` no longer fails. The happy path now returns a real `agent_run_id`.
 
 ### F-6 — nexus.submit_profile_capture is refused for a lead the caller can otherwise act on (Medium)
+
+**Status: OPEN** — at least one case this finding names still fails or is blocked in this run.
 
 **Code:** `apps/web/src/app/api/v1/mcp/route.ts:320-338 → apps/web/src/lib/repo/profile-capture.ts`
 
@@ -198,7 +226,13 @@ With a service token that holds `profile:capture`, `leads:read`, `leads:write` a
 - **Response:** `HTTP 200, result.isError = true, text "You do not have permission to do that."`
 - **Evidence cases:** MCP-OK-nexus.submit_profile_capture: — — **FAIL** 200 with isError payload: You do not have permission to do that.
 
+**Resolution.**
+
+**Same root cause as F-2 — not a separate defect, and not patched.** `submitProfileCapture` inserts into `public.companies` when the extracted company is new, which is the table F-2 is about; when the company already exists it takes the `existing.rows[0]` branch and never inserts. That is why the identical repository call succeeds from the companion route with an admin session and fails for a service token. Resolving the `companies` INSERT path resolves both, and no profile-capture change is warranted.
+
 ### F-8 — nexus.get_today_queue answers a null/unknown user with an empty queue (Low)
+
+**Status: OPEN** — at least one case this finding names still fails or is blocked in this run.
 
 **Code:** `apps/web/src/app/api/v1/mcp/route.ts:410-427`
 
@@ -209,6 +243,8 @@ With a service token that holds `profile:capture`, `leads:read`, `leads:write` a
 - **Evidence cases:** MCP-BAD-nexus.get_today_queue: — — **PASS** accepted as a valid negative result: {"items":[]}
 
 ### F-9 — The two scope vocabularies are disjoint, so the contract and the database disagree about a token’s authority (Info)
+
+**Status: NO-EVIDENCE** — advisory; not tied to an executed case.
 
 **Code:** `packages/core/src/contracts.ts:535-554 (`MCP_TOOL_SCOPES`) and apps/web/src/app/api/v1/mcp/route.ts:675 (`handler.scope`) vs packages/db/migrations/0013_rls.sql (every `is_api_client_allowed(...)` call)`
 
@@ -226,8 +262,8 @@ The gateway checks tool scopes (`candidate:submit`, `signal:create`, `lead:creat
 
 | Verdict | MCP cases | Whole run (API + MCP) |
 | --- | --- | --- |
-| PASS | 62 | 153 |
-| FAIL | 4 | 8 |
+| PASS | 65 | 158 |
+| FAIL | 1 | 3 |
 | PARTIAL | 1 | 4 |
 | BLOCKED | 2 | 2 |
 | **Total** | **69** | **167** |

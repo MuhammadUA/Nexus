@@ -14,13 +14,27 @@ mkdirSync(docs, { recursive: true });
 const R = JSON.parse(readFileSync(path.join(here, 'results.json'), 'utf8'));
 
 /**
- * The verification ran while the working tree was being edited by another writer:
- * `apps/web/src/lib/repo/leads.ts` and four other files changed mid-run (mtimes
- * 23:35 on the same day). Recorded so the results are read as a snapshot of a tree
- * that was still moving.
+ * Run provenance.
+ *
+ * An earlier generation of this report carried a hard-coded "snapshot caveat" claiming the tree had
+ * been edited mid-run. That caveat was true of one specific run and then became a permanent,
+ * misleading fixture of every later report — including reports generated from a tree that was never
+ * touched during the run. It is replaced by the run's own recorded provenance.
+ *
+ * `results.json` is written by the harness at the end of a run. Its `treeState` block records
+ * whether the tree was clean while that run executed, so the caveat appears only when it is true.
  */
-const CONCURRENCY_NOTE =
-  '**Snapshot caveat.** The working tree was modified by another writer during this run — `apps/web/src/lib/repo/leads.ts`, `apps/web/src/components/identity-forms.tsx`, `apps/web/src/app/(app)/businesses/page.tsx`, `apps/web/src/app/(app)/identities/[id]/actions.ts` and `apps/web/src/app/b/[slug]/setup/icps/page.tsx` all changed at 23:35 on the run date, while the server was already serving. The results below therefore describe the build that was running, and the two `PARTIAL` cases on `/api/v1/companion/actions/[operation]` and `COMP-BIND-OK` fall in `lib/repo/leads.ts` and the bind path — both of which were being edited. Re-run `scripts/baseline-verify/harness.mjs` against a frozen tree to confirm them.';
+function concurrencyNote() {
+  const state = R.treeState;
+  if (state === undefined) {
+    return '**Run provenance.** This report was generated from a `results.json` that does not record tree state (produced by an older harness). Re-run `scripts/baseline-verify/harness.mjs` to attach provenance.';
+  }
+  if (state.cleanDuringRun === true) {
+    return `**Run provenance.** The working tree was **clean and unchanged for the whole run** — verified by comparing \`git status --porcelain\` immediately before and after execution (both empty), at commit \`${state.head ?? 'unknown'}\`. Every result below therefore describes one frozen build.`;
+  }
+  return `**Run provenance — the tree moved during this run.** \`git status --porcelain\` differed between the start and the end of the run at commit \`${state.head ?? 'unknown'}\`:\n\n\`\`\`\nbefore: ${(state.statusBefore ?? '').trim() || '(clean)'}\nafter:  ${(state.statusAfter ?? '').trim() || '(clean)'}\n\`\`\`\n\nThe results below describe the build that was serving, and any case that touches a file listed above must be re-confirmed against a frozen tree.`;
+}
+const CONCURRENCY_NOTE = concurrencyNote();
 
 const byId = Object.fromEntries(R.cases.map((c) => [c.caseId, c]));
 const ids = (...list) => list;
@@ -63,6 +77,43 @@ function caseLine(list) {
     .map((c) => `${c.caseId}: ${evidence(c)} — **${c.verdict}** ${clip(c.note, 200)}`)
     .join('<br>');
 }
+
+/**
+ * The CURRENT state of a finding, derived from this run's own evidence.
+ *
+ * A narrative status written by hand drifts the moment the code changes, and a stale "OPEN" beside
+ * a fixed defect is exactly how a report stops being trustworthy. But deriving status from case
+ * verdicts alone is not enough either — see `caseAssertsDefect` below.
+ *
+ *   FIXED        every named case passes, and the cases assert the corrected behaviour
+ *   OPEN         at least one named case fails or is blocked, or a passing case merely ACCEPTS a
+ *                behaviour the finding reports as wrong
+ *   PARTIAL      cases pass, but at least one is only partially exercised
+ *   NO-EVIDENCE  the finding names no case (advisory / informational)
+ */
+function findingStatus(finding) {
+  const cases = finding.evidence.map((id) => byId[id]).filter(Boolean);
+  if (cases.length === 0) return 'NO-EVIDENCE';
+  if (cases.some((c) => c.verdict === 'FAIL' || c.verdict === 'BLOCKED')) return 'OPEN';
+  if (cases.some((c) => c.verdict === 'PARTIAL')) return 'PARTIAL';
+  /*
+   * A case can PASS while the finding is still open: the harness may pass a case precisely by
+   * ACCEPTING the reported behaviour as a valid negative result. `nexus.get_today_queue` returning
+   * `{items:[]}` for an unknown user is recorded as PASS because an empty queue is a defensible
+   * answer — but the finding says an agent cannot tell "nothing due" from "no such user", and that
+   * is still true. Without this check the report would flip F-8 to FIXED purely because a test
+   * accepts it. A finding therefore declares which of its cases would prove it fixed.
+   */
+  if (finding.evidenceProvesFix === false) return 'OPEN';
+  return 'FIXED';
+}
+
+const STATUS_NOTE = {
+  FIXED: 'every case this finding names passes in this run',
+  OPEN: 'at least one case this finding names still fails or is blocked in this run',
+  PARTIAL: 'the named cases pass, but at least one is only partially exercised',
+  'NO-EVIDENCE': 'advisory; not tied to an executed case',
+};
 
 /* ------------------------------------------------- endpoint inventory ---- */
 
@@ -268,6 +319,8 @@ const FINDINGS = [
     request: 'GET /api/v1/companion/today?businessId=<zemnas>&userId=<admin id> with osama@nexus.local (standard user, zemnas access)',
     response: 'HTTP 500, empty body. An SSM-style typed `{ "error": … }` with 403 was expected.',
     evidence: ['COMP-TODAY-OTHERUSER-STANDARD'],
+    resolution:
+      'The route now translates the database refusal into a typed `403 {"error": …}`, so a permission refusal is no longer an untyped 500. Confirmed by `COMP-TODAY-OTHERUSER-STANDARD`, which asserts the 403 and the typed body.',
   },
   {
     id: 'F-2',
@@ -280,6 +333,19 @@ const FINDINGS = [
       'POST /api/v1/mcp {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"nexus.submit_candidate","arguments":{"business_id":"d0000002-…-0001","idempotency_key":"mcp-cand-…","full_name":"Baseline MCP Candidate","company_name":"Northstar","job_title":"Head of Production","linkedin_url":"…"}}}',
     response: 'HTTP 200, {"jsonrpc":"2.0","id":1,"result":{"isError":true,"content":[{"type":"text","text":"new row violates row-level security policy for table \\"companies\\""}]}}',
     evidence: ['MCP-OK-nexus.submit_candidate', 'MCP-OK-nexus.create_or_update_lead', 'INGEST-OK', 'INGEST-IDEMPOTENT'],
+    resolution:
+      '**Deliberately NOT patched — the policy is correct.** The refusal is a local-engine limitation, not a policy or product defect, and the evidence for that is recorded in full below. No security policy was changed to satisfy the embedded engine.',
+    defectAssessment:
+      'The predicates are satisfied and the insert is still refused. `scripts/baseline-verify/diag-rls.mjs`, run against a freshly seeded database at this commit, establishes each link:\n\n' +
+      '1. Inside the gateway’s own session shape — `set local role authenticated` plus `set_config(\'nexus.api_client_id\', …)` — `public.acting_api_client_id()` resolves to the token’s UUID, `public.api_client_scopes()` returns all 29 granted scopes, `public.api_client_business_ids()` returns the three businesses, and `current_setting(\'nexus.api_client_id\')` reads back the same UUID. `current_role` is `authenticated`.\n' +
+      '2. The only INSERT policy on `companies` is `companies_insert`, it is `PERMISSIVE`, granted to `authenticated`, and its `WITH CHECK` is `is_admin() OR EXISTS(SELECT 1 FROM user_business_access … can_use_lead_sources) OR acting_api_client_id() IS NOT NULL`.\n' +
+      '3. That same expression is evaluated **in the same transaction** and returns `true` (`companies_insert_predicate: true`).\n' +
+      '4. The insert is still refused with `42501`. A permissive `WITH CHECK` that evaluates true cannot deny an insert in PostgreSQL.\n' +
+      '5. `authenticated` holds the `INSERT` privilege on `companies`, and the table owner inserts successfully, so this is not a GRANT gap.\n' +
+      '6. `companies` and `people` carry `relforcerowsecurity = true`; `signals` and `source_evidence` do too, yet writes to those succeed because their policies are business-scoped and evaluate through `is_api_client_allowed(business_id, …)` rather than through a bare `acting_api_client_id() is not null` term.\n' +
+      '7. **The decisive reduction:** the same one-term policy — `with check (public.acting_api_client_id() is not null)` — **accepts** the insert on a throwaway table created inside the diagnostic (`MINIMAL OK`). Add a second disjunct that must also be evaluated, `with check (public.current_user_id() is not null or public.acting_api_client_id() is not null)`, and the same engine **refuses** it (`MINIMAL2 FAIL`) on a table with no triggers, no foreign keys and no product policy.\n\n' +
+      'Conclusion: the failure reduces to how this engine evaluates a multi-term policy expression containing the helper functions, reproducing on a table the product does not own. It is therefore recorded as a limitation of the embedded PGlite runtime, **to be confirmed against real PostgreSQL before deployment** — this environment has no PostgreSQL, Docker or `psql` available, so that confirmation could not be performed here.\n\n' +
+      'Consequence for deployment: on real PostgreSQL these cases are expected to pass, and the deployment is gated on demonstrating that. On the embedded engine, **service-token ingestion cannot be used** — a fact now recorded in `DEPLOYMENT_READINESS.md`.',
   },
   {
     id: 'F-3',
@@ -292,6 +358,8 @@ const FINDINGS = [
       'POST /api/v1/mcp tools/call nexus.add_note with lead_id = 00000000-0000-4000-8000-0000000000ff (valid UUID, no such lead)',
     response: 'HTTP 200, result.structuredContent = {"note_id":null} with no isError flag. Same shape for create_task ({"task_id":null}) and submit_research ({"research_snapshot_id":null}).',
     evidence: ['MCP-BAD-nexus.add_note', 'MCP-BAD-nexus.create_task', 'MCP-BAD-nexus.submit_research'],
+    resolution:
+      'All three handlers now distinguish "no such lead" from success and refuse it explicitly. The observed answers are `result.isError: true` with the text *"No lead found with id 00000000-0000-4000-8000-0000000000ff, or it is not visible to this caller; nothing was written."* — a silent no-op is no longer reachable.',
   },
   {
     id: 'F-4',
@@ -303,6 +371,8 @@ const FINDINGS = [
     request: 'POST /api/v1/mcp tools/call nexus.add_note with no idempotency_key (the handler table says this is unnecessary)',
     response: 'HTTP 200, result.isError = true, text "idempotency_key is required for nexus.add_note" — i.e. the constant wins.',
     evidence: ['MCP-IDEM-KEY-REQUIRED', 'MCP-MUTATION-WITHOUT-KEY-INSERTS'],
+    resolution:
+      'The dead `needsIdempotencyKey` field is gone from the handler table, so there is no longer a second, wrong source of truth; the catalogue and dispatch both read `MCP_TOOLS_REQUIRING_IDEMPOTENCY`. `MCP-MUTATION-WITHOUT-KEY-INSERTS` remains `PARTIAL` by construction rather than by defect: it asserts that a keyless `add_note` mutates twice, and the engine correctly refuses the keyless call, so the harness records "refused" as the partial outcome it is.',
   },
   {
     id: 'F-5',
@@ -314,6 +384,8 @@ const FINDINGS = [
     request: 'POST /api/v1/mcp tools/call nexus.finish_agent_run with { business_id, agent_name } and no state',
     response: 'HTTP 200, result.isError = true, "new row for relation \\"agent_runs\\" violates check constraint \\"agent_runs_state_check\\"". Passing state:"succeeded" succeeds.',
     evidence: ['MCP-OK-nexus.finish_agent_run'],
+    resolution:
+      'The default was corrected to a state the constraint permits, so a call that omits `state` no longer fails. The happy path now returns a real `agent_run_id`.',
   },
   {
     id: 'F-6',
@@ -325,6 +397,8 @@ const FINDINGS = [
     request: 'POST /api/v1/mcp tools/call nexus.submit_profile_capture with a real lead id, its LinkedIn URL and pasted content',
     response: 'HTTP 200, result.isError = true, text "You do not have permission to do that."',
     evidence: ['MCP-OK-nexus.submit_profile_capture'],
+    resolution:
+      '**Same root cause as F-2 — not a separate defect, and not patched.** `submitProfileCapture` inserts into `public.companies` when the extracted company is new, which is the table F-2 is about; when the company already exists it takes the `existing.rows[0]` branch and never inserts. That is why the identical repository call succeeds from the companion route with an admin session and fails for a service token. Resolving the `companies` INSERT path resolves both, and no profile-capture change is warranted.',
   },
   {
     id: 'F-7',
@@ -336,6 +410,8 @@ const FINDINGS = [
     request: 'POST /api/v1/companion/actions/mark-connection-sent { leadId: <real zemnas lead>, identityId: <real active identity>, withNote: true } as admin',
     response: 'HTTP 400 {"error":"You do not have permission to do that."}',
     evidence: ['ACT-mark-connection-sent-OK', 'ACT-mark-message-sent-OK', 'ACT-reactivate-OK'],
+    resolution:
+      '**NOT A DEFECT — a verification fixture mismatch, and the guard is correct.** These three cases remain `PARTIAL` because the harness paired a lead with an outreach identity that does not cover the lead’s business. `mark_connection_sent` and `mark_message_sent` are `SECURITY DEFINER`, so RLS does not apply inside them; their only `42501` raise is `public.has_identity_business_access(p_identity_id, v_lead.business_id)`. Confirmed directly against the seeded database: the matched pair (Osama on a Zemnas lead) succeeds, while the mismatched pair (Bisma on a Zemnas lead) is refused with `42501 outreach identity d0000005-…2 is not authorized for business d0000002-…1` — the guard working exactly as designed.\n\nThe remaining usability point is real and is recorded rather than hidden: the refusal is reported as the blanket *"You do not have permission to do that."*, which points the operator at their own permissions instead of naming the unmet identity/business precondition. That is a message-quality improvement, not a security or correctness defect.',
   },
   {
     id: 'F-8',
@@ -347,6 +423,9 @@ const FINDINGS = [
     request: 'POST /api/v1/mcp tools/call nexus.get_today_queue with user_id = 00000000-0000-4000-8000-0000000000ff',
     response: 'HTTP 200, result.structuredContent = {"items":[]}',
     evidence: ['MCP-BAD-nexus.get_today_queue'],
+    // The case passes by ACCEPTING the empty queue as a valid negative result, so it cannot prove
+    // the finding fixed. The ambiguity the finding reports is unchanged in the code.
+    evidenceProvesFix: false,
   },
   {
     id: 'F-9',
@@ -363,12 +442,14 @@ const FINDINGS = [
     id: 'F-10',
     severity: 'Info',
     title: 'Known dead code: `apps/web/middleware.ts` never executes',
-    file: 'apps/web/middleware.ts',
+    file: 'apps/web/middleware.ts (deleted)',
     detail:
-      'Next resolves middleware to `src/middleware.ts` when a `src` directory exists, so the root-level file is ignored — `.next/server/middleware-manifest.json` lists no middleware. Companion CORS is therefore served by the static header rule in `apps/web/next.config.ts`, which the CORS cases below confirm is live. Reported only; not modified.',
+      'Next resolves middleware to `src/middleware.ts` when a `src` directory exists, so the root-level file was ignored — `.next/server/middleware-manifest.json` listed no middleware. Companion CORS is served by the static header rule in `apps/web/next.config.ts`, which the CORS cases below confirm is live.',
     request: 'GET /api/v1/companion/me with Origin: chrome-extension://…',
     response: '200/401 with `access-control-allow-origin: *` from the next.config.ts rule; a preflight returns 204 with the methods and headers advertised.',
     evidence: ['CORS-PREFLIGHT-COMPANION', 'CORS-GET-COMPANION', 'CORS-INGEST-NO-WILDCARD'],
+    resolution:
+      'Resolved by deletion, which was one of the two options the finding offered. The misleading file is gone and `next.config.ts` is the single source of truth for Companion CORS. `apps/web/src/middleware.ts` does not exist either, so nothing is silently shadowed.',
   },
 ];
 
@@ -465,14 +546,24 @@ function apiDoc() {
   L.push('');
   L.push('## 5. Findings');
   L.push('');
-  L.push('| Id | Severity | Finding | Code |');
-  L.push('| --- | --- | --- | --- |');
-  for (const f of FINDINGS) L.push(`| ${f.id} | ${f.severity} | ${f.title} | \`${f.file}\` |`);
+  L.push(
+    'The **Status** column is derived from this run’s own case verdicts, not written by hand: `FIXED` means every case the finding names passes, `OPEN` means at least one still fails or is blocked, `PARTIAL` means the named cases pass but at least one is only partially exercised. A finding cannot claim to be open beside passing evidence, or closed beside a regression.',
+  );
+  L.push('');
+  L.push('| Id | Severity | Status | Finding | Code |');
+  L.push('| --- | --- | --- | --- | --- |');
+  for (const f of FINDINGS) {
+    L.push(`| ${f.id} | ${f.severity} | **${findingStatus(f)}** | ${f.title} | \`${f.file}\` |`);
+  }
   L.push('');
   for (const f of FINDINGS) {
     L.push(`### ${f.id} — ${f.title} (${f.severity})`);
     L.push('');
+    L.push(`**Status: ${findingStatus(f)}** — ${STATUS_NOTE[findingStatus(f)]}.`);
+    L.push('');
     L.push(`**Code:** \`${f.file}\``);
+    L.push('');
+    L.push('**What was wrong.**');
     L.push('');
     L.push(f.detail);
     L.push('');
@@ -480,6 +571,24 @@ function apiDoc() {
     L.push(`- **Response:** \`${clip(f.response, 400)}\``);
     if (f.evidence.length > 0) L.push(`- **Evidence cases:** ${caseLine(f.evidence)}`);
     L.push('');
+    if (f.resolution !== undefined) {
+      L.push('**Resolution.**');
+      L.push('');
+      L.push(f.resolution);
+      L.push('');
+    }
+    if (f.defectAssessment !== undefined) {
+      L.push('**Is this a product defect?**');
+      L.push('');
+      L.push(f.defectAssessment);
+      L.push('');
+    }
+    if (f.detail !== undefined && f.resolution !== undefined && findingStatus(f) === 'FIXED') {
+      L.push(
+        '> The **What was wrong** text above describes the defect as it was found. It is retained as the record of the finding; the Status line states its current state.',
+      );
+      L.push('');
+    }
   }
   L.push('## 6. Cases that could not be exercised');
   L.push('');
@@ -641,15 +750,21 @@ function mcpDoc() {
   L.push('');
   L.push('## 9. Findings affecting the gateway');
   L.push('');
-  L.push('| Id | Severity | Finding |');
-  L.push('| --- | --- | --- |');
+  L.push(
+    'Statuses are derived from this run’s case verdicts, exactly as in the API report; see that document’s §5 for the full evidence and the F-2 assessment, which is shared by both.',
+  );
+  L.push('');
+  L.push('| Id | Severity | Status | Finding |');
+  L.push('| --- | --- | --- | --- |');
   for (const f of FINDINGS.filter((f) => /MCP|RLS|SQL|agent|idempot|scope|tool/i.test(`${f.title} ${f.detail}`))) {
-    L.push(`| ${f.id} | ${f.severity} | ${f.title} |`);
+    L.push(`| ${f.id} | ${f.severity} | **${findingStatus(f)}** | ${f.title} |`);
   }
   L.push('');
   for (const f of FINDINGS) {
     if (!/MCP|RLS|SQL|agent|idempot|scope|tool/i.test(`${f.title} ${f.detail}`)) continue;
     L.push(`### ${f.id} — ${f.title} (${f.severity})`);
+    L.push('');
+    L.push(`**Status: ${findingStatus(f)}** — ${STATUS_NOTE[findingStatus(f)]}.`);
     L.push('');
     L.push(`**Code:** \`${f.file}\``);
     L.push('');
@@ -659,6 +774,12 @@ function mcpDoc() {
     L.push(`- **Response:** \`${clip(f.response, 400)}\``);
     if (f.evidence.length > 0) L.push(`- **Evidence cases:** ${caseLine(f.evidence)}`);
     L.push('');
+    if (f.resolution !== undefined) {
+      L.push('**Resolution.**');
+      L.push('');
+      L.push(f.resolution);
+      L.push('');
+    }
   }
   L.push('## 10. Cases that could not be exercised');
   L.push('');
@@ -761,6 +882,7 @@ function summaryJson() {
     findings: FINDINGS.map((f) => ({
       id: f.id,
       severity: f.severity,
+      status: findingStatus(f),
       title: f.title,
       code: f.file,
       request: f.request,

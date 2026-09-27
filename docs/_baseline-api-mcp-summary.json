@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T18:34:05.863Z",
+  "generated_at": "2026-09-27T19:42:27.718Z",
   "base_url": "http://127.0.0.1:3000",
   "tree": "E:\\CRM\\CRM-integration",
   "branch": "integration/final",
@@ -7,8 +7,8 @@
   "methodology": "Real HTTP requests from scripts/baseline-verify/harness.mjs against the running server; results asserted from the response bodies, not the HTTP status. Raw evidence in scripts/baseline-verify/results.json.",
   "counts": {
     "total": 167,
-    "pass": 153,
-    "fail": 8,
+    "pass": 158,
+    "fail": 3,
     "partial": 4,
     "blocked": 2
   },
@@ -78,8 +78,8 @@
     },
     "api/v1/companion/today": {
       "total": 5,
-      "pass": 4,
-      "fail": 1,
+      "pass": 5,
+      "fail": 0,
       "partial": 0,
       "blocked": 0
     },
@@ -99,8 +99,8 @@
     },
     "api/v1/companion/bind": {
       "total": 5,
-      "pass": 4,
-      "fail": 1,
+      "pass": 5,
+      "fail": 0,
       "partial": 0,
       "blocked": 0
     },
@@ -169,8 +169,8 @@
     },
     "mcp/tools-call": {
       "total": 36,
-      "pass": 30,
-      "fail": 4,
+      "pass": 33,
+      "fail": 1,
       "partial": 0,
       "blocked": 2
     },
@@ -229,10 +229,10 @@
     "/api/v1/companion/leads": "PASS",
     "/api/v1/companion/leads/[id]": "PASS",
     "/api/v1/companion/search": "PASS",
-    "/api/v1/companion/today": "FAIL",
+    "/api/v1/companion/today": "PASS",
     "/api/v1/companion/icps": "PASS",
     "/api/v1/companion/heartbeat": "PASS",
-    "/api/v1/companion/bind": "FAIL",
+    "/api/v1/companion/bind": "PASS",
     "/api/v1/companion/add": "PASS",
     "/api/v1/companion/actions/[operation]": "PARTIAL",
     "/api/v1/ingest": "FAIL",
@@ -252,10 +252,10 @@
     "nexus.assign_lead": "PASS",
     "nexus.submit_profile_capture": "FAIL",
     "nexus.capture_reply": "PASS",
-    "nexus.add_note": "FAIL",
-    "nexus.create_task": "FAIL",
+    "nexus.add_note": "PASS",
+    "nexus.create_task": "PASS",
     "nexus.get_today_queue": "PASS",
-    "nexus.submit_research": "FAIL",
+    "nexus.submit_research": "PASS",
     "nexus.submit_message_draft": "PASS",
     "nexus.finish_agent_run": "PASS"
   },
@@ -298,7 +298,7 @@
       "title": "POST sign-in with valid credentials",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "200, token prefix nxu_-vZgcg…, role admin"
+      "note": "200, token prefix <redacted-token>…, role admin"
     },
     {
       "case_id": "COMP-SESSION-BADPW",
@@ -426,7 +426,7 @@
       "title": "GET leads for zemnas as admin",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "200, total=25 returned=5"
+      "note": "200, total=21 returned=5"
     },
     {
       "case_id": "COMP-LEADS-NOBIZ",
@@ -560,9 +560,9 @@
       "case_id": "COMP-TODAY-OTHERUSER-STANDARD",
       "group": "api/v1/companion/today",
       "title": "Standard user asks for another user’s queue",
-      "verdict": "FAIL",
-      "http_status": 500,
-      "note": "500 Internal Server Error with an untyped body: \"\""
+      "verdict": "PASS",
+      "http_status": 403,
+      "note": "403 refused: \"You do not have permission to do that.\""
     },
     {
       "case_id": "COMP-TODAY-OTHERUSER-MANAGER",
@@ -656,9 +656,9 @@
       "case_id": "COMP-BIND-OK",
       "group": "api/v1/companion/bind",
       "title": "POST bind a free identity from a fresh browser profile",
-      "verdict": "FAIL",
-      "http_status": 400,
-      "note": "expected 200 binding, got 400 {\"error\":\"You do not have permission to do that.\",\"reason\":\"bind_failed\"}"
+      "verdict": "PASS",
+      "http_status": 200,
+      "note": "200, binding present, transferredFrom=0"
     },
     {
       "case_id": "COMP-BIND-CONFLICT",
@@ -666,7 +666,7 @@
       "title": "POST bind an identity already held by another live profile, without transfer",
       "verdict": "PASS",
       "http_status": 409,
-      "note": "409 reason=identity_in_use, conflicts=[{\"sessionId\":\"9940b399-5afe-481b-b1b2-4998c607079c\",\"operatorName\":\"Osama Sender\",\"lastActiveAt\":\"2026-09-27T18:34:03.514Z\",\"isSelf\":false}]"
+      "note": "409 reason=identity_in_use, conflicts=[{\"sessionId\":\"98753a4a-47fb-4172-8b2c-e7aee20dee74\",\"operatorName\":\"Osama Sender\",\"lastActiveAt\":\"2026-09-27T19:42:25.539Z\",\"isSelf\":false}]"
     },
     {
       "case_id": "COMP-BIND-INVALID",
@@ -706,7 +706,7 @@
       "title": "POST add a LinkedIn profile (creates a lead)",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "200, leadId=69358a9d-f18e-4ff5-b09e-d32507bbe90d created=false needsProfile=false deduped=true"
+      "note": "200, leadId=8ae8809a-e236-40b1-b419-fc8227b33150 created=true needsProfile=false deduped=false"
     },
     {
       "case_id": "COMP-ADD-IDEMPOTENT",
@@ -714,7 +714,7 @@
       "title": "POST the identical capture with the same idempotencyKey",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "200, same leadId=69358a9d-f18e-4ff5-b09e-d32507bbe90d, deduped=true (no second lead)"
+      "note": "200, same leadId=8ae8809a-e236-40b1-b419-fc8227b33150, deduped=true (no second lead)"
     },
     {
       "case_id": "COMP-ADD-NOTLINKEDIN",
@@ -954,7 +954,7 @@
       "title": "POST ingest with a user (companion) token",
       "verdict": "PASS",
       "http_status": 201,
-      "note": "201 — \"accepted (user token bypasses the service scope list by design) leadId=008537fb-f721-4115-94cd-843e49167b7b\""
+      "note": "201 — \"accepted (user token bypasses the service scope list by design) leadId=e86a6e48-b2f1-4acb-a5a4-5ccd3059fc26\""
     },
     {
       "case_id": "INGEST-SCOPE",
@@ -1282,7 +1282,7 @@
       "title": "nexus.create_signal happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: signal_id=80c4ae36-76a1-430c-a0c3-c92a0fae6b51"
+      "note": "result asserted: signal_id=090a10a8-de57-407c-801d-fd053e044ea7"
     },
     {
       "case_id": "MCP-BAD-nexus.create_signal",
@@ -1298,7 +1298,7 @@
       "title": "nexus.add_source_evidence happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: evidence_id=298f5c0b-2641-4b1a-9945-212484f49fa8 deduplicated=false"
+      "note": "result asserted: evidence_id=07a493de-ae91-4602-bd3e-b8209f4245f0 deduplicated=false"
     },
     {
       "case_id": "MCP-BAD-nexus.add_source_evidence",
@@ -1330,7 +1330,7 @@
       "title": "nexus.assign_lead happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: lead_id=69358a9d-f18e-4ff5-b09e-d32507bbe90d owner_user_id=d0000001-0000-4000-8000-000000000003"
+      "note": "result asserted: lead_id=8ae8809a-e236-40b1-b419-fc8227b33150 owner_user_id=d0000001-0000-4000-8000-000000000003"
     },
     {
       "case_id": "MCP-BAD-nexus.assign_lead",
@@ -1362,7 +1362,7 @@
       "title": "nexus.capture_reply happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: lead_id=69358a9d-f18e-4ff5-b09e-d32507bbe90d captured=true"
+      "note": "result asserted: lead_id=8ae8809a-e236-40b1-b419-fc8227b33150 captured=true"
     },
     {
       "case_id": "MCP-BAD-nexus.capture_reply",
@@ -1378,15 +1378,15 @@
       "title": "nexus.add_note happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: note_id=eff1494b-5b73-402b-ad84-37273ae5f2c4"
+      "note": "result asserted: note_id=8803ae0f-92b8-42d2-8c50-e86ca14610c0"
     },
     {
       "case_id": "MCP-BAD-nexus.add_note",
       "group": "mcp/tools-call",
       "title": "nexus.add_note invalid call",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "http_status": 200,
-      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"note_id\":null})"
+      "note": "result.isError: No lead found with id 00000000-0000-4000-8000-0000000000ff, or it is not visible to this caller; nothing was written."
     },
     {
       "case_id": "MCP-OK-nexus.create_task",
@@ -1394,15 +1394,15 @@
       "title": "nexus.create_task happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: task_id=97afba55-c007-41cd-ad47-ddffdcaeb38e"
+      "note": "result asserted: task_id=855fd758-7c98-4e96-a5bf-6bd95c1814e0"
     },
     {
       "case_id": "MCP-BAD-nexus.create_task",
       "group": "mcp/tools-call",
       "title": "nexus.create_task invalid call",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "http_status": 200,
-      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"task_id\":null})"
+      "note": "result.isError: No lead found with id 00000000-0000-4000-8000-0000000000ff, or it is not visible to this caller; nothing was written."
     },
     {
       "case_id": "MCP-OK-nexus.get_today_queue",
@@ -1426,15 +1426,15 @@
       "title": "nexus.submit_research happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: research_snapshot_id=9f2382d8-d4af-494b-8215-bd498e757775"
+      "note": "result asserted: research_snapshot_id=5f9ea3ab-3171-4ec9-b1f1-f341d8fa4f56"
     },
     {
       "case_id": "MCP-BAD-nexus.submit_research",
       "group": "mcp/tools-call",
       "title": "nexus.submit_research invalid call",
-      "verdict": "FAIL",
+      "verdict": "PASS",
       "http_status": 200,
-      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"research_snapshot_id\":null})"
+      "note": "result.isError: No lead found with id 00000000-0000-4000-8000-0000000000ff, or it is not visible to this caller; nothing was written."
     },
     {
       "case_id": "MCP-OK-nexus.submit_message_draft",
@@ -1442,7 +1442,7 @@
       "title": "nexus.submit_message_draft happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: message_version_id=fe6b1c9c-1bdf-4f34-8625-1d8920774342"
+      "note": "result asserted: message_version_id=9cbb5b3c-94a4-4eda-bb89-c3f88da97f2d"
     },
     {
       "case_id": "MCP-BAD-nexus.submit_message_draft",
@@ -1458,7 +1458,7 @@
       "title": "nexus.finish_agent_run happy path",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result asserted: agent_run_id=ded11dbe-a6a1-4059-bce1-aaf54126b56f"
+      "note": "result asserted: agent_run_id=218340cc-82b6-491e-8055-8384f84221be"
     },
     {
       "case_id": "MCP-BAD-nexus.finish_agent_run",
@@ -1474,7 +1474,7 @@
       "title": "create_signal with a fresh idempotency_key",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "signal_id=f4790b89-08ea-41da-8639-8f83d1fa5c36 idempotent=false"
+      "note": "signal_id=d6eec1c2-acc4-4ad7-b590-b03bb24d588c idempotent=false"
     },
     {
       "case_id": "MCP-IDEM-REPLAY",
@@ -1482,7 +1482,7 @@
       "title": "Same key + same payload is replayed, not re-run",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "idempotent=true, same signal_id=f4790b89-08ea-41da-8639-8f83d1fa5c36 (no second row)"
+      "note": "idempotent=true, same signal_id=d6eec1c2-acc4-4ad7-b590-b03bb24d588c (no second row)"
     },
     {
       "case_id": "MCP-IDEM-DIFFERENT-PAYLOAD",
@@ -1490,7 +1490,7 @@
       "title": "Same key + different payload is refused",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "result.isError: \"idempotency_key mcp-idem-1790534044329 was already used for nexus.create_signal with different arguments.\""
+      "note": "result.isError: \"idempotency_key mcp-idem-1790538146368 was already used for nexus.create_signal with different arguments.\""
     },
     {
       "case_id": "MCP-IDEM-KEY-REQUIRED",
@@ -1506,7 +1506,7 @@
       "title": "The same key under a different business is not treated as a replay",
       "verdict": "PASS",
       "http_status": 200,
-      "note": "distinct signal_id=5abe3fef-33e6-4dba-a38d-ae52ea1a1a73 idempotent=false"
+      "note": "distinct signal_id=85789d17-2d36-4a7a-8d0a-4ba9aa67ad9f idempotent=false"
     },
     {
       "case_id": "MCP-NO-KEY-READONLY-REPEAT",
@@ -1599,37 +1599,6 @@
   ],
   "failures": [
     {
-      "case_id": "COMP-TODAY-OTHERUSER-STANDARD",
-      "group": "api/v1/companion/today",
-      "title": "Standard user asks for another user’s queue",
-      "verdict": "FAIL",
-      "endpoint_or_tool": "/api/v1/companion/today?businessId=d0000002-0000-4000-8000-000000000001&userId=<admin>",
-      "method": "GET",
-      "http_status": 500,
-      "request_body": null,
-      "body": "",
-      "note": "500 Internal Server Error with an untyped body: \"\"",
-      "finding": "F-1"
-    },
-    {
-      "case_id": "COMP-BIND-OK",
-      "group": "api/v1/companion/bind",
-      "title": "POST bind a free identity from a fresh browser profile",
-      "verdict": "FAIL",
-      "endpoint_or_tool": "/api/v1/companion/bind",
-      "method": "POST",
-      "http_status": 400,
-      "request_body": {
-        "installId": "baseline-install-0001",
-        "identityId": "d0000005-0000-4000-8000-000000000002",
-        "defaultBusinessId": "d0000002-0000-4000-8000-000000000002",
-        "transfer": false
-      },
-      "body": "{\"error\":\"You do not have permission to do that.\",\"reason\":\"bind_failed\"}",
-      "note": "expected 200 binding, got 400 {\"error\":\"You do not have permission to do that.\",\"reason\":\"bind_failed\"}",
-      "finding": null
-    },
-    {
       "case_id": "ACT-mark-connection-sent-OK",
       "group": "api/v1/companion/actions/[operation]",
       "title": "POST mark-connection-sent with a valid body",
@@ -1638,7 +1607,7 @@
       "method": "POST",
       "http_status": 400,
       "request_body": {
-        "leadId": "69358a9d-f18e-4ff5-b09e-d32507bbe90d",
+        "leadId": "8ae8809a-e236-40b1-b419-fc8227b33150",
         "identityId": "d0000005-0000-4000-8000-000000000002",
         "withNote": true
       },
@@ -1671,7 +1640,7 @@
       "method": "POST",
       "http_status": 400,
       "request_body": {
-        "leadId": "69358a9d-f18e-4ff5-b09e-d32507bbe90d"
+        "leadId": "8ae8809a-e236-40b1-b419-fc8227b33150"
       },
       "body": "{\"error\":\"The request could not be completed.\"}",
       "note": "400 \"The request could not be completed.\" — request rejected by a domain rule, typed",
@@ -1690,13 +1659,13 @@
         "business_key_or_id": "zemnas",
         "payload_type": "candidate",
         "payload": {
-          "full_name": "Baseline Ingest Person 1790534044085",
+          "full_name": "Baseline Ingest Person 1790538146179",
           "job_title": "Content Lead",
-          "company_name": "Northstar 1790534044085",
-          "linkedin_url": "https://www.linkedin.com/in/baseline-ingest-1790534044085"
+          "company_name": "Northstar 1790538146179",
+          "linkedin_url": "https://www.linkedin.com/in/baseline-ingest-1790538146179"
         },
-        "idempotency_key": "baseline-ingest-1790534044085",
-        "observed_at": "2026-09-27T18:34:04.085Z"
+        "idempotency_key": "baseline-ingest-1790538146179",
+        "observed_at": "2026-09-27T19:42:26.179Z"
       },
       "body": "{\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}",
       "note": "expected 200/201 with a leadId, got 400 {\"error\":\"new row violates row-level security policy for table \\\"companies\\\"\"}",
@@ -1728,11 +1697,11 @@
         "name": "nexus.submit_candidate",
         "arguments": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-cand-1790534044329",
+          "idempotency_key": "mcp-cand-1790538146368",
           "full_name": "Baseline MCP Candidate",
           "job_title": "Head of Production",
           "company_name": "Northstar",
-          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-candidate-1790534044329"
+          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-candidate-1790538146368"
         }
       },
       "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"new row violates row-level security policy for table \\\"people\\\"\"}]}}",
@@ -1752,11 +1721,11 @@
         "name": "nexus.create_or_update_lead",
         "arguments": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-lead-1790534044329",
+          "idempotency_key": "mcp-lead-1790538146368",
           "full_name": "Baseline MCP Lead Person",
           "company_name": "Studio 8",
           "job_title": "Content Lead",
-          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-lead-1790534044329"
+          "linkedin_url": "https://www.linkedin.com/in/baseline-mcp-lead-1790538146368"
         }
       },
       "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"new row violates row-level security policy for table \\\"companies\\\"\"}]}}",
@@ -1776,8 +1745,8 @@
         "name": "nexus.submit_profile_capture",
         "arguments": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-cap-1790534044329",
-          "lead_id": "69358a9d-f18e-4ff5-b09e-d32507bbe90d",
+          "idempotency_key": "mcp-cap-1790538146368",
+          "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
           "linkedin_url": "https://www.linkedin.com/in/baseline-verify-person",
           "pasted_content": "Baseline Verify\nHead of Production at Frame House\nMunich, Germany"
         }
@@ -1785,72 +1754,6 @@
       "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"You do not have permission to do that.\"}]}}",
       "note": "200 with isError payload: You do not have permission to do that.",
       "finding": "F-6"
-    },
-    {
-      "case_id": "MCP-BAD-nexus.add_note",
-      "group": "mcp/tools-call",
-      "title": "nexus.add_note invalid call",
-      "verdict": "FAIL",
-      "endpoint_or_tool": "/api/v1/mcp",
-      "method": "POST",
-      "http_status": 200,
-      "request_body": {
-        "method": "tools/call",
-        "name": "nexus.add_note",
-        "arguments": {
-          "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-note-bad-1790534044329",
-          "lead_id": "00000000-0000-4000-8000-0000000000ff",
-          "body": "x"
-        }
-      },
-      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"note_id\\\":null}\"}],\"structuredContent\":{\"note_id\":null},\"idempotent\":false}}",
-      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"note_id\":null})",
-      "finding": "F-3"
-    },
-    {
-      "case_id": "MCP-BAD-nexus.create_task",
-      "group": "mcp/tools-call",
-      "title": "nexus.create_task invalid call",
-      "verdict": "FAIL",
-      "endpoint_or_tool": "/api/v1/mcp",
-      "method": "POST",
-      "http_status": 200,
-      "request_body": {
-        "method": "tools/call",
-        "name": "nexus.create_task",
-        "arguments": {
-          "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-task-bad-1790534044329",
-          "lead_id": "00000000-0000-4000-8000-0000000000ff",
-          "title": "x"
-        }
-      },
-      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"task_id\\\":null}\"}],\"structuredContent\":{\"task_id\":null},\"idempotent\":false}}",
-      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"task_id\":null})",
-      "finding": "F-3"
-    },
-    {
-      "case_id": "MCP-BAD-nexus.submit_research",
-      "group": "mcp/tools-call",
-      "title": "nexus.submit_research invalid call",
-      "verdict": "FAIL",
-      "endpoint_or_tool": "/api/v1/mcp",
-      "method": "POST",
-      "http_status": 200,
-      "request_body": {
-        "method": "tools/call",
-        "name": "nexus.submit_research",
-        "arguments": {
-          "business_id": "d0000002-0000-4000-8000-000000000001",
-          "idempotency_key": "mcp-res-bad-1790534044329",
-          "lead_id": "00000000-0000-4000-8000-0000000000ff",
-          "summary": "x"
-        }
-      },
-      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"research_snapshot_id\\\":null}\"}],\"structuredContent\":{\"research_snapshot_id\":null},\"idempotent\":false}}",
-      "note": "silent no-op: HTTP 200 result reports success but wrote nothing ({\"research_snapshot_id\":null})",
-      "finding": "F-3"
     },
     {
       "case_id": "MCP-MUTATION-WITHOUT-KEY-INSERTS",
@@ -1864,8 +1767,8 @@
         "name": "nexus.add_note",
         "arguments": {
           "business_id": "d0000002-0000-4000-8000-000000000001",
-          "lead_id": "69358a9d-f18e-4ff5-b09e-d32507bbe90d",
-          "body": "no-key note 1790534044329"
+          "lead_id": "8ae8809a-e236-40b1-b419-fc8227b33150",
+          "body": "no-key note 1790538146368"
         }
       },
       "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"idempotency_key is required for nexus.add_note\"}]}}",
@@ -1877,6 +1780,7 @@
     {
       "id": "F-1",
       "severity": "High",
+      "status": "FIXED",
       "title": "/api/v1/companion/today turns a database refusal into an untyped HTTP 500",
       "code": "apps/web/src/app/api/v1/companion/today/route.ts:33-38",
       "request": "GET /api/v1/companion/today?businessId=<zemnas>&userId=<admin id> with osama@nexus.local (standard user, zemnas access)",
@@ -1888,6 +1792,7 @@
     {
       "id": "F-2",
       "severity": "High",
+      "status": "OPEN",
       "title": "Service-token writes fail with RLS 42501 on the business-less canonical tables",
       "code": "packages/db/migrations/0013_rls.sql:477-487 (`companies_insert`), 518-528 (`people_insert`); hit from apps/web/src/lib/repo/ingest.ts:184-211",
       "request": "POST /api/v1/mcp {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"nexus.submit_candidate\",\"arguments\":{\"business_id\":\"d0000002-…-0001\",\"idempotency_key\":\"mcp-cand-…\",\"full_name\":\"Baseline MCP Candidate\",\"company_name\":\"Northstar\",\"job_title\":\"Head of Production\",\"linkedin_url\":\"…\"}}}",
@@ -1902,6 +1807,7 @@
     {
       "id": "F-3",
       "severity": "High",
+      "status": "FIXED",
       "title": "Three MCP write tools report success while writing nothing",
       "code": "apps/web/src/app/api/v1/mcp/route.ts:371-380 (`add_note`), 391-407 (`create_task`), 438-447 (`submit_research`)",
       "request": "POST /api/v1/mcp tools/call nexus.add_note with lead_id = 00000000-0000-4000-8000-0000000000ff (valid UUID, no such lead)",
@@ -1915,6 +1821,7 @@
     {
       "id": "F-4",
       "severity": "Medium",
+      "status": "PARTIAL",
       "title": "Idempotency metadata contradicts itself between the catalogue and the dispatch table",
       "code": "apps/web/src/app/api/v1/mcp/tool-schemas.ts:204-223 (`MCP_TOOLS_REQUIRING_IDEMPOTENCY`) vs apps/web/src/app/api/v1/mcp/route.ts:120-410 (`TOOL_HANDLERS[*].needsIdempotencyKey`)",
       "request": "POST /api/v1/mcp tools/call nexus.add_note with no idempotency_key (the handler table says this is unnecessary)",
@@ -1927,6 +1834,7 @@
     {
       "id": "F-5",
       "severity": "Medium",
+      "status": "FIXED",
       "title": "nexus.finish_agent_run’s default state can never be inserted",
       "code": "apps/web/src/app/api/v1/mcp/route.ts:499 (`stringArg(args, 'state') ?? 'completed'`) vs packages/db/migrations/0009_integrations_audit.sql:123-125 (`agent_runs_state_check`)",
       "request": "POST /api/v1/mcp tools/call nexus.finish_agent_run with { business_id, agent_name } and no state",
@@ -1938,6 +1846,7 @@
     {
       "id": "F-6",
       "severity": "Medium",
+      "status": "OPEN",
       "title": "nexus.submit_profile_capture is refused for a lead the caller can otherwise act on",
       "code": "apps/web/src/app/api/v1/mcp/route.ts:320-338 → apps/web/src/lib/repo/profile-capture.ts",
       "request": "POST /api/v1/mcp tools/call nexus.submit_profile_capture with a real lead id, its LinkedIn URL and pasted content",
@@ -1949,6 +1858,7 @@
     {
       "id": "F-7",
       "severity": "Medium",
+      "status": "PARTIAL",
       "title": "Three companion operations refuse the administrator with a blanket message",
       "code": "apps/web/src/app/api/v1/companion/actions/[operation]/route.ts:84-127 → apps/web/src/lib/repo/leads.ts (`markConnectionSent`, `markMessageSent`, `startReactivation`)",
       "request": "POST /api/v1/companion/actions/mark-connection-sent { leadId: <real zemnas lead>, identityId: <real active identity>, withNote: true } as admin",
@@ -1962,6 +1872,7 @@
     {
       "id": "F-8",
       "severity": "Low",
+      "status": "OPEN",
       "title": "nexus.get_today_queue answers a null/unknown user with an empty queue",
       "code": "apps/web/src/app/api/v1/mcp/route.ts:410-427",
       "request": "POST /api/v1/mcp tools/call nexus.get_today_queue with user_id = 00000000-0000-4000-8000-0000000000ff",
@@ -1973,6 +1884,7 @@
     {
       "id": "F-9",
       "severity": "Info",
+      "status": "NO-EVIDENCE",
       "title": "The two scope vocabularies are disjoint, so the contract and the database disagree about a token’s authority",
       "code": "packages/core/src/contracts.ts:535-554 (`MCP_TOOL_SCOPES`) and apps/web/src/app/api/v1/mcp/route.ts:675 (`handler.scope`) vs packages/db/migrations/0013_rls.sql (every `is_api_client_allowed(...)` call)",
       "request": "A service token carrying only the contract scopes (`candidate:submit`, `signal:create`, …) then calling a write tool",
@@ -1982,8 +1894,9 @@
     {
       "id": "F-10",
       "severity": "Info",
+      "status": "FIXED",
       "title": "Known dead code: `apps/web/middleware.ts` never executes",
-      "code": "apps/web/middleware.ts",
+      "code": "apps/web/middleware.ts (deleted)",
       "request": "GET /api/v1/companion/me with Origin: chrome-extension://…",
       "response": "200/401 with `access-control-allow-origin: *` from the next.config.ts rule; a preflight returns 204 with the methods and headers advertised.",
       "evidence_cases": [
