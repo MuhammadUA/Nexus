@@ -58,6 +58,22 @@ ui-audit/
 playwright-report/
 test-results/
 
+# Verification harness output.
+#
+# The scripts under `scripts/baseline-verify/` are kept because they are the reproducible record of
+# the API/MCP baseline run: `harness.mjs` drives the live endpoint, `report.mjs` renders the docs and
+# `results.json` holds the recorded exchanges. What must never be committed is what they *emit* — in
+# particular `secrets.json`, which contains raw live `nxs_` service tokens created for the run, plus
+# the token cookies and logs. Those are generated, contain working credentials, and are recreated by
+# re-running the harness.
+scripts/baseline-verify/secrets.json
+**/secrets.json
+**/*-cookie.txt
+**/cookie.txt
+**/.verify-hold/
+**/.verify-hold-log.txt
+**/tsconfig.*-check.json
+
 # Ignore all environment variants except templates
 .env.*
 !.env.example

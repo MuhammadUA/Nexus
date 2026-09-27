@@ -1,0 +1,10 @@
+﻿import { readFileSync } from "node:fs";
+const s = JSON.parse(readFileSync("scripts/baseline-verify/secrets.json","utf8"));
+const base="http://127.0.0.1:3000";
+const login = await (await fetch(base+"/api/v1/companion/session",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"osama@nexus.local",password:"demo-password-1234",label:"probe500"})})).json();
+const adminId = s.users.find(u=>u.email==="admin@nexus.local").id;
+const zemnas = s.businesses.find(b=>b.key==="zemnas").id;
+const r = await fetch(`${base}/api/v1/companion/today?businessId=${zemnas}&userId=${adminId}`,{headers:{authorization:`Bearer ${login.token}`}});
+console.log("status", r.status);
+console.log("headers", JSON.stringify(Object.fromEntries(r.headers.entries())));
+console.log("body", (await r.text()).slice(0,2000));
