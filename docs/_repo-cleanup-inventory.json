@@ -1,0 +1,436 @@
+{
+  "generatedAt": "2026-09-27T18:17:51Z",
+  "repoPath": "E:/CRM/CRM-integration",
+  "branch": "integration/final",
+  "headCommit": "9f00918",
+  "snapshotNote": "The working tree is LIVE: another agent is running `pnpm install` and builds in this worktree. `node_modules/`, `apps/web/.next/` and `apps/web/.data/` appeared mid-inventory. Counts of untracked/ignored entries are point-in-time for generatedAt.",
+  "repoSizeBytes": 766650521,
+  "repoSizeExcludingGitBytes": 766650521,
+  "repoSizeNote": "766650521 bytes = 731.1 MiB, excluding `.git` (.git is a worktree pointer file; real gitdir lives at E:/CRM/CRM/.git/worktrees/CRM-integration).",
+  "trackedFileCount": 3032,
+  "trackedSourceBytes": 3648212,
+  "trackedSourceFileCount": 326,
+  "trackedCommittedArtifactBytes": 92607328,
+  "trackedCommittedArtifactFileCount": 2706,
+  "totals": {
+    "ignoredClutterBytes": 197810249,
+    "untrackedClutterBytes": 5748,
+    "committedClutterBytes": 92607328,
+    "removableExcludingNodeModulesBytes": 303294829,
+    "nodeModulesBytes": 472517628,
+    "nodeModulesDisposition": "keep"
+  },
+  "counts": {
+    "trackedFindings": 1,
+    "ignoredFindings": 6,
+    "untrackedFindings": 2,
+    "note": "1 tracked finding category covering 2706 committed PGlite files; 2 distinct untracked paths; 6 ignored top-level paths (2 of which are log files inside the untracked dir)."
+  },
+  "categories": [
+    {
+      "name": "committed-build-and-generated-artifacts",
+      "displayName": "Committed generated artifacts / stale local database copies (TRACKED)",
+      "totalBytes": 92607328,
+      "entries": [
+        {
+          "path": "apps/web/.data-corrupt-20260925165536/",
+          "tracking": "tracked",
+          "bytes": 54589872,
+          "fileCount": 1353,
+          "reproducible": true,
+          "disposition": "safe-to-remove",
+          "reason": "A full PGlite/PostgreSQL data directory (base/, global/, pg_wal/, pg_xact/, postgresql.conf, pg_hba.conf, postmaster.pid, .s.PGSQL.5432.lock.out) committed to git in commit 4e0d7c4 ('NEXUS baseline before parallel frontend and backend remediation'). Zero source references: `git grep -n -I -e data-corrupt` over all tracked files returns exit 1 (no match). Not matched by .gitignore patterns `apps/web/.data/` or `.data/` because the directory name is `.data-corrupt-<stamp>`, not exactly `.data` -> it was never ignored, so it was committed normally. Regenerable: `pnpm --filter @nexus/db run verify` applies all 25 migrations to a fresh embedded database; `node --experimental-strip-types apps/web/scripts/seed-demo.ts` rebuilds demo content.",
+          "removalRequiresCommit": true,
+          "regenerationCommand": "pnpm --filter @nexus/db run verify && node --experimental-strip-types apps/web/scripts/seed-demo.ts"
+        },
+        {
+          "path": "apps/web/.data-broken-171559/",
+          "tracking": "tracked",
+          "bytes": 38017456,
+          "fileCount": 1353,
+          "reproducible": true,
+          "disposition": "safe-to-remove",
+          "reason": "Sibling PGlite data directory committed in the same commit 4e0d7c4. The name records it as a broken/corrupt database snapshot kept in-repo. Zero source references: `git grep -n -I -e data-broken` over all tracked files returns exit 1. Contains a stale postmaster.pid and a .s.PGSQL.5432.lock.out, i.e. state from a dead server process. Identical file count (1353) to the sibling directory, confirming it is a duplicated database snapshot rather than distinct source. Same regeneration path as above.",
+          "removalRequiresCommit": true,
+          "regenerationCommand": "pnpm --filter @nexus/db run verify && node --experimental-strip-types apps/web/scripts/seed-demo.ts"
+        }
+      ]
+    },
+    {
+      "name": "ignored-build-output",
+      "displayName": "Ignored build output",
+      "totalBytes": 160628348,
+      "entries": [
+        {
+          "path": "apps/web/.next/",
+          "tracking": "ignored",
+          "bytes": 160628348,
+          "fileCount": 428,
+          "reproducible": true,
+          "disposition": "safe-to-remove",
+          "reason": "Next.js build cache/output, matched by .gitignore line 2 `.next/`. NOT tracked (`git ls-files apps/web/.next` is empty). Appeared during this inventory because another agent ran a build. Regenerable with `pnpm --filter @nexus/web run build`.",
+          "regenerationCommand": "pnpm --filter @nexus/web run build"
+        }
+      ]
+    },
+    {
+      "name": "ignored-local-database",
+      "displayName": "Ignored local embedded database state",
+      "totalBytes": 37172649,
+      "entries": [
+        {
+          "path": "apps/web/.data/",
+          "tracking": "ignored",
+          "bytes": 37172649,
+          "fileCount": 1353,
+          "reproducible": true,
+          "disposition": "safe-to-remove",
+          "reason": "Local PGlite runtime state, matched by .gitignore line 18 `apps/web/.data/`. NOT tracked. This is the directory the application actually reads: apps/web/scripts/smoke-gateway.mjs:21 and seed-demo.ts:93 use `apps/web/.data/nexus`. Regenerable: `pnpm db:reset` (packages/db verify.ts applies all 25 migrations), then optional `node --experimental-strip-types apps/web/scripts/seed-demo.ts` for demo data. Note it is single-process only and a real deployment must set DATABASE_URL instead.",
+          "regenerationCommand": "pnpm db:reset && node --experimental-strip-types apps/web/scripts/seed-demo.ts"
+        }
+      ]
+    },
+    {
+      "name": "ignored-dependencies",
+      "displayName": "Installed dependencies (EXPECTED — keep)",
+      "totalBytes": 472517628,
+      "entries": [
+        {
+          "path": "node_modules/",
+          "tracking": "ignored",
+          "bytes": 472517628,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "pnpm workspace dependency tree (230 nested node_modules directories across the workspace). Matched by .gitignore line 9 `node_modules/`; NOT tracked. Expected and required. Must NOT be recommended as cleanup clutter — it is currently being populated by a running `pnpm install`, and removing it would break the install in flight. Only removing/rebuilding it via `pnpm install` would be legitimate."
+        },
+        {
+          "path": "apps/extension/node_modules/",
+          "tracking": "ignored",
+          "bytes": 17920,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "Workspace package symlink/dependency directory installed by pnpm. Ignored, not tracked, expected."
+        },
+        {
+          "path": "apps/web/node_modules/",
+          "tracking": "ignored",
+          "bytes": 16384,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "Workspace package symlink/dependency directory installed by pnpm. Ignored, not tracked, expected."
+        },
+        {
+          "path": "packages/core/node_modules/",
+          "tracking": "ignored",
+          "bytes": 0,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "Workspace package symlink/dependency directory installed by pnpm. Ignored, not tracked, expected."
+        },
+        {
+          "path": "packages/db/node_modules/",
+          "tracking": "ignored",
+          "bytes": 0,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "Workspace package symlink/dependency directory installed by pnpm. Ignored, not tracked, expected."
+        },
+        {
+          "path": "packages/ui/node_modules/",
+          "tracking": "ignored",
+          "bytes": 0,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "Workspace package symlink/dependency directory installed by pnpm. Ignored, not tracked, expected."
+        }
+      ]
+    },
+    {
+      "name": "scratch-and-evidence-created-during-remediation",
+      "displayName": "Live scratch/verification folder created by the concurrent agent (DO NOT REMOVE)",
+      "totalBytes": 9252,
+      "entries": [
+        {
+          "path": "scripts/baseline-verify/",
+          "tracking": "untracked",
+          "bytes": 9252,
+          "reproducible": false,
+          "disposition": "keep",
+          "reason": "Appeared DURING this inventory (it was absent at the first `git status`). Contains db-setup.mjs (5748 bytes, untracked) plus build.log (1572 bytes) and build2.log (1932 bytes) which are gitignored by the `*.log` rule. This is active working state belonging to the other agent that is running. It looks like scratch/temp output, so a future cleanup may be tempted to delete it — it must NOT be removed while that agent is working.",
+          "caution": "DO NOT DELETE: active work-in-progress by the concurrent agent."
+        },
+        {
+          "path": "scripts/baseline-verify/build.log",
+          "tracking": "ignored",
+          "bytes": 1572,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "Build log inside the active scratch dir. Ignored by the `*.log` rule in .gitignore. Regenerable by re-running the build, but it is live evidence for the concurrent agent's work."
+        },
+        {
+          "path": "scripts/baseline-verify/build2.log",
+          "tracking": "ignored",
+          "bytes": 1932,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "Second build log inside the active scratch dir. Ignored by the `*.log` rule. Same caution as above."
+        }
+      ]
+    },
+    {
+      "name": "os-and-editor-cache",
+      "displayName": "OS / editor cache files",
+      "totalBytes": 0,
+      "entries": [
+        {
+          "path": "(none found)",
+          "tracking": "n/a",
+          "bytes": 0,
+          "reproducible": false,
+          "disposition": "keep",
+          "reason": "No tracked or untracked `.DS_Store`, `Thumbs.db`, `.idea/`, or `.vscode/` settings exist in this worktree. `git ls-files '*.DS_Store' 'Thumbs.db' '.idea/*' '.vscode/*'` returned nothing, and a recursive scan for ignored/untracked OS caches found none. .gitignore already covers `.DS_Store`, `Thumbs.db`, `.idea/`, and `.vscode/*` (with `!.vscode/extensions.json`). Nothing to do."
+        }
+      ]
+    },
+    {
+      "name": "logs-test-reports-coverage-screenshots-archives",
+      "displayName": "Logs, test reports, coverage, screenshots, archives/zips (tracked and ignored)",
+      "totalBytes": 0,
+      "note": "The only log files present in this worktree are scripts/baseline-verify/build.log + build2.log (3504 bytes total), which are counted once under the scratch-and-evidence category and are not double-counted here.",
+      "entries": [
+        {
+          "path": "(tracked *.log / coverage / test-results / playwright-report / .vitest / .work / *.zip / *.tar / *.tsbuildinfo)",
+          "tracking": "n/a",
+          "bytes": 0,
+          "reproducible": false,
+          "disposition": "keep",
+          "reason": "NOTHING FOUND. Verified by enumeration over `git ls-files`: zero tracked *.log, zero tracked *.zip/*.tar/*.tgz/*.7z/*.rar, zero tracked *.tsbuildinfo, zero tracked .next/out/dist/build/coverage/.vitest/playwright-report/test-results/.work/.data paths, zero tracked *.png/*.jpg/*.jpeg/*.webp/*.gif (no committed screenshots or audit image blobs). The only tracked binary blobs in the repo are the two committed PGlite directories reported above. This is a genuinely clean repository with respect to the usual artifact buckets."
+        }
+      ]
+    },
+    {
+      "name": "duplicate-generated-artifacts",
+      "displayName": "Duplicate generated artifacts across apps/web, apps/extension and repo root",
+      "totalBytes": 92607328,
+      "entries": [
+        {
+          "path": "apps/web/.data-corrupt-20260925165536/ vs apps/web/.data-broken-171559/ vs apps/web/.data/",
+          "tracking": "tracked",
+          "bytes": 92607328,
+          "reproducible": true,
+          "disposition": "safe-to-remove",
+          "reason": "Three copies of the same generated artifact class. All three contain exactly 1353 files with the same layout (nexus/base/{1,4,5}, nexus/global, nexus/pg_wal, nexus/pg_xact, config files). Two copies are COMMITTED to git (~88.3 MB, tracked); the third (apps/web/.data/) is the live ignored one that the app actually uses. Committing two of three copies is pure duplication of regenerable database state.",
+          "note": "`apps/extension/dist/` and a repo-root `dist/` do NOT exist in this worktree and are NOT tracked; see extension-dist entry."
+        },
+        {
+          "path": "apps/extension/dist/",
+          "tracking": "n/a",
+          "bytes": 0,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "Does not exist on disk and is NOT tracked (`git ls-files apps/extension/dist` empty; `Test-Path` false). The extension build writes here, and .gitignore line 5 (`dist/`) covers it, so it is correctly ignored and correctly absent. If a future cleanup ever removes it, it MUST be rebuilt with `pnpm --filter @nexus/extension run build` before the extension can be loaded. Nothing to remove today."
+        },
+        {
+          "path": "repo-root dist/ and build/",
+          "tracking": "n/a",
+          "bytes": 0,
+          "reproducible": true,
+          "disposition": "keep",
+          "reason": "Do not exist in this worktree and are not tracked. Covered by .gitignore lines 4-6 (`dist/`, `build/`). No finding."
+        }
+      ]
+    },
+    {
+      "name": "stale-audit-output-in-repo",
+      "displayName": "Audit output inside the repo (docs/)",
+      "totalBytes": 218272,
+      "entries": [
+        {
+          "path": "docs/",
+          "tracking": "tracked",
+          "bytes": 218272,
+          "fileCount": 11,
+          "reproducible": false,
+          "disposition": "keep",
+          "reason": "11 tracked markdown/JSON documents: ACCEPTANCE_AUDIT.md (21.0 KB), CODEX_IMPLEMENTATION_AUDIT.json (15.3 KB), CODEX_IMPLEMENTATION_AUDIT.md (43.5 KB), DB_CONTRACT.md (25.0 KB), DEPLOYMENT.md (12.5 KB), DESIGN_TOKENS.md (3.3 KB), EXTENSION_ACCEPTANCE_AUDIT.md (22.8 KB), EXTENSION_SECURITY_AUDIT.md (11.3 KB), FRONTEND_CONTRACTS.md (21.2 KB), IMPLEMENTATION_MATRIX.md (18.8 KB), UI_ACCEPTANCE_AUDIT.md (19.2 KB). These are TEXT audit/contract documents, not image or screenshot blobs. The brief classifies audit reports as MUST-NOT-DELETE; also CODEX_IMPLEMENTATION_AUDIT.json is a schema/implementation contract record. Retained. Total is only 0.21 MB, i.e. not a size problem."
+        }
+      ]
+    }
+  ],
+  "mustNotDelete": [
+    { "path": "packages/db/migrations/", "reason": "25 SQL migration files (0001_extensions_and_helpers.sql .. 0025_identity_lifecycle.sql) that define the entire schema, RLS policies, triggers, functions and grants. Irreplaceable source of truth." },
+    { "path": "packages/db/seed/", "reason": "fixtures.ts test seed data." },
+    { "path": "apps/web/scripts/seed-demo.ts", "reason": "Documented demo seed script (23.6 KB). This is the regeneration path for local database state." },
+    { "path": "apps/web/scripts/seed-demo-operational.ts", "reason": "Operational demo seed (47.7 KB). Currently modified in the working tree by the concurrent agent." },
+    { "path": "apps/web/scripts/bootstrap-admin.ts", "reason": "Documented admin bootstrap script (referenced by the `bootstrap-admin` npm script)." },
+    { "path": "apps/web/scripts/smoke-gateway.mjs", "reason": "Documented smoke test (`pnpm --filter @nexus/web run smoke`) and the canonical proof of the apps/web/.data/nexus path." },
+    { "path": "apps/web/scripts/smoke-login.mjs", "reason": "Smoke test script." },
+    { "path": "apps/web/scripts/probe-ui-queries.ts", "reason": "UI query probe evidence tool." },
+    { "path": "apps/web/scripts/dump-ui-ids.ts", "reason": "UI id dump evidence tool." },
+    { "path": "apps/web/scripts/cleanup-verify-business.ts", "reason": "Verification script." },
+    { "path": "apps/web/scripts/serve.mjs", "reason": "`start` script entry point (serve.mjs)." },
+    { "path": "apps/web/scripts/codemod-*.mjs", "reason": "3 codemod scripts (action-guard, route-guard, route-guard-business) that produced the enforced guard patterns; documented as provenance." },
+    { "path": "apps/web/src/", "reason": "174 tracked application source files (app routes, components, repo layer, lib)." },
+    { "path": "apps/web/test/", "reason": "17 tracked test files plus stubs." },
+    { "path": "apps/web/.env.example", "reason": "Env TEMPLATE (explicitly protected by .gitignore `!.env.example`)." },
+    { "path": "apps/web/CONTRIBUTING.md", "reason": "Contributor documentation; also the design-token usage reference." },
+    { "path": "apps/extension/src/", "reason": "12 tracked extension source files (sidepanel.tsx, background.ts, content.ts, linkedin-adapter.ts, mount.tsx, api.ts, chrome-actions.ts, use-list-state.ts, config.ts, types.ts, globals.d.ts, linkedin-adapter.test.ts)." },
+    { "path": "apps/extension/e2e/", "reason": "8 tracked Playwright spec/harness files." },
+    { "path": "apps/extension/static/sidepanel.html", "reason": "Extension host page; the side panel cannot load without it." },
+    { "path": "apps/extension/scripts/build.mjs", "reason": "The documented build command implementation for the extension." },
+    { "path": "apps/extension/scripts/package.mjs", "reason": "The in-repo ZIP packer (writes the distributable zip). Must be kept even though no committed zip exists — it is how archives are produced." },
+    { "path": "apps/extension/package.json", "reason": "Extension manifest package definition (MV3 host)." },
+    { "path": "packages/ui/src/", "reason": "Shared design system: index.ts, tokens.ts, primitives.tsx, app-shell.tsx, companion-shell.tsx, domain.tsx, tabs.tsx, styles.css (34.5 KB). Consumed by BOTH hosts, which is what makes the shared-design-language claim true." },
+    { "path": "packages/core/src/", "reason": "Domain contract package: contracts.ts, permissions.ts, dedupe.ts, messaging-rules.ts, normalize.ts, sequence-engine.ts, today-engine.ts, vocabulary.ts plus their tests. Schema/behaviour contracts." },
+    { "path": "packages/db/src/", "reason": "client.ts, index.ts, migrate.ts, migrations-dir.ts. migrations-dir.ts implements the NEXUS_MIGRATIONS_DIR contract and the cwd-relative resolution used by the bundled app." },
+    { "path": "product/Nexus_CRM_Master_Spec_v1.json", "reason": "Master product SPEC (56.5 KB, tracked). Source of truth for the whole build." },
+    { "path": "product/figma/Nexus_User_CRM_Companion_Final.fig", "reason": "Figma reference (179.3 KB, tracked). Brief explicitly protects Figma refs." },
+    { "path": "product/figma/Nexus_Admin_Backend_Final.fig", "reason": "Figma reference (290.2 KB, tracked). Brief explicitly protects Figma refs." },
+    { "path": "docs/", "reason": "All 11 audit/contract/spec documents, including CODEX_IMPLEMENTATION_AUDIT.json and UI_ACCEPTANCE_AUDIT.md. Brief explicitly protects audit reports." },
+    { "path": "pnpm-lock.yaml", "reason": "Single lockfile for the pnpm workspace. Brief explicitly protects lockfiles." },
+    { "path": "pnpm-workspace.yaml", "reason": "Declares apps/* and packages/* workspace membership." },
+    { "path": "package.json", "reason": "Root manifest with the documented build/test/verify/db:reset scripts." },
+    { "path": "tsconfig.base.json", "reason": "Shared TypeScript config." },
+    { "path": "eslint.config.mjs", "reason": "Lint configuration (`pnpm lint`)." },
+    { "path": ".gitignore", "reason": "The ignore rules this inventory relies on; itself source of truth." },
+    { "path": "scripts/repair-encoding.mjs", "reason": "Encoding-repair tooling (provenance for the NX-007 double-encoded UTF-8 fix)." },
+    { "path": "scripts/baseline-verify/", "reason": "ACTIVE work-in-progress of the concurrent agent. Do not remove." },
+    { "path": ".vscode/extensions.json", "reason": "The one editor file explicitly un-ignored by .gitignore; shared recommendation, not user-specific." },
+    { "path": "external: E:/CRM/frontend-comparison/", "reason": "16.04 MB external historical evidence. Explicitly out of scope for deletion." },
+    { "path": "external: E:/CRM/frontend-live-figma-reaudit/", "reason": "4.56 MB external historical evidence. Explicitly out of scope for deletion." },
+    { "path": "external: E:/CRM/ui-audit/", "reason": "8.92 MB external historical evidence. Explicitly out of scope for deletion." },
+    { "path": "other worktree: E:/CRM/CRM (codex/figma-frontend)", "reason": "DO NOT MODIFY. Contains 5 modified packages/ui + core files that appear to be the source of the integration branch's uncommitted app-shell/permissions changes." },
+    { "path": "other worktree: E:/CRM/CRM-backend (backend/remediation)", "reason": "DO NOT MODIFY. Contains 4 untracked docs/FRONTEND_COMPARISON_AUDIT.{json,md} and FRONTEND_LIVE_FIGMA_REAUDIT.{json,md} - historical evidence." }
+  ],
+  "deadCodeCandidates": [
+    {
+      "kind": "unused-dependency",
+      "path": "packages/db/package.json",
+      "package": "@nexus/core",
+      "section": "dependencies",
+      "proof": "`git grep -I -n '@nexus/core' -- packages/db` returns exactly one hit: packages/db/package.json:23 (the declaration itself). No file under packages/db/src or packages/db/scripts imports or mentions it. Contrast: apps/web genuinely imports it in many files.",
+      "confidence": "high",
+      "disposition": "needs-proof"
+    },
+    {
+      "kind": "unused-dependency",
+      "path": "packages/db/package.json",
+      "package": "zod",
+      "section": "dependencies",
+      "proof": "`git grep -I -n -w 'zod' -- packages/db` returns exactly one hit: packages/db/package.json:24 (the declaration itself). No import of zod anywhere under packages/db. (zod IS genuinely used in packages/core, so this is not a repo-wide false positive.)",
+      "confidence": "high",
+      "disposition": "needs-proof"
+    },
+    {
+      "kind": "unused-dependency",
+      "path": "apps/extension/package.json",
+      "package": "@nexus/core",
+      "section": "dependencies",
+      "proof": "`git grep -I -n '@nexus/core' -- apps/extension` returns exactly one hit: apps/extension/package.json:19 (the declaration itself). The extension imports only '@nexus/ui' (apps/extension/src/sidepanel.tsx:36). No extension source file references @nexus/core.",
+      "confidence": "high",
+      "disposition": "needs-proof"
+    },
+    {
+      "kind": "unused-export",
+      "path": "packages/ui/src/primitives.tsx",
+      "symbols": ["ErrorState", "LoadingState", "MessageBlock", "Overline", "SectionTitle", "Skeleton", "Timeline", "TimelineDot", "TimelineItem", "VisuallyHidden"],
+      "proof": "Each symbol was searched repo-wide with `git grep -I -l -w <Symbol>`. A first pass suggested they were unused, but the stronger check showed they DO appear in apps/web/CONTRIBUTING.md (the design-kit documentation table) and several are genuinely rendered (MessageBlock, Timeline, TimelineItem appear in extension/web sources). Therefore these are NOT dead code - they are documented public API of the design system. Reported here only to record that the initial 'unused export' signal was a documentation-only match, not real usage.",
+      "confidence": "low",
+      "disposition": "keep"
+    },
+    {
+      "kind": "unused-export",
+      "path": "packages/ui/src/app-shell.tsx",
+      "symbols": ["Breadcrumbs"],
+      "proof": "`git grep -I -l -w Breadcrumbs` returns exactly ONE file: packages/ui/src/app-shell.tsx — its own definition. It is not referenced by any web page, extension source, test, or documentation. It is exported publicly via packages/ui/src/index.ts (export * from './app-shell.js'), so it is reachable API but currently unrendered.",
+      "confidence": "high",
+      "disposition": "needs-proof"
+    },
+    {
+      "kind": "unused-export",
+      "path": "packages/ui/src/domain.tsx",
+      "symbols": ["CountChip", "leadStateAccent", "leadStateLabel", "ProvenanceBlock"],
+      "proof": "For each symbol `git grep -I -l -w <Symbol>` returns exactly one file: packages/ui/src/domain.tsx (its own definition). No page, component, test or doc references them. All four are re-exported publicly through packages/ui/src/index.ts. Note leadStateLabel/leadStateAccent look like the intended values but the UI renders lead state via the LeadStatusChip component instead, so they are likely superseded helpers rather than missing wiring.",
+      "confidence": "high",
+      "disposition": "needs-proof"
+    },
+    {
+      "kind": "unused-export",
+      "path": "packages/ui/src/companion-shell.tsx",
+      "symbols": ["SelectorOption"],
+      "proof": "`git grep -I -l -w SelectorOption` returns exactly one file: packages/ui/src/companion-shell.tsx (its own definition, an exported interface). Not referenced anywhere else, including the extension which is the only consumer of companion-shell.",
+      "confidence": "high",
+      "disposition": "needs-proof"
+    },
+    {
+      "kind": "orphan-css",
+      "path": "packages/ui/src/styles.css",
+      "symbols": ["nx-companion__segmented", "nx-nav__count", "nx-spacer"],
+      "proof": "150 class names are defined in styles.css. For each, `git grep -I -l -w <class>` was run over *.ts/*.tsx. These three have EXACTLY ONE hit each — the CSS rule that defines them (styles.css:1213, :621, :778) — with no literal or template-literal consumer in any TSX. Careful control: modifier classes that initially looked unused (nx-alert--green, nx-chip--red, nx-btn--danger, nx-grid--3, nx-stack--lg, nx-message--inbound, nx-timeline__dot--*) were disproven as dead: they are built dynamically, e.g. packages/ui/src/primitives.tsx:514 `nx-alert--${accent}`, :163 `nx-chip--${accent}`, :137 `nx-btn--${variant}`, :670 `nx-grid--${cols}`, :638 `nx-stack--${size}`, :544 ``nx-timeline__dot--${dot}``, :581 ``nx-message--${direction}``. Only the three above have neither form of consumer.",
+      "confidence": "medium",
+      "disposition": "needs-proof"
+    },
+    {
+      "kind": "orphan-file-investigated-and-cleared",
+      "path": "packages/ui/src/tabs.tsx",
+      "symbols": ["Tabs", "TabItem", "TabsProps"],
+      "proof": "Initially suspected orphan because packages/ui/src/index.ts does NOT list './tabs.js' and no file imports './tabs'. DISPROVEN: packages/ui/src/primitives.tsx:528 re-exports it (`export { Tabs, type TabItem, type TabsProps } from './tabs.js';`), so it reaches consumers through the barrel, and it is genuinely rendered at apps/web/src/app/b/[slug]/duplicates/page.tsx:209. NOT dead code.",
+      "confidence": "high",
+      "disposition": "keep"
+    },
+    {
+      "kind": "dead-route-check",
+      "path": "apps/web/src/app/**/page.tsx",
+      "proof": "All 44 page.tsx routes were extracted and each route's last path segment was searched as a literal '/segment' across apps/web/src and packages/core/src. EVERY route has at least one inbound reference. The weakest is /my-trash with 1 inbound reference, and it is a REAL one: packages/core/src/permissions.ts:738 registers `{ route: '/my-trash', ... }` and :1045 adds a nav item `{ label: 'Trash', route: '/my-trash', permission: 'trash.view' }`. Conclusion: NO orphaned/dead routes.",
+      "confidence": "high",
+      "disposition": "keep"
+    },
+    {
+      "kind": "false-positive-cleared",
+      "path": "packages/db/package.json / apps/web/package.json / packages/ui/package.json",
+      "proof": "A naive import-scan flagged @types/*, typescript and vitest as 'unused' in several packages, and react/react-dom/next/@electric-sql/pglite/zod in apps/web. These are false positives: @types/* and typescript are consumed by the compiler via tsconfig (`types`/`lib` resolution) without an import statement; vitest is the test runner invoked by the `test` npm script; next/react/react-dom are used implicitly by the Next.js/JSX runtime (no explicit import needed with the modern transform); @electric-sql/pglite is imported in packages/db/scripts/verify.ts. Not reported as removals.",
+      "confidence": "high",
+      "disposition": "keep"
+    }
+  ],
+  "proposedRemovals": [
+    {
+      "path": "apps/web/.data-corrupt-20260925165536/",
+      "bytes": 54589872,
+      "tracking": "tracked",
+      "reason": "Committed (tracked) stale/corrupt PGlite database snapshot with zero source references; pure duplicate of regenerable database state. Removing it requires `git rm -r` and a commit, since the files are in the index.",
+      "regeneration": "pnpm --filter @nexus/db run verify && node --experimental-strip-types apps/web/scripts/seed-demo.ts",
+      "risk": "low",
+      "executed": false
+    },
+    {
+      "path": "apps/web/.data-broken-171559/",
+      "bytes": 38017456,
+      "tracking": "tracked",
+      "reason": "Committed (tracked) stale/broken PGlite database snapshot with zero source references; contains a dead postmaster.pid and socket lock from a dead server. Requires `git rm -r` plus a commit.",
+      "regeneration": "pnpm --filter @nexus/db run verify && node --experimental-strip-types apps/web/scripts/seed-demo.ts",
+      "risk": "low",
+      "executed": false
+    },
+    {
+      "path": "apps/web/.next/",
+      "bytes": 160628348,
+      "tracking": "ignored",
+      "reason": "Ignored Next.js build output; already excluded from git. Safe to delete for disk space; the next build recreates it.",
+      "regeneration": "pnpm --filter @nexus/web run build",
+      "risk": "low",
+      "executed": false,
+      "caveat": "A build is currently in flight in this worktree; deleting now would disrupt the concurrent agent."
+    },
+    {
+      "path": "apps/web/.data/",
+      "bytes": 37172649,
+      "tracking": "ignored",
+      "reason": "Ignored local embedded-database state used for single-process dev. Regenerable from migrations + seed. Deleting forces a re-seed and loses any local demo/admin state.",
+      "regeneration": "pnpm db:reset && node --experimental-strip-types apps/web/scripts/seed-demo.ts",
+      "risk": "medium",
+      "executed": false,
+      "caveat": "Server may currently hold this database open (port 3000 is in use by another agent). Deleting it under a running server is unsafe."
+    }
+  ]
+}

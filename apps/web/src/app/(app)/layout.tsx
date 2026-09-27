@@ -9,9 +9,11 @@ export const dynamic = 'force-dynamic';
  * Authenticated shell for every non-business-scoped screen (admin hub, team,
  * settings, My Day, …).
  *
- * No business slug is bound here, so business-scoped navigation entries drop out of
- * the sidebar rather than rendering as dead links; the `/b/[slug]` layout supplies
- * the slug for those.
+ * `Shell` derives a default business from the switcher list so the sidebar keeps
+ * its full set of destinations here. Previously no slug was bound at this level, so
+ * every business-scoped entry was dropped for want of a slug and the sidebar
+ * collapsed to the handful of global routes; the `/b/[slug]` layout supplies the
+ * real slug for the business-scoped screens.
  */
 export default async function AppLayout({ children }: { readonly children: ReactNode }): Promise<ReactNode> {
   const context = await loadViewerContext();

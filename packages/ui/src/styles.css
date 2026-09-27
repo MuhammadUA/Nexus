@@ -694,7 +694,10 @@ body {
 .nx-content {
   flex: 1 1 auto;
   width: 100%;
-  max-width: 1120px;
+  /* Final Figma A02 measure: at 1440 desktop the content column is ~1202px beside the 238px
+     sidebar. The previous 1120px cap left the composition 82px narrower than the design and was
+     the largest measurable layout deviation in the live-Figma re-audit. */
+  max-width: var(--nx-content-max-width, 1202px);
   padding: var(--nx-space-xxl) var(--nx-space-shell);
   min-width: 0;
 }

@@ -585,10 +585,16 @@ export async function seedOperational(
       );
 
       // A SENT instance with its immutable version: the lead timeline's outbound entry.
+      //
+      // Inserted DYNAMIC, given its version, and only then frozen to SENT. Writing it as SENT
+      // directly is refused by `assert_sent_message_has_content` (migration 0021), because a SENT
+      // message with no `current_version_id` would be permanently unshowable history — the timeline
+      // would render "Message sent" with no body and no way to repair it. This is the same ordering
+      // `mark_message_sent` uses, so the seed exercises the real transition rather than bypassing it.
       const messageId = OP_IDS.message(conversationCount);
       await run(`insert into public.message_instances
-           (id, conversation_id, state, due_at, sent_at, business_id, lead_id, step_order, step_kind)
-         values ($1,$2,'SENT', now() - interval '3 days', now() - interval '3 days', $3,$4,1,'message')
+           (id, conversation_id, state, due_at, business_id, lead_id, step_order, step_kind)
+         values ($1,$2,'DYNAMIC', now() - interval '3 days', $3,$4,1,'message')
          on conflict (id) do nothing`,
         [messageId, conversationId, businessId, leadId],
       );
@@ -601,6 +607,11 @@ export async function seedOperational(
           `${PEOPLE[lead.person - 1]?.name.split(' ')[0] ?? 'there'} — saw ${COMPANIES[PEOPLE[lead.person - 1]?.company ?? 1]?.name ?? 'your team'} is scaling output. We run overflow editing under your brand, so your team keeps the client relationship. Worth a short call?`,
           owners[lead.owner],
         ],
+      );
+      await run(`update public.message_instances
+            set current_version_id = $2, state = 'SENT', sent_at = now() - interval '3 days'
+          where id = $1 and current_version_id is null`,
+        [messageId, OP_IDS.messageVersion(conversationCount)],
       );
 
       // The inbound reply itself: verbatim text, captured as an interaction and an outcome.

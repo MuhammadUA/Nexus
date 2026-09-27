@@ -701,10 +701,12 @@ export const ROUTE_PERMISSIONS: readonly RoutePermissionRequirement[] = [
   { route: '/b/:businessSlug/reactivation', surface: 'admin', permissions: ['sequence.reactivate'] },
   { route: '/businesses', surface: 'admin', permissions: ['business.create'] },
   { route: '/businesses/new', surface: 'admin', permissions: ['business.create'] },
+  { route: '/b/:businessSlug/setup', surface: 'admin', permissions: ['knowledge.manage'] },
   { route: '/b/:businessSlug/setup/brain', surface: 'admin', permissions: ['knowledge.manage'] },
   { route: '/b/:businessSlug/setup/icps', surface: 'admin', permissions: ['icp.manage'] },
   { route: '/b/:businessSlug/setup/sequences', surface: 'admin', permissions: ['sequence.manage'] },
   { route: '/b/:businessSlug/setup/knowledge', surface: 'admin', permissions: ['knowledge.manage'] },
+  { route: '/b/:businessSlug/setup/signals', surface: 'admin', permissions: ['scoring.manage'] },
   { route: '/team', surface: 'admin', permissions: ['user.manage'] },
   { route: '/team/:userId/permissions', surface: 'admin', permissions: ['user.manage'] },
   { route: '/identities', surface: 'admin', permissions: ['identity.manage'] },
@@ -712,6 +714,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermissionRequirement[] = [
   { route: '/integrations', surface: 'admin', permissions: ['integration.manage'] },
   { route: '/b/:businessSlug/automations', surface: 'admin', permissions: ['automation.manage'] },
   { route: '/b/:businessSlug/lead-sources/import', surface: 'admin', permissions: ['lead_source.use'] },
+  { route: '/b/:businessSlug/insights', surface: 'admin', permissions: ['insights.view'] },
   { route: '/b/:businessSlug/insights/messaging', surface: 'admin', permissions: ['insights.view'] },
   { route: '/settings', surface: 'admin', permissions: ['settings.manage'] },
   { route: '/my-access', surface: 'admin', permissions: ['identity.self_assign'] },
@@ -909,61 +912,120 @@ export interface NavItem {
   readonly label: string;
   readonly route: string;
   readonly permission: Permission | null;
+  /**
+   * Secondary destinations shown as tabs on the parent screen.
+   *
+   * The final Figma Admin IA is two-level: seven top-level sidebar destinations, with the nested
+   * modules reached as tabs inside their parent (Business Setup -> Overview / ICPs / Sequences /
+   * Knowledge / Signals). This is deliberately *not* the flat 21-item sidebar the earlier design
+   * used, and equally deliberately not a display-label lookup — a route reached only by matching a
+   * label string silently disappears when the label is reworded.
+   *
+   * A child's own `permission` is enforced by the route guard; the sidebar only decides visibility.
+   */
+  readonly children?: readonly NavItem[];
 }
 
-/** Admin navigation, ordered by the spec's admin workflow. */
+/** Fluent helper: build a secondary-nav child. */
+function child(label: string, route: string, permission: Permission | null): NavItem {
+  return { label, route, permission };
+}
+
+/**
+ * Admin navigation — the final Figma information architecture.
+ *
+ * Seven top-level destinations in three groups. Nested modules are children, reached through the
+ * parent's tab strip, so no product screen is orphaned and the sidebar stays the width Figma draws
+ * (238px). `ADMIN_NAV_FLAT` below exposes every reachable destination for reachability checks.
+ *
+ * The permission on each entry is the *same* permission its route declares in `ROUTE_PERMISSIONS`
+ * below, so visibility and authorization cannot drift apart.
+ */
 export const ADMIN_NAV: readonly { readonly group: string; readonly items: readonly NavItem[] }[] = [
   {
-    group: 'Operate',
+    group: 'Work',
     items: [
       { label: 'Overview', route: '/b/:businessSlug/overview', permission: 'insights.view' },
-      { label: 'Leads', route: '/b/:businessSlug/leads', permission: 'lead.view_all' },
-      { label: 'Reactivation', route: '/b/:businessSlug/reactivation', permission: 'sequence.reactivate' },
-      { label: 'Profile Queue', route: '/b/:businessSlug/profile-queue', permission: 'profile_queue.use' },
-      { label: 'Duplicate Review', route: '/b/:businessSlug/duplicates', permission: 'duplicate.review' },
+      {
+        label: 'Leads',
+        route: '/b/:businessSlug/leads',
+        permission: 'lead.view_all',
+        // The operational surfaces that hang off the lead workflow. Figma's 03-Leads frame carries
+        // Trash and Lead Sources as header buttons rather than sidebar entries, so these stay
+        // secondary: two-level navigation matches the frame, and nothing is orphaned. Each child's
+        // own route guard still enforces its real permission (duplicate.review, trash.view, ...).
+        children: [
+          child('Leads', '/b/:businessSlug/leads', 'lead.view_all'),
+          child('Lead Sources', '/b/:businessSlug/lead-sources', 'lead_source.use'),
+          child('Profile Queue', '/b/:businessSlug/profile-queue', 'profile_queue.use'),
+          child('Duplicate Review', '/b/:businessSlug/duplicates', 'duplicate.review'),
+          child('Reactivation', '/b/:businessSlug/reactivation', 'sequence.reactivate'),
+          child('Trash', '/b/:businessSlug/trash', 'trash.view'),
+        ],
+      },
     ],
   },
   {
-    group: 'Business setup',
+    group: 'Configure',
     items: [
-      { label: 'Businesses', route: '/businesses', permission: 'business.create' },
-      { label: 'Business Brain', route: '/b/:businessSlug/setup/brain', permission: 'knowledge.manage' },
-      { label: 'ICPs', route: '/b/:businessSlug/setup/icps', permission: 'icp.manage' },
-      { label: 'Sequences', route: '/b/:businessSlug/setup/sequences', permission: 'sequence.manage' },
-      { label: 'Knowledge', route: '/b/:businessSlug/setup/knowledge', permission: 'knowledge.manage' },
-      { label: 'Business Domains', route: '/business-domains', permission: 'domain.manage' },
+      {
+        label: 'Business Setup',
+        route: '/b/:businessSlug/setup',
+        permission: 'knowledge.manage',
+        children: [
+          child('Overview', '/b/:businessSlug/setup', 'knowledge.manage'),
+          child('ICPs', '/b/:businessSlug/setup/icps', 'icp.manage'),
+          child('Sequences', '/b/:businessSlug/setup/sequences', 'sequence.manage'),
+          child('Knowledge', '/b/:businessSlug/setup/knowledge', 'knowledge.manage'),
+          child('Signals', '/b/:businessSlug/setup/signals', 'scoring.manage'),
+        ],
+      },
+      {
+        label: 'Team & Accounts',
+        route: '/team',
+        permission: 'user.manage',
+        children: [
+          child('Team', '/team', 'user.manage'),
+          child('Permissions', '/team/:userId/permissions', 'user.manage'),
+          child('Outreach Identities', '/identities', 'identity.manage'),
+          child('My Access', '/my-access', 'identity.self_assign'),
+        ],
+      },
+      {
+        label: 'Integrations',
+        route: '/integrations',
+        permission: 'integration.manage',
+        children: [
+          child('Gateway', '/integrations', 'integration.manage'),
+          child('Automations', '/b/:businessSlug/automations', 'automation.manage'),
+          child('Import Builder', '/b/:businessSlug/lead-sources/import', 'lead_source.use'),
+          child('Business Domains', '/business-domains', 'domain.manage'),
+        ],
+      },
     ],
   },
   {
-    group: 'Team & access',
+    group: 'Admin',
     items: [
-      { label: 'Team & Accounts', route: '/team', permission: 'user.manage' },
-      { label: 'Outreach Identities', route: '/identities', permission: 'identity.manage' },
-      { label: 'My Access & Assignment', route: '/my-access', permission: 'identity.self_assign' },
-    ],
-  },
-  {
-    group: 'Ingestion',
-    items: [
-      { label: 'Lead Sources', route: '/b/:businessSlug/lead-sources', permission: 'lead_source.use' },
-      { label: 'Import Builder', route: '/b/:businessSlug/lead-sources/import', permission: 'lead_source.use' },
-      { label: 'Trash', route: '/b/:businessSlug/trash', permission: 'trash.view' },
-    ],
-  },
-  {
-    group: 'Platform',
-    items: [
-      { label: 'Integrations Gateway', route: '/integrations', permission: 'integration.manage' },
-      // Automations and insights are per-business: a mapping or a reply theme only
-      // means something inside one business, so they carry the slug like the rest of
-      // the operational surfaces. Entries without `:businessSlug` are global
-      // (tokens, platform settings).
-      { label: 'Automation Mapping', route: '/b/:businessSlug/automations', permission: 'automation.manage' },
-      { label: 'Messaging Insights', route: '/b/:businessSlug/insights/messaging', permission: 'insights.view' },
+      {
+        label: 'Insights',
+        route: '/b/:businessSlug/insights',
+        permission: 'insights.view',
+        children: [
+          child('Messaging Insights', '/b/:businessSlug/insights/messaging', 'insights.view'),
+        ],
+      },
       { label: 'Settings', route: '/settings', permission: 'settings.manage' },
+      { label: 'Businesses', route: '/businesses', permission: 'business.create' },
     ],
   },
 ];
+
+/** Every admin destination, flattened — used by the nav to resolve and highlight ancestors. */
+export const ADMIN_NAV_FLAT: readonly NavItem[] = ADMIN_NAV.flatMap((section) =>
+  section.items.flatMap((item) => [item, ...(item.children ?? [])]),
+);
+
 
 /** User navigation. spec: "Operators should work from My Day -> exact action". */
 export const USER_NAV: readonly { readonly group: string; readonly items: readonly NavItem[] }[] = [

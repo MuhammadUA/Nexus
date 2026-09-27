@@ -32,12 +32,23 @@ export function Shell({
   const router = useRouter();
   const pathname = usePathname();
 
+  /**
+   * The business used to resolve sidebar links on screens that are not themselves business-scoped.
+   *
+   * `businesses` is the switcher list, which already honours the viewer's grants, so its first entry
+   * is a business this operator can actually reach. Substituting it keeps the full seven-destination
+   * sidebar visible on `/`, `/team`, `/integrations` and the user surfaces. Without it every
+   * business-scoped entry is dropped for want of a slug and the sidebar collapses.
+   */
+  const effectiveSlug = businessSlug ?? businesses[0]?.slug;
+
   return (
     <AppShell
       surface={surface}
       nav={nav}
       activeRoute={pathname}
       {...(businessSlug === undefined ? {} : { businessSlug })}
+      {...(effectiveSlug === undefined ? {} : { defaultBusinessSlug: effectiveSlug })}
       businesses={businesses}
       onSelectBusiness={(businessId) => {
         const target = businesses.find((business) => business.id === businessId);

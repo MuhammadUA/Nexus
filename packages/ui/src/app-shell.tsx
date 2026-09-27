@@ -1,9 +1,20 @@
-﻿/**
+/**
  * Application chrome for the Next.js surfaces (admin + user).
  *
- * The sidebar is data-driven from `ADMIN_NAV` / `USER_NAV` in `@nexus/core`, so a
- * route can never appear in the navigation without also declaring the permission
- * that gates it — navigation and authorization cannot drift apart.
+ * The sidebar is data-driven from `ADMIN_NAV` / `USER_NAV` in `@nexus/core`, so a route can never
+ * appear in the navigation without also declaring the permission that gates it — navigation and
+ * authorization cannot drift apart.
+ *
+ * Two rules here are load-bearing, and both were violated by an earlier implementation:
+ *
+ *  1. **Never look a destination up by its display label.** Resolving nav entries by matching
+ *     `item.label` against a hard-coded string silently drops the entry the moment a label is
+ *     reworded, which is how a seven-destination sidebar collapsed to three on non-business-scoped
+ *     routes. The tree is fixed here; only *visibility* is filtered, and by permission.
+ *  2. **Never render a dead section.** A destination whose `:businessSlug` cannot be resolved is
+ *     dropped from the sidebar (it would be a dead link), but that can only happen when the viewer
+ *     has no business at all. Every parent keeps its children, so the nested modules stay reachable
+ *     through the secondary tab strip rather than being orphaned.
  */
 import type { ReactElement, ReactNode } from 'react';
 
@@ -29,6 +40,16 @@ export interface AppShellProps {
   readonly activeRoute: string;
   /** Replaces the `:businessSlug` token in nav routes. */
   readonly businessSlug?: string;
+  /**
+   * The slug to substitute when the current route is not itself business-scoped.
+   *
+   * Without this, every business-scoped sidebar entry drops out on `/`, `/team`, `/integrations`
+   * and the user surfaces, because there is no slug to substitute and a nav entry is never rendered
+   * as a dead link. That is how a seven-destination sidebar silently became three. A viewer who can
+   * reach at least one business always has a coherent default, so the full navigation renders
+   * everywhere and the business switcher reflects the same context.
+   */
+  readonly defaultBusinessSlug?: string;
   readonly businesses?: readonly BusinessOption[];
   readonly onSelectBusiness?: (businessId: string) => void;
   readonly onNavigate: (route: string) => void;
@@ -39,13 +60,37 @@ export interface AppShellProps {
 }
 
 /**
- * Substitutes the route parameters a nav entry may contain. Entries whose
- * required parameter is unknown are dropped rather than rendered as a dead link.
+ * Substitutes the route parameters a nav entry may contain.
+ *
+ * `:businessSlug` is the only parameter the sidebar can supply. A `:userId` child (the per-user
+ * permissions screen) has no single sensible value from the sidebar, so it is resolved to the
+ * people list, which is where a viewer picks the user whose permissions they want to edit.
  */
-function resolveRoute(route: string, businessSlug: string | undefined): string | null {
-  if (!route.includes(':businessSlug')) return route;
-  if (businessSlug === undefined || businessSlug.length === 0) return null;
-  return route.replace(':businessSlug', businessSlug);
+function resolveRoute(
+  route: string,
+  businessSlug: string | undefined,
+  activeRoute: string,
+): string | null {
+  let resolved = route;
+  if (resolved.includes(':businessSlug')) {
+    if (businessSlug === undefined || businessSlug.length === 0) return null;
+    resolved = resolved.replace(':businessSlug', businessSlug);
+  }
+  if (resolved.includes(':userId')) {
+    // The concrete user is only known while editing that user; otherwise send the viewer to the
+    // team list. That keeps the destination reachable instead of rendering a dead `/team//permissions`.
+    const match = /^\/team\/([^/]+)\/permissions/.exec(activeRoute);
+    resolved = resolved.replace(':userId', match?.[1] ?? '');
+    if (resolved.includes('/team//')) return null;
+  }
+  return resolved;
+}
+
+/** A resolved navigation entry. */
+interface ResolvedItem {
+  readonly item: NavItem;
+  readonly href: string;
+  readonly children: readonly { readonly item: NavItem; readonly href: string }[];
 }
 
 export function AppShell({
@@ -53,6 +98,7 @@ export function AppShell({
   nav,
   activeRoute,
   businessSlug,
+  defaultBusinessSlug,
   businesses,
   onSelectBusiness,
   onNavigate,
@@ -61,25 +107,64 @@ export function AppShell({
   userLabel,
   onSignOut,
 }: AppShellProps): ReactElement {
-  const userNav = surface === 'user'
-    ? [{
-        group: 'My workspace',
-        items: nav
-          .flatMap((section) => section.items)
-          .filter((item) =>
-            item.label === 'My Day' || item.label === 'My Leads' || item.label === 'Lead Sources',
-          ),
-      }]
-    : nav;
+  // The slug actually used for link resolution: the route's own business when it is business-scoped,
+  // otherwise the viewer's default. This single line is what keeps the sidebar stable across every
+  // screen instead of collapsing on the non-business-scoped ones.
+  const effectiveSlug = businessSlug ?? defaultBusinessSlug;
+
+  const userNav =
+    surface === 'user'
+      ? [
+          {
+            group: 'My workspace',
+            items: nav
+              .flatMap((section) => section.items)
+              .filter(
+                (item) =>
+                  item.label === 'My Day' || item.label === 'My Leads' || item.label === 'Lead Sources',
+              ),
+          },
+        ]
+      : nav;
+
+  const resolveChildren = (
+    item: NavItem,
+  ): readonly { readonly item: NavItem; readonly href: string }[] =>
+    (item.children ?? []).flatMap((entry) => {
+      const href = resolveRoute(entry.route, effectiveSlug, activeRoute);
+      return href === null ? [] : [{ item: entry, href }];
+    });
 
   const sections = userNav
     .map((section) => ({
       group: section.group,
-      items: section.items
-        .map((item) => ({ item, href: resolveRoute(item.route, businessSlug) }))
-        .filter((entry): entry is { item: NavItem; href: string } => entry.href !== null),
+      items: section.items.flatMap((item): ResolvedItem[] => {
+        const href = resolveRoute(item.route, effectiveSlug, activeRoute);
+        // An item with children whose own route cannot be resolved (a `:userId` child with no
+        // context) still renders, anchored at its first resolvable child, so the group of
+        // destinations is never lost.
+        const children = resolveChildren(item);
+        if (href === null) {
+          const first = children[0];
+          return first === undefined ? [] : [{ item, href: first.href, children }];
+        }
+        return [{ item, href, children }];
+      }),
     }))
     .filter((section) => section.items.length > 0);
+
+  /**
+   * The active top-level entry, used for both highlighting and the secondary tab strip.
+   *
+   * Longest-prefix match, so `/b/zemnas/setup/icps` selects *Business Setup* rather than also
+   * matching a shorter `/b/zemnas` prefix.
+   */
+  const activeItem = sections
+    .flatMap((section) => section.items)
+    .filter((entry) => activeRoute === entry.href || activeRoute.startsWith(`${entry.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+
+  const secondary = activeItem?.children.filter((child) => child.href !== activeItem.href) ?? [];
 
   return (
     <div className="nx-app">
@@ -101,7 +186,7 @@ export function AppShell({
             <select
               id="nx-business-switcher"
               className="nx-select"
-              value={businesses.find((b) => b.slug === businessSlug)?.id ?? ''}
+              value={businesses.find((b) => b.slug === effectiveSlug)?.id ?? ''}
               onChange={(event) => onSelectBusiness?.(event.target.value)}
             >
               {businesses.map((business) => (
@@ -118,17 +203,16 @@ export function AppShell({
             <p className="nx-sidebar__group-label">{section.group}</p>
             <ul className="nx-nav">
               {section.items.map(({ item, href }) => {
-                const active = activeRoute === href || activeRoute.startsWith(`${href}/`);
+                const active = activeItem?.href === href;
                 return (
-                  <li key={href}>
+                  <li key={`${item.label}-${href}`}>
                     <a
                       className="nx-nav__item"
                       href={href}
                       aria-current={active ? 'page' : undefined}
                       onClick={(event) => {
-                        // Client-side navigation keeps the shell mounted (and the
-                        // Companion-like list state intact); the href remains for
-                        // middle-click, copy-link and no-JS access.
+                        // Client-side navigation keeps the shell mounted (and the Companion-like list
+                        // state intact); the href remains for middle-click, copy-link and no-JS access.
                         if (event.metaKey || event.ctrlKey || event.shiftKey) return;
                         event.preventDefault();
                         onNavigate(href);
@@ -184,7 +268,7 @@ export function AppShell({
               onKeyDown={(event) => {
                 if (event.key !== 'Enter') return;
                 const value = event.currentTarget.value.trim();
-                const base = businessSlug === undefined ? '/my-leads' : `/b/${businessSlug}/leads`;
+                const base = effectiveSlug === undefined ? '/my-leads' : `/b/${effectiveSlug}/leads`;
                 onNavigate(value.length === 0 ? base : `${base}?q=${encodeURIComponent(value)}`);
               }}
             />
@@ -192,6 +276,34 @@ export function AppShell({
           <span className="nx-topbar__spacer" />
           {surface === 'admin' && <span className="nx-topbar__context">Admin workspace</span>}
         </header>
+
+        {/**
+         * Secondary navigation.
+         *
+         * The final Figma Admin IA is two-level: seven sidebar destinations, with the nested modules
+         * reached as a tab strip inside their parent (Business Setup -> ICPs / Sequences / Knowledge
+         * / Signals). Without this strip those screens would be reachable only by typing a URL.
+         */}
+        {secondary.length > 0 && (
+          <div className="nx-subnav" role="tablist" aria-label={`${activeItem?.item.label ?? 'Section'} sections`}>
+            {secondary.map(({ item, href }) => (
+              <a
+                key={`${item.label}-${href}`}
+                role="tab"
+                className="nx-subnav__item"
+                aria-selected={activeRoute === href}
+                href={href}
+                onClick={(event) => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+                  event.preventDefault();
+                  onNavigate(href);
+                }}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        )}
 
         <main className="nx-content" id="nx-content">
           {children}
