@@ -50,8 +50,12 @@ describe('route permission lookup', () => {
   });
 
   it('does not match a path of the wrong depth', () => {
-    expect(routePermissionsFor('/b/zemnas/setup')).toBeNull();
+    // `/b/:businessSlug/setup` is now a real declared route (the Business Setup landing tab of the
+    // final Figma IA), so it resolves rather than being unmatched. The depth check is exercised by
+    // the two cases below, which have no declared pattern at their length.
+    expect(routePermissionsFor('/b/zemnas/setup')?.route).toBe('/b/:businessSlug/setup');
     expect(routePermissionsFor('/b/zemnas/setup/icps/extra')).toBeNull();
+    expect(routePermissionsFor('/b/zemnas')).toBeNull();
   });
 
   it('identifies business-scoped patterns', () => {
