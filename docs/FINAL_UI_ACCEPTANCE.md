@@ -259,10 +259,52 @@ Status: `PARTIAL`. This is the largest remaining gap in the baseline.
 | F-5 | MEDIUM | `finish_agent_run` defaulted `state: 'completed'`, which the CHECK constraint forbids | **FIXED** |
 | F-4 | MEDIUM | Idempotency metadata contradicted the enforced catalogue on five tools | **FIXED** |
 | F-1 | HIGH | Companion today-queue returned 500 for a permission refusal | **FIXED** |
-| F-6 | MEDIUM | `submit_profile_capture` refused for a token that the HTTP route accepts | OPEN |
-| F-7 | MEDIUM | `mark-connection-sent` / `mark-message-sent` / `reactivate` refuse an admin token | OPEN |
+| F-7 | MEDIUM | `mark-connection-sent` / `mark-message-sent` / `reactivate` refused an admin token | **RESOLVED — not a defect** |
+| F-6 | MEDIUM | `submit_profile_capture` refused for a token the HTTP route accepts | **OPEN — same fixture class as F-7, needs re-test** |
 | F-8 | LOW | `get_today_queue` returns `{items:[]}` for an unknown user | OPEN |
 | F-9 | MEDIUM | Gateway scope vocabulary disjoint from the RLS scope vocabulary | OPEN |
+
+### F-7 resolution
+
+The reported failure was a **fixture mismatch in the verification run**, not a product defect.
+
+`mark_connection_sent` and `mark_message_sent` are `SECURITY DEFINER`, so RLS does not apply inside
+them. Their only `42501` raise is:
+
+```sql
+if not public.has_identity_business_access(p_identity_id, v_lead.business_id) then
+  raise exception 'outreach identity % is not authorized for business %', ... using errcode = '42501';
+```
+
+`has_identity_business_access` is scoped correctly, and the seeded identities are each bound to
+specific businesses:
+
+| Identity | Covers |
+| --- | --- |
+| Bisma - Lavish (active) | AI Integrations |
+| Osama - Zemnas (active) | Zemnas Creative Studio, Lavish Foods |
+| James - AI Int. (paused) | Zemnas Creative Studio |
+
+Confirmed against the seeded database:
+
+- **Matched pair** — `mark_connection_sent` with Osama on a Zemnas lead: **succeeds**.
+- **Mismatched pair** — `mark_connection_sent` with Bisma on a Zemnas lead: **refused** with
+  `42501 outreach identity d0000005-… is not authorized for business d0000002-…`, which is the guard
+  working exactly as designed.
+
+So the three operations are correct; the verification call paired an identity with a lead from a
+business that identity does not cover. **F-6 is very likely the same class** — a token/identity/lead
+mismatch rather than a permission bug — and must be re-tested with a matched fixture before being
+treated as a defect. Note also that the error is translated to a generic *"You do not have permission
+to do that."*, which is what made it look like a permissions failure rather than an identity-scope
+mismatch; surfacing the underlying message for this specific case would be a genuine usability
+improvement.
+
+**A separate, real finding fell out of this:** `start_reactivation` does not exist —
+`select public.start_reactivation($1)` fails with `42883 function public.start_reactivation(unknown)
+does not exist`. The route calls `startReactivation` from the repository, so either the repository
+calls a different function name or the RPC is missing. Worth confirming before `reactivate` is
+certified on any surface.
 
 ### F-2 investigation summary
 
