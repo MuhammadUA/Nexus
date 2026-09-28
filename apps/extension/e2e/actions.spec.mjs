@@ -11,17 +11,20 @@ import { launchExtension } from './harness.mjs';
 import {
   alerts,
   callApi,
+  chooseOption,
   clickButton,
   leadRows,
   openModule,
   optionValues,
   readExtensionStorage,
   searchAndOpen,
+  selectShellAccount,
   signInAndBind,
   waitForCrmView,
   waitForDom,
   waitForFocus,
   waitForShell,
+  waitForStableValue,
 } from './helpers.mjs';
 
 let extension;
@@ -38,19 +41,27 @@ test.afterAll(async () => {
 test.beforeEach(async () => {
   page = await extension.openPanel();
   await waitForShell(page);
-  await signInAndBind(page);
+  // The business list is scoped to the chosen channel account (spec §36), and these
+  // cases all work under Zemnas — so the account that exposes it is the one to bind.
+  await signInAndBind(page, { identity: /osama/i, business: /zemnas/i });
   await waitForCrmView(page);
+  // The shell lists the selected account's businesses, so the account is chosen
+  // before the business is picked (invariant 14).
+  await selectShellAccount(page, /osama/i);
   // Always start on Leads under Zemnas, so the cases are independent of what the last one left.
+  // The account switch reconciles the business selection asynchronously, so the choice is made and
+  // then confirmed to have held — otherwise a late reconciliation silently returns the panel to the
+  // account's first business and every search below runs against the wrong tenant.
   const businesses = await optionValues(page, '#nx-c-business');
+  if (businesses.length === 0) throw new Error('no businesses available to the panel');
+
   const zemnas = await page.evaluate(() =>
     [...document.querySelectorAll('#nx-c-business option')].find((option) => /Zemnas/.test(option.textContent ?? ''))?.value,
   );
-  if (zemnas !== undefined) {
-    const { chooseOption } = await import('./helpers.mjs');
-    await chooseOption(page, '#nx-c-business', zemnas);
-  }
-  await page.waitForTimeout(600);
-  if (businesses.length === 0) throw new Error('no businesses available to the panel');
+  expect(zemnas, 'the selected account must offer Zemnas').not.toBeUndefined();
+  await chooseOption(page, '#nx-c-business', zemnas);
+  const settled = await waitForStableValue(page, '#nx-c-business');
+  expect(settled, 'the business selection must survive the account reconciliation').toBe(zemnas);
 });
 
 test.afterEach(async () => {

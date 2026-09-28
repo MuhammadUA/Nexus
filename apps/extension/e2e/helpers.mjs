@@ -138,13 +138,55 @@ export async function clickButton(page, pattern) {
 }
 
 /**
+ * Waits until the business selector offers what the caller needs.
+ *
+ * V1.2 scopes the business list to the selected channel account (spec §36), and it
+ * arrives from the server *after* the account is chosen. Selecting the business
+ * immediately therefore wrote a value the freshly-loaded option list did not
+ * contain, and the panel kept the old selection — the bind then failed, or bound a
+ * pair nobody had chosen. Every caller goes through here instead of sleeping.
+ *
+ * `wanted === null` means "wait for any option".
+ */
+export async function waitForBusinessOptions(page, wanted = null, timeout = 25_000) {
+  await page
+    .waitForFunction(
+      ([target, expected]) => {
+        const element = document.querySelector(target);
+        if (element === null) return false;
+        const values = [...element.options].map((option) => option.value).filter((value) => value.length > 0);
+        return expected === null ? values.length > 0 : values.includes(expected);
+      },
+      ['#c-business', wanted],
+      { timeout },
+    )
+    .catch(() => undefined);
+}
+
+/** `{ value, label }` for a `<select>`'s non-placeholder options. */
+export async function optionEntries(page, selector) {
+  return page.evaluate(
+    (target) =>
+      [...document.querySelectorAll(`${target} option`)]
+        .filter((option) => option.value.length > 0)
+        .map((option) => ({ value: option.value, label: option.textContent?.trim() ?? '' })),
+    selector,
+  );
+}
+
+/**
  * Binds this browser profile, handling the in-use warning when it appears.
  *
  * `transfer` is what an operator clicks on the warning, so it is opt-in: a test that wants to
  * observe the warning leaves it false.
  */
 export async function bind(page, { identityId, businessId, transfer = false } = {}) {
-  if (identityId !== undefined) await chooseOption(page, '#c-identity', identityId);
+  if (identityId !== undefined) {
+    await chooseOption(page, '#c-identity', identityId);
+    // The account decides which businesses are offered, so the list has to settle
+    // before a business can be chosen from it.
+    await waitForBusinessOptions(page, businessId ?? null);
+  }
   if (businessId !== undefined) await chooseOption(page, '#c-business', businessId);
 
   const clicked = await clickButton(page, /^\s*bind this browser\s*$/i);
@@ -217,31 +259,134 @@ export async function bind(page, { identityId, businessId, transfer = false } = 
 }
 
 /**
+ * Selects the shell's own channel-account filter and waits for its business list.
+ *
+ * The Companion's business list is the intersection of what the signed-in user may
+ * see and what the *selected* channel account may send from (spec
+ * `roles_and_permissions.extension_visibility_rule`, invariant 14), so a spec that
+ * needs a particular business has to pick the account that carries it first — the
+ * default selection is simply the first account in the list.
+ *
+ * Returns the business options the shell is now offering.
+ */
+export async function selectShellAccount(page, label, timeout = 25_000) {
+  const entries = await optionEntries(page, '#nx-c-identity');
+  const chosen = entries.find((entry) => label.test(entry.label));
+  if (chosen === undefined) {
+    throw new Error(
+      `selectShellAccount: no channel account matches ${String(label)}; the panel offers ${JSON.stringify(
+        entries.map((entry) => entry.label),
+      )}`,
+    );
+  }
+
+  await chooseOption(page, '#nx-c-identity', chosen.value);
+
+  // The business list is refetched for the new account; reading it before it arrives
+  // is how a spec ends up asserting against the previous account's businesses.
+  await page
+    .waitForFunction(
+      (expected) => {
+        const element = document.querySelector('#nx-c-business');
+        if (element === null) return false;
+        const values = [...element.options].map((option) => option.value).filter((value) => value.length > 0);
+        const snapshot = element.dataset.nxE2eSnapshot ?? '';
+        const current = JSON.stringify(values);
+        // Settled means "non-empty and unchanged since the previous poll", which is
+        // the only signal that distinguishes "loaded for this account" from
+        // "still showing the last account's list".
+        if (snapshot === current && values.length > 0) return true;
+        element.dataset.nxE2eSnapshot = current;
+        return false;
+      },
+      chosen.value,
+      { timeout, polling: 250 },
+    )
+    .catch(() => undefined);
+
+  return optionEntries(page, '#nx-c-business');
+}
+
+/**
+ * Waits until a `<select>`'s value has stopped changing.
+ *
+ * Changing the channel account refetches the business list, and the shell reconciles
+ * its selection when that list arrives — so a business chosen immediately after an
+ * account switch can be replaced by the reconciliation a moment later. This waits for
+ * the value to hold still across two polls, which is what makes "the operator picked
+ * Zemnas" true rather than momentary.
+ */
+export async function waitForStableValue(page, selector, timeout = 20_000) {
+  await page
+    .waitForFunction(
+      (target) => {
+        const element = document.querySelector(target);
+        if (element === null) return false;
+        const value = element.value;
+        const snapshot = element.dataset.nxE2eStable ?? null;
+        if (snapshot === value && value !== '') return true;
+        element.dataset.nxE2eStable = value;
+        return false;
+      },
+      selector,
+      { timeout, polling: 300 },
+    )
+    .catch(() => undefined);
+
+  return page.evaluate((target) => document.querySelector(target)?.value ?? null, selector);
+}
+
+/**
  * Signs in and binds, leaving the panel on the CRM View.
  *
  * Several cases only need "a working Companion", and repeating the two steps in each of them would
- * bury the thing under test. The identity is chosen explicitly because the panel defaults to none.
+ * bury the thing under test.
+ *
+ * `identity` / `business` are optional label patterns. They exist because V1.2 scopes the business
+ * list to the chosen channel account (§36): a spec that needs a particular business must say which
+ * account exposes it, and the account must be chosen *before* the list is read. Without a pattern the
+ * first usable account is taken, which is what most cases want.
  */
-export async function signInAndBind(page, { transfer = true } = {}) {
+export async function signInAndBind(page, { transfer = true, identity = null, business = null } = {}) {
   await signIn(page);
 
   // The browser profile may already be bound — the same profile is reused across the specs — in
   // which case the panel opens straight into the CRM View and there is nothing left to bind.
   const alreadyBound = await isCrmView(page);
-  if (alreadyBound) return { identityId: null, businessId: null, warned: false };
+  if (alreadyBound) {
+    // A caller that asked for a specific account or business cannot be served by
+    // whatever binding happens to exist, so the expectation is checked against the
+    // shell's own selectors rather than silently satisfied.
+    const current = await page.evaluate(() => ({
+      business: document.querySelector('#nx-c-business')?.selectedOptions?.[0]?.textContent?.trim() ?? '',
+      identity: document.querySelector('#nx-c-identity')?.selectedOptions?.[0]?.textContent?.trim() ?? '',
+    }));
+    if (identity !== null && current.identity !== '') {
+      expect(current.identity, 'the bound channel account').toMatch(identity);
+    }
+    if (business !== null && current.business !== '') {
+      expect(current.business, 'the bound business').toMatch(business);
+    }
+    return { identityId: null, businessId: null, warned: false };
+  }
 
-  const identities = await page.evaluate(() =>
-    [...document.querySelectorAll('#c-identity option')].map((option) => option.value).filter((value) => value.length > 0),
-  );
-  expect(identities.length, 'the account must have at least one usable sender identity').toBeGreaterThan(0);
+  const identities = await optionEntries(page, '#c-identity');
+  expect(identities.length, 'the account must have at least one usable channel account').toBeGreaterThan(0);
+  const chosenIdentity = (identity === null ? null : identities.find((entry) => identity.test(entry.label))) ?? identities[0];
 
-  const businesses = await page.evaluate(() =>
-    [...document.querySelectorAll('#c-business option')].map((option) => option.value).filter((value) => value.length > 0),
-  );
+  await chooseOption(page, '#c-identity', chosenIdentity.value);
+  await waitForBusinessOptions(page, null);
+
+  const businesses = await optionEntries(page, '#c-business');
+  expect(businesses.length, 'the chosen account must expose at least one business').toBeGreaterThan(0);
+  const chosenBusiness = (business === null ? null : businesses.find((entry) => business.test(entry.label))) ?? businesses[0];
+  if (business !== null) {
+    expect(chosenBusiness.label, 'the requested business must be offered by the chosen account').toMatch(business);
+  }
 
   const warned = await bind(page, {
-    identityId: identities[0],
-    businessId: businesses[0],
+    identityId: chosenIdentity.value,
+    businessId: chosenBusiness.value,
     transfer,
   });
 
@@ -269,7 +414,7 @@ export async function signInAndBind(page, { transfer = true } = {}) {
     throw new Error(`bind did not reach the CRM View; panel state: ${JSON.stringify(state)}`);
   }
 
-  return { identityId: identities[0], businessId: businesses[0], warned };
+  return { identityId: chosenIdentity.value, businessId: chosenBusiness.value, warned };
 }
 
 /**

@@ -31,19 +31,29 @@ const ENRICHMENT_PRESENTATION: Readonly<Record<string, EnrichmentPresentation>> 
   FAILED: { label: 'failed', accent: 'red' },
 };
 
-export function enrichmentLabel(status: string): string {
+/**
+ * The chip's label for a state.
+ *
+ * The parameter is typed `unknown` on purpose: the value arrives from a JSON payload,
+ * so a payload that omits it (or a projection that renames it) must degrade to a
+ * neutral chip rather than throwing inside render — a throw here unmounts the whole
+ * panel, which is exactly what a shape mismatch between two Companion projections did
+ * before this was hardened.
+ */
+export function enrichmentLabel(status: unknown): string {
+  if (typeof status !== 'string' || status.length === 0) return ENRICHMENT_PRESENTATION.MINIMAL?.label ?? 'not started';
   return ENRICHMENT_PRESENTATION[status]?.label ?? status.toLowerCase().replace(/_/g, ' ');
 }
 
-export function enrichmentAccent(status: string): AccentName {
+export function enrichmentAccent(status: unknown): AccentName {
+  if (typeof status !== 'string') return 'neutral';
   return ENRICHMENT_PRESENTATION[status]?.accent ?? 'neutral';
 }
 
 /** `completeness_score` rendered as a percentage. Clamped for display only. */
-export function intelligenceLabel(intelligence: number): string {
-  const bounded = Number.isFinite(intelligence)
-    ? Math.max(0, Math.min(100, Math.trunc(intelligence)))
-    : 0;
+export function intelligenceLabel(intelligence: unknown): string {
+  const value = typeof intelligence === 'number' ? intelligence : Number(intelligence);
+  const bounded = Number.isFinite(value) ? Math.max(0, Math.min(100, Math.trunc(value))) : 0;
   return `${String(bounded)}%`;
 }
 

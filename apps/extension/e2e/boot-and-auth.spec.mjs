@@ -11,16 +11,19 @@ import { launchExtension } from './harness.mjs';
 import {
   API_ORIGIN,
   bind,
+  chooseOption,
   clickButton,
   fill,
   hasDom,
   installId,
   leadRows,
   openModule,
+  optionEntries,
   optionLabels,
   readExtensionStorage,
   signIn,
   signInAndBind,
+  waitForBusinessOptions,
   waitForCrmView,
   waitForShell,
 } from './helpers.mjs';
@@ -145,9 +148,18 @@ test('signs in, stores the token in session storage, and reaches the CRM View', 
   const local = await readExtensionStorage(page, 'local', null);
   expect(JSON.stringify(local)).not.toContain('nxu_');
 
-  // Binding screen: the identities and businesses the account may use.
-  const identityOptions = await optionLabels(page, '#c-identity');
+  // Binding screen: the channel accounts the actor may use, and the businesses the
+  // chosen one exposes. V1.2 scopes that second list to the account (spec §36), so
+  // the account that carries Zemnas is chosen explicitly rather than assumed to be
+  // first — asserting against whichever account happened to be listed first is how
+  // this test drifted when the scoping landed.
+  const identityOptions = await optionEntries(page, '#c-identity');
   expect(identityOptions.length).toBeGreaterThan(0);
+  const osama = identityOptions.find((entry) => /osama/i.test(entry.label));
+  expect(osama, 'the Osama channel account must be offered').toBeDefined();
+  await chooseOption(page, '#c-identity', osama.value);
+  await waitForBusinessOptions(page, null);
+
   const businessOptions = await optionLabels(page, '#c-business');
   expect(businessOptions).toContain('Zemnas Creative Studio');
 });

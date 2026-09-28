@@ -863,8 +863,20 @@ export interface CompanionSearchRow {
   readonly lastActivityAt: string | null;
   readonly nextActionAt: string | null;
   readonly nextActionType: string | null;
-  /** V1.2 enrichment indicator (spec §36). */
-  readonly enrichment: CompanionEnrichment;
+  /**
+   * V1.2 enrichment indicator (spec §36), flattened to the same three fields the
+   * leads and today projections use.
+   *
+   * It was briefly nested as `enrichment: { … }` here while the panel read
+   * `enrichmentStatus`/`intelligence` and the extension's own `SearchResult` type
+   * declared them flat. A cast at the API boundary hid the mismatch, the chip got
+   * `undefined`, and the panel blanked: one shape per projection is what keeps that
+   * class of bug impossible rather than merely unlikely.
+   */
+  readonly enrichmentStatus: EnrichmentState;
+  /** `completeness_score`, 0–100. Never recomputed. */
+  readonly intelligence: number;
+  readonly missingFields: readonly string[];
   /** Deterministic Google fallback when the lead has no profile URL yet. */
   readonly findLinkedInUrl: string | null;
 }
@@ -920,11 +932,9 @@ export async function companionSearch(actor: Actor, query: string, limit = 25): 
         lastActivityAt: asIso(row.last_activity_at),
         nextActionAt: asIso(row.next_action_at),
         nextActionType: asStringOrNull(row.next_action_type),
-        enrichment: {
-          status: toEnrichmentState(row.enrichment_status),
-          intelligence: asNumber(row.completeness_score),
-          missingFields: asStringArray(row.missing_fields),
-        },
+        enrichmentStatus: toEnrichmentState(row.enrichment_status),
+        intelligence: asNumber(row.completeness_score),
+        missingFields: asStringArray(row.missing_fields),
         findLinkedInUrl: findLinkedInSearchUrl({
           fullName: personName,
           companyName,

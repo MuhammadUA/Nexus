@@ -33,7 +33,13 @@ async function asOwner<T>(sql: Db, fn: () => Promise<T>): Promise<T> {
 
 const COMPANY_RESEARCH_BODY = 'RAW-COMPANY-RESEARCH-BODY: abcmedia.example services, hiring, size 40';
 
-interface JobRow {
+/**
+ * The columns a claim/heartbeat returns.
+ *
+ * Indexed so it satisfies the driver's generic `Row` constraint (`Record<string,
+ * unknown>`): a plain interface without an index signature does not.
+ */
+interface JobRow extends Record<string, unknown> {
   id: string;
   status: string;
   attempt_count: number;

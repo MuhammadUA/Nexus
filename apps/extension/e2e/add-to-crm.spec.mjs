@@ -12,7 +12,7 @@
 import { expect, test } from '@playwright/test';
 
 import { launchExtension } from './harness.mjs';
-import { callApi, signInAndBind, waitForCrmView, waitForShell } from './helpers.mjs';
+import { callApi, selectShellAccount, signInAndBind, waitForCrmView, waitForShell } from './helpers.mjs';
 
 let extension;
 let page;
@@ -31,8 +31,15 @@ test.afterAll(async () => {
 test.beforeEach(async () => {
   page = await extension.openPanel();
   await waitForShell(page);
-  await signInAndBind(page);
+  // The business list is scoped to the chosen channel account (spec §36), so the account that
+  // exposes Zemnas is the one to bind. Without naming it the helper would bind whichever account
+  // happens to be first, and Zemnas would not be selectable at all.
+  await signInAndBind(page, { identity: /osama/i, business: /zemnas/i });
   await waitForCrmView(page);
+
+  // The shell's business list is the account's, not the user's (invariant 14), so the
+  // account that carries Zemnas is selected before the list is read.
+  const shellBusinesses = await selectShellAccount(page, /osama/i);
 
   const ids = await page.evaluate(() => {
     const pick = (selector, pattern) =>
@@ -50,6 +57,10 @@ test.beforeEach(async () => {
   identityId = ids.identity;
   expect(businessId, 'the Zemnas business must be selectable').not.toBe('');
   expect(identityId, 'the Osama sender identity must be selectable').not.toBe('');
+  expect(
+    shellBusinesses.map((entry) => entry.label),
+    'the account that carries Zemnas must also carry Lavish',
+  ).toEqual(expect.arrayContaining([expect.stringMatching(/Zemnas/), expect.stringMatching(/Lavish/)]));
 });
 
 test.afterEach(async () => {

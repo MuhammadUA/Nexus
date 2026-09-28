@@ -723,6 +723,15 @@ export const ROUTE_PERMISSIONS: readonly RoutePermissionRequirement[] = [
   { route: '/identities/:identityId', surface: 'admin', permissions: ['identity.manage'] },
   { route: '/integrations', surface: 'admin', permissions: ['integration.manage'] },
   { route: '/b/:businessSlug/automations', surface: 'admin', permissions: ['automation.manage'] },
+  // V1.2 operational surfaces. Agent Jobs is a working queue, so it is gated by
+  // `lead.view_all` rather than by `automation.manage`: that mirrors the database's
+  // own capability (`nexus_job_scope_ok` admits an admin or a manager of the
+  // business) and keeps a manager able to run the queue they are responsible for.
+  // The AI tab is configuration, so it carries the requirement of the section it
+  // belongs to — activation is additionally admin-only in the action and in the
+  // `prompt_versions` write policy.
+  { route: '/b/:businessSlug/agent-jobs', surface: 'admin', permissions: ['lead.view_all'] },
+  { route: '/b/:businessSlug/setup/ai', surface: 'admin', permissions: ['knowledge.manage'] },
   { route: '/b/:businessSlug/lead-sources/import', surface: 'admin', permissions: ['lead_source.use'] },
   { route: '/b/:businessSlug/insights', surface: 'admin', permissions: ['insights.view'] },
   { route: '/b/:businessSlug/insights/messaging', surface: 'admin', permissions: ['insights.view'] },

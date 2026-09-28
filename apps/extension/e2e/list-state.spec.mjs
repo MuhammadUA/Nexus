@@ -14,6 +14,7 @@ import {
   chooseOption,
   optionValues,
   readExtensionStorage,
+  selectShellAccount,
   signInAndBind,
   waitForCrmView,
   waitForShell,
@@ -34,8 +35,15 @@ test.afterAll(async () => {
 test.beforeEach(async () => {
   page = await extension.openPanel();
   await waitForShell(page);
-  await signInAndBind(page);
+  // Two businesses must be reachable for the switching cases below, and V1.2 scopes
+  // the business list to the chosen channel account (spec §36) — the demo seed's
+  // Osama account is the one that exposes more than a single business.
+  await signInAndBind(page, { identity: /osama/i });
   await waitForCrmView(page);
+  // Two businesses must be reachable for the switching cases below: the shell lists
+  // the selected account's businesses, and Osama is the demo account that carries
+  // more than one.
+  await selectShellAccount(page, /osama/i);
 });
 
 test.afterEach(async () => {
@@ -102,7 +110,12 @@ test('the status filter and search text are restored, not reset', async () => {
 });
 
 test('a partial stored record does not break the panel', async () => {
-  // An older or truncated record: every field must fall back individually.
+  // An older or truncated record. Every *absent* field falls back to its empty form
+  // rather than `undefined`, which is what keeps the selectors controlled. The one
+  // field that is present but unknown — a business id this panel cannot reach — is
+  // deliberately not restored: V1.2 scopes the selector to the chosen channel account
+  // (spec §36), so keeping an unreachable id would leave the list showing a business
+  // the account cannot use.
   await writeExtensionStorage(page, 'local', { 'nexus.listState': { businessId: 'only-this-field' } });
 
   await page.reload();
@@ -110,9 +123,10 @@ test('a partial stored record does not break the panel', async () => {
   await waitForCrmView(page);
 
   const state = await persistedState(page);
-  // The unknown field survived; the absent ones came back as their empty forms rather than
-  // `undefined`, which is what keeps the selectors controlled.
-  expect(state?.businessId).toBe('only-this-field');
+  const eligible = await optionValues(page, '#nx-c-business');
+  expect(eligible.length).toBeGreaterThan(0);
+  expect(eligible, 'the unreachable id was replaced by one the account may use').toContain(state?.businessId);
+  expect(state?.businessId).not.toBe('only-this-field');
   expect(state?.statusFilter).toBe('');
   expect(state?.selectedIndex).toBe(-1);
 });
