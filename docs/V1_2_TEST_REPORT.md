@@ -79,12 +79,19 @@ them.
 
 ## 3. Application tests
 
-| Suite | Result |
-| --- | --- |
-| `@nexus/core` | see §6 |
-| `@nexus/db` | see §6 |
-| `@nexus/web` | see §6 |
-| `@nexus/extension` | see §6 |
+| Suite | Files | Tests | Result |
+| --- | --- | --- | --- |
+| `@nexus/core` | 6 | 144 | pass |
+| `@nexus/db` | 8 | 110 | pass |
+| `@nexus/web` | 26 | 441 | pass |
+| `@nexus/extension` (unit) | 1 | 9 | pass |
+| **Total** | **41** | **704** | **pass** |
+
+The V1.2 additions inside those totals: 56 core tests (37 deterministic enrichment
+and search links, 19 job chaining), 24 database tests (7 raw lifecycle, 17 agent
+jobs), and 148 web tests (16 MCP agent tools, 22 AI pipeline, 13 enrichment repo,
+59 Lead UI, 18 Agent Jobs UI, 17 metrics, 18 channel vocabulary) — plus the
+Companion binding suite grown from 6 to 31 and `rls-access` from 28 to 31.
 
 ### 3.1 V1.2 MCP agent surface
 
@@ -98,6 +105,31 @@ refusal; retryable failure and release; cross-business refusal without confirmin
 existence; the enrichment context's deterministic score, its four available
 channels and its **exact** Google query strings; the minimal-lead path landing in
 `NEEDS_PROFILE`; minimal-lead replay; and metadata-only evidence storage.
+
+### 3.2 AI pipeline
+
+`apps/web/test/v1-2-ai-pipeline.test.ts` (22) and `v1-2-enrichment-repo.test.ts`
+(13), both with injected providers so no request leaves the machine:
+
+* **Cache** — the same input hash, prompt version and model makes exactly one
+  provider call, the second returns `cached: true` and writes a `CACHED` row;
+  changed facts make a second call; activating a new prompt version makes a second
+  call.
+* **Validation** — a provider answer that violates the schema returns
+  `schema_invalid`, writes a `FAILED` run, and mutates nothing at all.
+* **Raw lifecycle** — a successful extraction commits facts plus provenance,
+  deletes the staging row and advances the enrichment state; a failure retains the
+  row with a typed code; the retry deletes its own row; a run with no staged
+  evidence is failed with `raw_staging_missing` and **zero** provider calls.
+* **No leakage** — a marker planted in the pasted body is absent from
+  `audit_events`, `agent_job_events`, `ai_runs`, `people` and
+  `source_evidence.raw_text_or_json`.
+* **Context pack** — identical facts reproduce the same pack hash, a changed fact
+  rebuilds it, the claim list is bounded, and no marker is present.
+* **Processor** — a `WAITING_AI` job reaches `COMPLETE` only after extraction and
+  deletion; a retryable failure reuses the same staging row on the next pass and then
+  completes; a terminal failure leaves the job `FAILED` with its evidence retained.
+
 
 ## 4. End-to-end
 

@@ -636,7 +636,9 @@ const TOOL_HANDLERS: Readonly<
             stringArg(args, 'instructions'),
             capabilities,
             credential.kind === 'service' ? 'api_client' : 'user',
-            credential.kind === 'service' ? null : credential.actor.userId,
+            // `ServiceCredential` has no user id; a user credential carries one
+            // directly, which is narrower than the actor union.
+            credential.kind === 'service' ? null : credential.userId,
             stringArg(args, 'dedupe_key'),
             stringArg(args, 'reason'),
           ],
@@ -1118,7 +1120,8 @@ const TOOL_HANDLERS: Readonly<
              (business_id, person_id, company_id, lead_id, source, source_url, raw_text_or_json,
               content_hash, raw_content_hash, collector_agent, agent_job_id, observed_at, confidence,
               raw_deleted_at, extracted_at)
-           values ($1, $2, $3, $4, $5, $6, $7::text, $8, $8, $9, $10, now(), $11, now(), now())
+           values ($1, $2, $3, $4, $5, $6, $7::text, $8, $8, $9, $10,
+                   coalesce($11::timestamptz, now()), $12, now(), now())
            on conflict (business_id, content_hash) do nothing
            returning id`,
           [
@@ -1132,6 +1135,9 @@ const TOOL_HANDLERS: Readonly<
             hash,
             stringArg(args, 'collector_agent'),
             stringArg(args, 'agent_job_id'),
+            // When the observation happened is the caller's fact, not ours: a
+            // research dump read an hour ago is an hour-old observation.
+            stringArg(args, 'observed_at'),
             numberArg(args, 'confidence', 0.6),
           ],
         );

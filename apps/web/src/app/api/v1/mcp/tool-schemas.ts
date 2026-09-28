@@ -324,7 +324,9 @@ export const MCP_TOOL_SCHEMAS: Readonly<Record<McpToolName, z.ZodTypeAny>> = {
     content_hash: text(200).optional(),
     collector_agent: text(120).optional(),
     agent_job_id: uuid.nullable().optional(),
-    observed_at: text(40).optional(),
+    // ISO-8601 with an offset or a Z. Validated rather than passed through, so an
+    // unparseable timestamp is "fix your arguments" and not a database error.
+    observed_at: z.string().trim().datetime({ offset: true }).optional(),
     confidence: z.number().min(0).max(1).optional(),
   }),
 };
