@@ -33,8 +33,10 @@ export interface AuthOutcome {
 /** True once at least one user row exists. */
 export async function deploymentIsClaimed(): Promise<boolean> {
   return withServiceRole('first-run check: count users', async (sql) => {
-    const result = await sql.query<{ n: number }>(`select count(*)::int as n from public.users`);
-    return (result.rows[0]?.n ?? 0) > 0;
+    const result = await sql.query<{ claimed: boolean }>(
+      `select public.nexus_deployment_is_claimed() as claimed`,
+    );
+    return result.rows[0]?.claimed === true;
   });
 }
 
@@ -61,30 +63,14 @@ export async function bootstrapFirstAdmin(input: BootstrapInput): Promise<AuthOu
   const passwordHash = await hashPassword(input.password);
 
   return withServiceRole('bootstrap: create the first admin', async (sql) => {
-    const existing = await sql.query<{ n: number }>(`select count(*)::int as n from public.users`);
-    if ((existing.rows[0]?.n ?? 0) > 0) {
+    const inserted = await sql.query<{ user_id: string | null }>(
+      `select public.nexus_bootstrap_first_admin($1, $2, $3) as user_id`,
+      [email, input.fullName.trim(), passwordHash],
+    );
+    const userId = inserted.rows[0]?.user_id ?? null;
+    if (userId === null) {
       return { ok: false, reason: 'This deployment already has users. Sign in instead.' };
     }
-
-    const inserted = await sql.query<{ id: string }>(
-      `insert into public.users (email, full_name, role, status)
-       values ($1, $2, 'admin', 'active')
-       returning id`,
-      [email, input.fullName.trim()],
-    );
-    const userId = inserted.rows[0]?.id;
-    if (userId === undefined) return { ok: false, reason: 'Could not create the admin user.' };
-
-    await sql.query(`insert into public.user_credentials (user_id, password_hash) values ($1, $2)`, [
-      userId,
-      passwordHash,
-    ]);
-
-    await sql.query(
-      `insert into public.audit_events (actor_type, actor_id, entity_type, entity_id, action, after_json, source_client)
-       values ('system', $1, 'users', $1, 'bootstrap_first_admin', $2, 'web-bootstrap')`,
-      [userId, JSON.stringify({ email, role: 'admin' })],
-    );
 
     return { ok: true, userId };
   });

@@ -183,9 +183,8 @@ export async function submitIngest(actor: Actor, input: IngestInput): Promise<In
       companyId = byCompany.rows[0]?.id ?? null;
       if (companyId === null) {
         const created = await sql.query<{ id: string }>(
-          `insert into public.companies (name, normalized_name, created_by)
-           values ($1, $2, null) returning id`,
-          [companyName, normalizedCompany],
+          `select public.nexus_resolve_or_create_company($1, $2, $3, null, null) as id`,
+          [input.businessId, companyName, normalizedCompany],
         );
         companyId = created.rows[0]?.id ?? null;
       }
@@ -193,21 +192,24 @@ export async function submitIngest(actor: Actor, input: IngestInput): Promise<In
 
     if (personId === null) {
       const created = await sql.query<{ id: string }>(
-        `insert into public.people
-           (full_name, normalized_name, job_title, location, linkedin_url, normalized_linkedin_url, company_id)
-         values ($1, $2, $3, $4, $5, $6, $7)
-         returning id`,
+        `select public.nexus_resolve_or_create_person($1, $2, $3, $4, $5, $6, null, null) as id`,
         [
+          input.businessId,
           fullName ?? 'Unknown (external candidate)',
           normalizedName ?? slugify(fullName ?? 'unknown'),
           jobTitle,
           location,
-          linkedinRaw,
           linkedin.canonicalUrl,
-          companyId,
         ],
       );
       personId = created.rows[0]?.id ?? null;
+    }
+
+    if (personId !== null && companyId !== null) {
+      await sql.query(`update public.people set company_id = $2, updated_at = now() where id = $1`, [
+        personId,
+        companyId,
+      ]);
     }
 
     if (personId === null) throw new Error('The person record could not be resolved.');

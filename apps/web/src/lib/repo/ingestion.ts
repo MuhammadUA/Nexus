@@ -944,11 +944,9 @@ async function writeRow(
     }
     if (personId === null) {
       const inserted = await sql.query<Row>(
-        `insert into public.people
-           (full_name, normalized_name, job_title, location, linkedin_url, headline, created_by)
-         values ($1, $2, $3, $4, $5, $6, $7)
-         returning id`,
+        `select public.nexus_resolve_or_create_person($1, $2, $3, $4, $5, $6, $7, $8) as id`,
         [
+          businessId,
           fullName,
           normalizedName,
           row.normalized.jobTitle,
@@ -1002,10 +1000,8 @@ async function writeRow(
     companyId = matchedCompany;
   } else {
     const inserted = await sql.query<Row>(
-      `insert into public.companies (name, normalized_name, primary_domain, normalized_domain, created_by)
-       values ($1, $2, $3, $3, $4)
-       returning id`,
-      [row.normalized.companyName, normalizedCompany, row.normalized.companyDomain, viewer.userId],
+      `select public.nexus_resolve_or_create_company($1, $2, $3, $4, $5) as id`,
+      [businessId, row.normalized.companyName, normalizedCompany, row.normalized.companyDomain, viewer.userId],
     );
     companyId = asStringOrNull(inserted.rows[0]?.id);
     if (companyId === null && row.normalized.companyDomain !== null) {

@@ -112,11 +112,7 @@ export async function resolveCredential(authorizationHeader: string | null): Pro
         business_ids: string[];
       }>(
         `select id, name, scopes, business_ids
-           from public.api_clients
-          where token_hash = $1
-            and is_active
-            and revoked_at is null
-            and (expires_at is null or expires_at > now())`,
+           from public.nexus_resolve_api_client($1)`,
         [hash],
       );
       return result.rows[0] ?? null;

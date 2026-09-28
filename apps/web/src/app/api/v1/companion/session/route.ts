@@ -49,7 +49,7 @@ export async function POST(request: Request): Promise<Response> {
       email: string;
       full_name: string | null;
       role: 'admin' | 'manager' | 'user';
-    }>(`select id, email, full_name, role from public.users where id = $1`, [outcome.userId]);
+    }>(`select id, email, full_name, role from public.nexus_get_user_profile($1)`, [outcome.userId]);
 
     return profile.rows[0];
   });
@@ -74,11 +74,7 @@ export async function DELETE(request: Request): Promise<Response> {
 
   // Revoke by hash: the caller proves possession, and nothing else can revoke it.
   await withServiceRole('companion: revoke user token', async (sql) => {
-    await sql.query(
-      `update public.user_api_tokens set revoked_at = now()
-        where token_hash = $1 and revoked_at is null`,
-      [hashToken(raw)],
-    );
+    await sql.query(`select public.nexus_revoke_user_token_by_hash($1)`, [hashToken(raw)]);
   });
 
   // Confirm the token is actually gone before reporting success.

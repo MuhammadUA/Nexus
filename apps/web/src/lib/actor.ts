@@ -133,7 +133,18 @@ export async function withServiceRole<T>(reason: string, fn: (sql: Db) => Promis
   }
   const sql = await getSql();
   await sql.exec('begin');
-  await sql.exec('set local row_security = off');
+  const configuredRole = process.env.NEXUS_DB_SERVICE_ROLE?.trim() ?? '';
+  if (configuredRole.length > 0) {
+    if (configuredRole !== 'nexus_service') {
+      throw new Error('NEXUS_DB_SERVICE_ROLE must be nexus_service when configured.');
+    }
+    await sql.exec('set local role nexus_service');
+  } else {
+    // Local PGlite/test databases run as their schema owner. Hosted deployments
+    // configure the NOLOGIN nexus_service role above instead of giving the
+    // connection login ownership or BYPASSRLS.
+    await sql.exec('set local row_security = off');
+  }
   await sql.exec(
     `select set_config('request.jwt.claims', ${quoteLiteral(JSON.stringify({ role: 'service_role' }))}, true)`,
   );
