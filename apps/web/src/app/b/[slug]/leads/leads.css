@@ -314,3 +314,321 @@
 .nx-bulk-bar__result {
   flex-basis: 100%;
 }
+
+/* ============================================================================
+ * V1.2 — intelligence-first Lead UI (§68, §69)
+ *
+ * Everything below is built from the tokens in `packages/ui/src/tokens.ts`. No colour,
+ * radius or spacing value is invented, and no state is conveyed by colour alone: every
+ * enrichment state, processing step and contact-point provenance renders its label as
+ * text beside the indicator.
+ * ========================================================================== */
+
+/* ------------------------------------------------------- intelligence meter -- */
+
+/*
+ * §29.1/§29.2 — `Lead intelligence 35%` with its missing pieces named. The bar is a
+ * secondary cue; the number and the missing list are the content.
+ */
+.nx-intel-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nx-space-sm);
+  max-width: 34rem;
+}
+
+.nx-intel-meter__track {
+  position: relative;
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  height: 6px;
+  background: var(--nx-surface-inset);
+  border: var(--nx-border-width) solid var(--nx-border-color);
+  border-radius: var(--nx-radius-pill);
+  overflow: hidden;
+}
+
+.nx-intel-meter__fill {
+  display: block;
+  height: 100%;
+  background: var(--nx-accent-cyan-border);
+}
+
+.nx-intel-meter__value {
+  font-size: var(--nx-font-size-sm);
+  font-weight: var(--nx-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--nx-text-primary);
+}
+
+/* The compact form used inside a table cell. */
+.nx-intel-value {
+  font-size: var(--nx-font-size-sm);
+  font-weight: var(--nx-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A dense cell shows at most two lines of a long reason. The full value stays available
+ * through the `title` attribute, so nothing is hidden — only uncluttered.
+ */
+.nx-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 22rem;
+}
+
+/* A person's name as the row's primary link, without the nav-item padding. */
+.nx-table__strong {
+  font-weight: var(--nx-font-weight-semibold);
+  color: var(--nx-text-primary);
+  text-decoration: none;
+}
+
+.nx-table__strong:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------- processing -- */
+
+/*
+ * §67.2 — the named processing states. A step's state is a word (`done`, `current`,
+ * `waiting`, `failed`, `pending`) rendered in its own column, so the marker's shape is a
+ * cue and never the only signal.
+ */
+.nx-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--nx-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nx-steps__item {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  grid-template-areas:
+    'marker label state'
+    'marker detail detail';
+  column-gap: var(--nx-space-sm);
+  align-items: center;
+  padding: var(--nx-space-sm);
+  background: var(--nx-surface-card);
+  border: var(--nx-border-width) solid var(--nx-border-color);
+  border-radius: var(--nx-radius-control);
+}
+
+.nx-steps__marker {
+  grid-area: marker;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--nx-radius-pill);
+  background: var(--nx-accent-neutral-border);
+}
+
+.nx-steps__item[data-state='done'] .nx-steps__marker {
+  background: var(--nx-accent-green-border);
+}
+
+.nx-steps__item[data-state='current'] .nx-steps__marker,
+.nx-steps__item[data-state='waiting'] .nx-steps__marker {
+  background: var(--nx-accent-amber-border);
+}
+
+.nx-steps__item[data-state='failed'] .nx-steps__marker {
+  background: var(--nx-accent-red-border);
+}
+
+.nx-steps__item[data-state='current'] {
+  border-color: var(--nx-accent-amber-border);
+  background: var(--nx-accent-amber-fill);
+}
+
+.nx-steps__label {
+  grid-area: label;
+  font-size: var(--nx-font-size-sm);
+  font-weight: var(--nx-font-weight-medium);
+  color: var(--nx-text-primary);
+}
+
+.nx-steps__state {
+  grid-area: state;
+  font-size: var(--nx-font-size-micro);
+  letter-spacing: var(--nx-tracking-overline, 0.06em);
+  text-transform: uppercase;
+  color: var(--nx-text-muted);
+}
+
+.nx-steps__detail {
+  grid-area: detail;
+}
+
+/* ------------------------------------------------------------------ brief -- */
+
+.nx-brief__headline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nx-space-xs);
+}
+
+.nx-brief__headline strong {
+  font-size: var(--nx-font-size-lg);
+}
+
+.nx-brief__why {
+  margin: var(--nx-space-xs) 0 0;
+  font-size: var(--nx-font-size-md);
+  line-height: var(--nx-leading-normal);
+  color: var(--nx-text-primary);
+}
+
+.nx-brief__signals,
+.nx-brief__reasons {
+  margin: var(--nx-space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nx-brief__signals > li {
+  padding: var(--nx-space-sm) 0;
+  border-bottom: var(--nx-border-width) solid var(--nx-border-divider);
+}
+
+.nx-brief__signals > li:last-child {
+  border-bottom: 0;
+}
+
+.nx-brief__reasons > li {
+  display: inline-block;
+  margin-right: var(--nx-space-md);
+}
+
+.nx-brief__summary,
+.nx-evidence__meta,
+.nx-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--nx-space-sm);
+  margin: var(--nx-space-xs) 0 0;
+}
+
+.nx-brief__summary dt,
+.nx-evidence__meta dt,
+.nx-facts dt {
+  font-size: var(--nx-font-size-micro);
+  letter-spacing: var(--nx-tracking-overline, 0.06em);
+  text-transform: uppercase;
+  color: var(--nx-text-muted);
+}
+
+.nx-brief__summary dd,
+.nx-evidence__meta dd,
+.nx-facts dd {
+  margin: 2px 0 0;
+  font-size: var(--nx-font-size-sm);
+  color: var(--nx-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------- evidence -- */
+
+.nx-evidence {
+  border-top: var(--nx-border-width) solid var(--nx-border-divider);
+  padding-top: var(--nx-space-sm);
+}
+
+.nx-evidence__summary,
+.nx-workspace__more > summary,
+.nx-add-lead__summary {
+  cursor: pointer;
+  font-size: var(--nx-font-size-sm);
+  font-weight: var(--nx-font-weight-medium);
+  color: var(--nx-text-secondary);
+}
+
+.nx-evidence__summary:hover,
+.nx-workspace__more > summary:hover,
+.nx-add-lead__summary:hover {
+  color: var(--nx-text-primary);
+}
+
+.nx-evidence__list {
+  margin: var(--nx-space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nx-evidence__item {
+  padding: var(--nx-space-sm);
+  margin-top: var(--nx-space-sm);
+  background: var(--nx-surface-inset);
+  border: var(--nx-border-width) solid var(--nx-border-color);
+  border-radius: var(--nx-radius-control);
+}
+
+/* ---------------------------------------------------------- search links -- */
+
+.nx-search-link {
+  padding: var(--nx-space-sm);
+  background: var(--nx-surface-inset);
+  border: var(--nx-border-width) solid var(--nx-border-color);
+  border-radius: var(--nx-radius-control);
+}
+
+/*
+ * §30.4 — the generated query is visible and copyable so it can be run outside the browser.
+ */
+.nx-search-link__query {
+  display: block;
+  margin-top: var(--nx-space-xs);
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-font-size-xs);
+  color: var(--nx-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------- outreach -- */
+
+.nx-channel-row {
+  padding: var(--nx-space-sm) 0;
+  border-bottom: var(--nx-border-width) solid var(--nx-border-divider);
+}
+
+.nx-channel-row:last-of-type {
+  border-bottom: 0;
+}
+
+.nx-channel-row__name {
+  min-width: 6rem;
+}
+
+.nx-channel-row__value {
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-font-size-xs);
+  color: var(--nx-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------- add lead -- */
+
+.nx-add-lead {
+  padding: var(--nx-space-md) var(--nx-space-lg);
+  background: var(--nx-surface-card);
+  border: var(--nx-border-width) solid var(--nx-border-color);
+  border-radius: var(--nx-radius-card);
+}
+
+.nx-add-lead[open] .nx-add-lead__summary {
+  margin-bottom: var(--nx-space-md);
+  display: block;
+}
+
+.nx-workspace__more {
+  border-top: var(--nx-border-width) solid var(--nx-border-divider);
+  padding-top: var(--nx-space-sm);
+}
+
