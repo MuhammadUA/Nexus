@@ -22,6 +22,7 @@ import {
   normalizePaging,
   read,
   readOne,
+  type CapturedReply,
   type ListParams,
   type Page,
 } from './common';
@@ -610,6 +611,11 @@ export interface MutationResult {
   readonly error?: string;
 }
 
+/** A capture that also hands back the rows the reply was written to. */
+export interface ReplyMutationResult extends MutationResult {
+  readonly reply?: CapturedReply;
+}
+
 async function attempt(
   viewer: Viewer,
   fn: (sql: Db) => Promise<string | undefined>,
@@ -701,23 +707,49 @@ export interface ReplyInput {
   readonly sourceClient?: string;
 }
 
-export async function captureReply(viewer: Viewer, input: ReplyInput): Promise<MutationResult> {
+/**
+ * The reply capture used by the UI and the Companion.
+ *
+ * Returns the rows `capture_reply` wrote alongside the usual mutation result, so
+ * the caller can attach a *separate* AI reading (`classifyCapturedReply`) to the
+ * same event. It is still a `MutationResult`, so every existing caller is
+ * unaffected; the extra field is what the classifier needs and nothing else.
+ */
+export async function captureReply(viewer: Viewer, input: ReplyInput): Promise<ReplyMutationResult> {
   if (input.exactText.trim().length === 0) {
     return { ok: false, error: 'Paste the exact reply before saving.' };
   }
-  return attempt(viewer, async (sql) => {
-    const result = await sql.query<{ result: { outcome_recorded?: boolean } }>(
-      `select public.capture_reply($1, $2, $3, $4, $5, now()) as result`,
-      [
-        input.leadId,
-        input.exactText,
-        input.outcome,
-        input.note ?? null,
-        input.sourceClient ?? 'web',
-      ],
-    );
-    return result.rows[0] === undefined ? undefined : input.leadId;
-  });
+
+  try {
+    // Deliberately not routed through `attempt`, which only carries a string id:
+    // this write has to hand back the three rows the reply landed in, and widening
+    // the shared helper for one caller would make every other mutation's result
+    // shape harder to reason about.
+    const reply = await withActor(viewer.actor, async (sql) => {
+      const result = await sql.query<{ result: Record<string, unknown> | null }>(
+        `select public.capture_reply($1, $2, $3, $4, $5, now()) as result`,
+        [
+          input.leadId,
+          input.exactText,
+          input.outcome,
+          input.note ?? null,
+          input.sourceClient ?? 'web',
+        ],
+      );
+      const captured = result.rows[0]?.result ?? {};
+      return {
+        leadId: input.leadId,
+        conversationId: asStringOrNull(captured['conversation_id']),
+        interactionId: asStringOrNull(captured['interaction_id']),
+        outcomeId: asStringOrNull(captured['outcome_id']),
+        outcome: asStringOrNull(captured['outcome']) ?? input.outcome,
+      } satisfies CapturedReply;
+    });
+
+    return { ok: true, id: reply.leadId, reply };
+  } catch (error) {
+    return { ok: false, error: describeDbError(error) };
+  }
 }
 
 /** spec `companion_extension.connection_action` — with or without a note. */

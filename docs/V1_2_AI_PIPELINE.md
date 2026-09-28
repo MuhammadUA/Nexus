@@ -20,17 +20,23 @@ caller (route / action / processor)
    └─ extract: validate → commit structured facts → provenance → verify → DELETE RAW → advance state
 ```
 
-Seven server-side tasks, all in `AI_TASK_TYPES`:
+Seven server-side tasks, all in `AI_TASK_TYPES`, all invoked from a product flow:
 
-| Task | Output | Cached |
-| --- | --- | --- |
-| `PROFILE_EXTRACTION` | structured person facts, experience, signals, per-field confidence | yes |
-| `COMPANY_EXTRACTION` | site, industry, services, size, locations, hiring, content activity, signals | yes |
-| `SIGNAL_EXTRACTION` | typed signals with polarity/strength | yes |
-| `ICP_QUALIFICATION` | fit score, intent score, reasons, disqualifiers, recommended angle | yes |
-| `CONTEXT_BUILD` | the compact AI Context Pack | yes (stored in `ai_context_packs`) |
-| `MESSAGE_DRAFT` | channel-specific draft (subject/body/claims used) | no (a draft is a new immutable version) |
-| `REPLY_CLASSIFICATION` | outcome, sentiment, intent, next action, reason | yes |
+| Task | Output | Cached | Invoked by |
+| --- | --- | --- | --- |
+| `PROFILE_EXTRACTION` | structured person facts, experience, signals, per-field confidence | yes | the enrichment commit, from a staged paste |
+| `COMPANY_EXTRACTION` | site, industry, services, size, locations, hiring, content activity, signals | yes | the enrichment commit, from staged company research |
+| `SIGNAL_EXTRACTION` | typed signals with polarity/strength | yes | signal extraction on a staged research body |
+| `ICP_QUALIFICATION` | fit score, intent score, reasons, disqualifiers, recommended angle | yes | the `QUALIFY_LEAD` job, planned from facts and processed by the AI processor; persisted on `lead_icp_matches` through `set_primary_icp` |
+| `CONTEXT_BUILD` | the compact AI Context Pack | yes (stored in `ai_context_packs`) | the `BUILD_CONTEXT` job, the lead screen, and automatically after a qualification |
+| `MESSAGE_DRAFT` | channel-specific draft (subject/body/claims used) | no (a draft is a new immutable version) | the draft action on a lead, or `nexus.submit_message_draft` |
+| `REPLY_CLASSIFICATION` | outcome, sentiment, intent, next action, reason | yes | every reply capture, after the reply is stored |
+
+The two that run from a job are the *model-only* jobs: they are created `OPEN` by the
+chaining planner and claimed by `nexus_claim_ai_direct_work`, because there is no
+staged body to wait for. Reply classification runs inline after `capture_reply` has
+committed, and is best-effort: a missing provider or a schema failure is reported as a
+missing reading, never as a lost reply.
 
 `DEEPSEEK_API_KEY` is read server-side only (`apps/web/src/lib/ai/config.ts`). A
 missing key is a normal deployment state: the task returns a typed

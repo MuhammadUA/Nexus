@@ -24,6 +24,7 @@ import type { DiscoverySource } from '@nexus/core';
 import { withActor, type Actor } from '../actor';
 import type { Row } from '../sql';
 import { asString, asStringOrNull } from './common';
+import type { CapturedReply } from './common';
 
 /** The pipeline stages, in the order the spec lists them. */
 export const PIPELINE_STAGES = [
@@ -354,19 +355,31 @@ export async function submitIngest(actor: Actor, input: IngestInput): Promise<In
   });
 }
 
-/** Messages from an external client, applied through the same reply path as a UI. */
+/**
+ * Messages from an external client, applied through the same reply path as a UI.
+ *
+ * Returns what `capture_reply` wrote (the interaction and outcome row ids) so the
+ * caller can attach a *separate* AI reading to the same event without ever
+ * touching the verbatim text this function has just stored.
+ */
 export async function recordExternalReply(
   actor: Actor,
   input: { readonly leadId: string; readonly exactText: string; readonly outcome: string; readonly sourceClient: string },
-): Promise<void> {
-  await withActor(actor, async (sql) => {
-    await sql.query(`select public.capture_reply($1, $2, $3, $4, $5, now())`, [
-      input.leadId,
-      input.exactText,
-      input.outcome,
-      null,
-      input.sourceClient,
-    ]);
+): Promise<CapturedReply> {
+  return withActor(actor, async (sql) => {
+    const result = await sql.query<{ result: Record<string, unknown> | null }>(
+      `select public.capture_reply($1, $2, $3, $4, $5, now()) as result`,
+      [input.leadId, input.exactText, input.outcome, null, input.sourceClient],
+    );
+
+    const captured = result.rows[0]?.result ?? {};
+    return {
+      leadId: input.leadId,
+      conversationId: asStringOrNull(captured['conversation_id']),
+      interactionId: asStringOrNull(captured['interaction_id']),
+      outcomeId: asStringOrNull(captured['outcome_id']),
+      outcome: asStringOrNull(captured['outcome']) ?? input.outcome,
+    };
   });
 }
 

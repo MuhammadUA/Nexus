@@ -27,6 +27,7 @@ import {
   type AgentJobStatus,
   type AgentJobType,
   type EnrichmentState,
+  type QualificationChainInput,
 } from '@nexus/core';
 
 import { withActor, type Viewer } from '../actor';
@@ -572,6 +573,97 @@ export async function reapExpiredLeases(viewer: Viewer): Promise<number> {
   });
 }
 
+/* --------------------------------------------------- model-only work ----- */
+
+export interface ClaimedDirectJob {
+  readonly jobId: string;
+  readonly businessId: string;
+  readonly jobType: string;
+  readonly leadId: string | null;
+  readonly personId: string | null;
+  readonly companyId: string | null;
+  readonly attemptCount: number;
+  readonly leaseExpiresAt: string | null;
+}
+
+/**
+ * Claims `OPEN` jobs whose whole job is a model call (qualification, context).
+ *
+ * Distinct from `nexus_claim_ai_work`, which takes `WAITING_AI` jobs — those have a
+ * staged body an agent produced. These have no body: their prerequisites are
+ * committed structured facts, so they are claimable as soon as the planner creates
+ * them. The lease, the attempt count and `SKIP LOCKED` are the same, so two
+ * processors cannot take the same job and a dead processor's work returns to the
+ * queue through the ordinary reaper.
+ */
+export async function claimDirectAiWork(
+  viewer: Viewer,
+  input: {
+    readonly businessId?: string | null;
+    readonly limit?: number;
+    readonly leaseSeconds?: number;
+    readonly jobTypes?: readonly string[];
+    readonly capabilities?: readonly string[];
+  } = {},
+): Promise<readonly ClaimedDirectJob[]> {
+  return withActor(viewer.actor, async (sql) => {
+    const result = await sql.query<{
+      job_id: string;
+      business_id: string;
+      job_type: string;
+      lead_id: string | null;
+      person_id: string | null;
+      company_id: string | null;
+      attempt_count: number;
+      lease_expires_at: unknown;
+    }>(
+      `select job_id, business_id, job_type, lead_id, person_id, company_id,
+              attempt_count, lease_expires_at
+         from public.nexus_claim_ai_direct_work($1, $2, $3, $4::text[], $5::text[])`,
+      [
+        input.limit ?? 5,
+        input.businessId ?? null,
+        input.leaseSeconds ?? 600,
+        input.jobTypes ?? ['QUALIFY_LEAD', 'BUILD_CONTEXT'],
+        input.capabilities ?? ['ai_qualify', 'ai_context'],
+      ],
+    );
+    return result.rows.map((row) => ({
+      jobId: String(row.job_id),
+      businessId: String(row.business_id),
+      jobType: row.job_type,
+      leadId: row.lead_id === null ? null : String(row.lead_id),
+      personId: row.person_id === null ? null : String(row.person_id),
+      companyId: row.company_id === null ? null : String(row.company_id),
+      attemptCount: asNumber(row.attempt_count, 0),
+      leaseExpiresAt: asIso(row.lease_expires_at),
+    }));
+  });
+}
+
+/**
+ * Completes a model-only job.
+ *
+ * The database still refuses while an un-consumed staging row exists and still
+ * refuses unless the caller holds the running lease, so "complete only after the
+ * structured result is persisted and nothing raw is left behind" holds for these
+ * jobs exactly as it does for an extraction job.
+ */
+export async function completeDirectAgentJob(
+  viewer: Viewer,
+  input: { readonly jobId: string; readonly aiRunId?: string | null; readonly agent?: string },
+): Promise<{ jobId: string; status: string }> {
+  return withActor(viewer.actor, async (sql) => {
+    const result = await sql.query<{ job_id: string; status: string }>(
+      `select job_id, status from public.nexus_complete_direct_agent_job($1, $2, $3)`,
+      [input.jobId, input.aiRunId ?? null, input.agent ?? 'ai_processor'],
+    );
+    const row = result.rows[0];
+    if (row === undefined) throw new Error('The agent job could not be completed.');
+    return { jobId: String(row.job_id), status: row.status };
+  });
+}
+
 /* ---------------------------------------------------------------- chain -- */
 
 export interface ChainJobsResult {
@@ -600,7 +692,20 @@ type ChainFactRow = {
  */
 export async function chainJobsForLead(
   viewer: Viewer,
-  input: { readonly businessId: string; readonly leadId: string },
+  input: {
+    readonly businessId: string;
+    readonly leadId: string;
+    /**
+     * Qualification state, when the caller can supply it.
+     *
+     * The planner needs to know whether the stored qualification answers today's
+     * facts, and only the AI layer can compute that (the hash is over the same
+     * canonical projection the prompt uses). A caller that omits it plans no
+     * qualification — the conservative default, because a caller that cannot judge
+     * staleness must not cause a model call.
+     */
+    readonly qualification?: QualificationChainInput;
+  },
 ): Promise<readonly ChainJobsResult[]> {
   // Facts and open keys are read in one transaction; job creation then happens
   // outside it, because each creation opens its own transaction and a nested
@@ -653,6 +758,7 @@ export async function chainJobsForLead(
       openJobKeys: open.rows
         .map((entry) => entry.dedupe_key)
         .filter((key): key is string => typeof key === 'string' && key.length > 0),
+      ...(input.qualification === undefined ? {} : { qualification: input.qualification }),
     });
   });
 

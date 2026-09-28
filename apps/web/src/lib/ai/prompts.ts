@@ -25,7 +25,7 @@ import 'server-only';
 
 import { PROMPT_KEYS, type PromptKey } from '@nexus/core';
 
-import { withActor, type Viewer } from '../actor';
+import { withActor, type ActorCarrier, type Viewer } from '../actor';
 import { asIso, asNumber, describeDbError } from '../repo/common';
 
 export interface PromptDefinition {
@@ -339,7 +339,7 @@ export async function ensureDefaultPrompts(viewer: Viewer): Promise<void> {
  * that a partially populated row can leave.
  */
 export async function resolvePrompt(
-  viewer: Viewer,
+  viewer: ActorCarrier,
   key: PromptKey,
   businessId: string | null,
 ): Promise<ResolvedPrompt> {
@@ -391,7 +391,7 @@ export interface PromptVersionSummary {
 
 /** Every version visible in a scope: the global set plus one business's overrides. */
 export async function listPromptVersions(
-  viewer: Viewer,
+  viewer: ActorCarrier,
   businessId: string | null,
 ): Promise<readonly PromptVersionSummary[]> {
   const rows = await withActor(viewer.actor, async (sql) =>

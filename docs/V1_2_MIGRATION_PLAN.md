@@ -1,6 +1,6 @@
-# NEXUS V1.2 — Migration Plan (`0030`–`0035`)
+# NEXUS V1.2 — Migration Plan (`0030`–`0036`)
 
-**Branch:** `v1.2/ai-first-redesign`. **Migrations:** `packages/db/migrations/0030` … `0035`.
+**Branch:** `v1.2/ai-first-redesign`. **Migrations:** `packages/db/migrations/0030` … `0036`.
 **Normative sibling:** `product/NEXUS_V1_2_MASTER_SPEC.md` (the product contract; this document is the
 database contract for the same change).
 **Audience:** the person who applies these to a real PostgreSQL/Supabase project — ChatGPT, per the V1.2
@@ -12,7 +12,7 @@ is the implementation of record.
 
 ---
 
-## 1. What these six migrations are for
+## 1. What these seven migrations are for
 
 | Migration | Adds | Implements |
 | --- | --- | --- |
@@ -22,6 +22,7 @@ is the implementation of record.
 | `0033_ai_runs_prompts_context.sql` | `ai_runs`, `ai_context_packs`, an additive extension of `prompt_versions`, `nexus_active_prompt` | §46–§54, §56, §59, §60, §61 |
 | `0034_v1_2_processor_and_read_models.sql` | `nexus_claim_ai_work`, three `security_invoker` read views, V1.2 read indexes, `nexus_retry_agent_job` | §42.6, §56.3, §64, §65, §70, §76 |
 | `0035_companion_binding_scope.sql` | corrected `companion_visible_business_ids`, `companion_ineligible_reason`, `assert_companion_binding_scope` | §71, §78, §77 |
+| `0036_lead_qualification.sql` | the ICP-qualification columns on `lead_icp_matches` (intent score, recommended angle, reasons, disqualifiers, confidence, AI-run id, qualified-at, input hash) with their checks and two partial indexes, plus `nexus_claim_ai_direct_work` and `nexus_complete_direct_agent_job` for jobs whose whole work is a model call | §36, §46, §49, §59 |
 
 ---
 
@@ -713,9 +714,9 @@ select count(*) from public.lead_enrichment_funnel;
 ## 14. Forward-only posture
 
 - **There are no down migrations.** A rollback is either a restore or a *new* additive migration.
-- **Once applied anywhere, `0030`–`0035` are frozen.** A defect is fixed by `0036`, exactly as `0029`
-  fixed `0028`'s first deployed revision and `0035` fixed `0001`'s helper. Editing an applied migration
-  means two databases with the same version number and different schemas.
+- **Once applied anywhere, `0030`–`0036` are frozen.** A defect is fixed by the next number, exactly as
+  `0029` fixed `0028`'s first deployed revision and `0035` fixed `0001`'s helper. Editing an applied
+  migration means two databases with the same version number and different schemas.
 - **Dropping something is not a rollback.** Dropping `raw_staging`, `agent_jobs` or `ai_runs` would delete
   in-flight work and the cost ledger; if a surface must be retired, retire the code path and leave the
   table, or write a migration that is explicit about what it destroys and why.

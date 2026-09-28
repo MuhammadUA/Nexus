@@ -82,7 +82,7 @@ behind a plausible response. Ingestion-shaped tools carry a second, deeper key
 | `nexus.create_signal` | `signal:create` | |
 | `nexus.add_source_evidence` | `evidence:add` | |
 | `nexus.submit_source_metadata` | `evidence:add` | V1.2: metadata + structured summary, never a raw body |
-| `nexus.capture_reply` | `reply:capture` | exact inbound text, verbatim |
+| `nexus.capture_reply` | `reply:capture` | exact inbound text, verbatim | capture commits first; the AI reading is a separate result (`classification`, or `null` with a typed `classification_error`), and a `Do not contact` capture stays DNC whatever the model reads |
 | `nexus.add_note` | `note:add` | |
 | `nexus.create_task` | `task:create` | |
 | `nexus.submit_research` | `research:submit` | |

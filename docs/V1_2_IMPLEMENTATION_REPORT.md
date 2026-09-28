@@ -3,8 +3,10 @@
 **Branch:** `v1.2/ai-first-redesign` (pushed to `MuhammadUA/Nexus`)
 **Source branch:** `integration/final`, treated as read-only
 **Source SHA:** `50aa3c19005c7ac34777554ff4bbc7035c13aef4`
-**Final V1.2 SHA:** `ef1c8ce` plus the documentation commit that carries this report;
-the clean-checkout gate ran at `ef1c8ce` and only documentation follows it.
+**Final V1.2 SHA:** the head of `v1.2/ai-first-redesign` after the AI call-site commit
+in §15; the clean-checkout gate ran at `ef1c8ce`, and the only commits after it are the
+gate report, the disclosure of the two then-unwired tasks, and the change that wired
+them (which re-ran the whole gate — see §12).
 **Production / Supabase / Vercel:** not touched. Nothing was deployed, merged or
 force-pushed; no tag was moved.
 
@@ -45,6 +47,8 @@ NEXUS V1.2 turns the CRM from a database-shaped tool into an AI-first sales OS:
 | `4e787a7` | `docs: V1.2 agent jobs, AI pipeline, MCP contract, UI acceptance and test report` |
 | `69edb09` `0aecf20` `197c84a` `c4b4a43` `4446b5e` | the application: Companion, AI pipeline, Leads/Lead Detail, Agent Jobs + AI settings + navigation, Overview/Insights/Channel Accounts |
 | `7bd1d76` `ab29f66` `83f24e1` `ef1c8ce` | integration fixes, the document set, the browser E2E suite and its three defects, and the last MCP corrections |
+| `e658b80` `a8580b1` | the clean-checkout gate results, and the disclosure of the two AI tasks that had no caller yet |
+| `SELF` | `feat(ai): invoke ICP qualification and reply classification, and process model-only agent jobs` — the call sites, the persistence, migration `0036` and 17 new tests (see §15) |
 
 ## 3. Migrations (additive, forward-only)
 
@@ -56,6 +60,7 @@ NEXUS V1.2 turns the CRM from a database-shaped tool into an AI-first sales OS:
 | `0033_ai_runs_prompts_context.sql` | `ai_runs` + cache index, `prompt_versions` extended (business override, sampling, active flag) and `nexus_active_prompt`, `ai_context_packs` |
 | `0034_v1_2_processor_and_read_models.sql` | `nexus_claim_ai_work`, `nexus_retry_agent_job`, `ai_usage_daily` / `agent_job_queue_summary` / `lead_enrichment_funnel` views, V1.2 read indexes |
 | `0035_companion_binding_scope.sql` | corrected `companion_visible_business_ids`, `companion_ineligible_reason`, the `browser_sessions` bind-scope trigger |
+| `0036_lead_qualification.sql` | the qualification columns on `lead_icp_matches` (intent score, angle, reasons, disqualifiers, confidence, run id, qualified-at, input hash) with their checks and indexes, plus `nexus_claim_ai_direct_work` and `nexus_complete_direct_agent_job` for model-only jobs |
 
 Nothing destructive, nothing renamed, and no applied migration was rewritten. The
 one V1.1 constraint V1.2 replaces is `prompt_versions_key_version_key`, because a
@@ -197,35 +202,33 @@ Implementation-level: `docs/V1_2_AI_PIPELINE.md`, `docs/V1_2_AGENT_JOBS.md`,
 `docs/V1_2_TEST_REPORT.md`, and this report. All historical documents are
 preserved.
 
-## 12. Gate results and the clean-checkout run
+## 12. Gate results
 
-The full release gate was run from a **clean worktree** (`git worktree add --detach
-E:\CRM\v12-cleancheck v1.2/ai-first-redesign`, at the code commit `ef1c8ce`) after
-`pnpm install --frozen-lockfile`. Nothing depended on this machine's scratch state:
-the web E2E suite provisions its own database in the OS temp directory and removes it
-afterwards, and the extension suite seeds a fresh demo database inside the worktree.
+The full release gate was run twice: once from a **clean worktree** (`git worktree add
+--detach E:\CRM\v12-cleancheck v1.2/ai-first-redesign`) at the code commit `ef1c8ce`,
+and again in the integration tree after the AI call sites in §15 landed (migration
+`0036`, 17 new tests). Nothing depended on this machine's scratch state: the web E2E
+suite provisions its own database in the OS temp directory and removes it afterwards,
+and the extension suite seeds a fresh demo database in `apps/web/.data`.
 
 ```
 pnpm install --frozen-lockfile                     pass (3.2s)
-pnpm run typecheck                                 pass — 5 packages, no errors
+pnpm run typecheck                                 pass — every package, no errors
 pnpm run lint                                      pass — --max-warnings 0 per package
-pnpm run test                                      pass — 41 files, 704 tests
-pnpm run db:verify                                 pass — 35 migrations, 71 tables,
+pnpm run test                                      pass — 42 files, 730 tests
+pnpm run db:verify                                 pass — 36 migrations, 71 tables,
                                                    198 policies, 111 triggers,
-                                                   127 functions, 218 indexes
+                                                   129 functions, 220 indexes
 pnpm run build                                     pass — Next.js production build
 pnpm --filter @nexus/extension run build           pass — manifest valid, no credentials
 pnpm --filter @nexus/web run e2e                   pass — 15 tests
 pnpm --filter @nexus/extension run e2e             pass — 38 tests
 ```
 
-Per suite: `@nexus/core` 144, `@nexus/db` 110, `@nexus/web` 441, `@nexus/extension`
+Per suite: `@nexus/core` 154, `@nexus/db` 110, `@nexus/web` 457, `@nexus/extension`
 (unit) 9. The extension E2E baseline on `integration/final` was 36 passed / 2 skipped;
 it is now 38 passed / 0 failed, with the two previously skipped cases covered by the
 account-scoped bind work. Full detail: `docs/V1_2_TEST_REPORT.md`.
-
-The only commits after the gated commit are documentation, so the result applies to
-the final tree of the branch.
 
 ### Defects the new browser E2E found and that are fixed here
 
@@ -295,29 +298,129 @@ Carried forward honestly rather than papered over:
    database has no leads. It proves the screens, the deterministic search links and
    the absence of a manual complete action; it does not prove a full enrichment
    round trip, which the PGlite suites do.
-9. **Two of the seven AI tasks are implemented but not yet invoked from a product
-   flow.** `ICP_QUALIFICATION` and `REPLY_CLASSIFICATION` both exist as first-class
-   tasks — versioned prompt (`icp_qualify`, `reply_classify`), strict schema, input
-   hashing, cache lookup, ledger row with tokens and cost — and are callable through
-   the same `runAiTask` the other five use, so the pipeline and cache correctness
-   apply to them unchanged. What is missing is the call site and its persistence:
-   * `ICP_QUALIFICATION` should run as the `QUALIFY_LEAD` job the chaining table
-     names (`QUALIFY_LEAD:<lead_id>`, master spec §36) and write the decided ICP to
-     `lead_icp_matches` through the audited `set_primary_icp`. Until then the fit and
-     intent the Lead screens show come from the deterministic `lead_icp_matches`
-     rows the ingest pipeline writes, and the Brief's confidence is the derived
-     figure — no qualification score is invented. A hand-created `QUALIFY_LEAD` job
-     fails with the typed `no_processor_for_job_type`, which is visible in the queue
-     rather than silently stuck, and automatic chaining never creates one.
-   * `REPLY_CLASSIFICATION` should run from the reply-capture path and write the
-     proposed outcome and reason to `conversation_outcomes` and an `interactions`
-     row (master spec §64.5), leaving the verbatim inbound text untouched. Until
-     then reply capture is exactly V1.1 behaviour — the exact text verbatim, the
-     operator's outcome, DNC and sequence pausing intact, which the DNC and reply
-     suites still assert.
+9. ~~**Two of the seven AI tasks are implemented but not yet invoked from a product
+   flow.**~~ **Closed in this branch — see §15.** Both tasks now have a call site and
+   a persistence path, and `QUALIFY_LEAD` is processed rather than failing with
+   `no_processor_for_job_type`.
 
-   Both are additive: no schema change is needed for either, because the target
-   tables already exist and the runner already records the attempt.
+## 15. Closing the AI call sites (qualification and reply classification)
+
+The two tasks that existed as contracts without a caller are now invoked, persisted
+and tested end to end. Nothing was redesigned: the prompts, schemas, runner, cache
+key and ledger are the ones already in the branch, and the new migration only adds
+the columns and the two functions the call sites need.
+
+### 15.1 `ICP_QUALIFICATION` as the `QUALIFY_LEAD` job
+
+* **Planned from facts, by the existing planner.** `planChainedJobs` gained an
+  optional `qualification` input; when the caller supplies it, a `QUALIFY_LEAD` plan
+  is produced only when the prerequisites hold, the state allows it, and the stored
+  answer does *not* already cover the current input. The prerequisites are
+  `qualificationPrerequisites()` in `@nexus/core`: a resolved person, a resolved
+  company, and at least one piece of intelligence (company research, a signal, or an
+  existing context pack). Without qualification state the planner plans nothing —
+  the conservative default, so a caller that cannot judge staleness cannot cause a
+  model call.
+* **Claimed from `OPEN`.** These jobs are created `OPEN` by the planner, and
+  `nexus_claim_ai_work` only takes `WAITING_AI` (jobs an agent staged evidence for).
+  Migration 0036 adds `nexus_claim_ai_direct_work`, the same lease-guarded,
+  `SKIP LOCKED`, attempt-counted claim, for jobs whose whole work is a model call.
+  This also fixed a **pre-existing stuck state**: `BUILD_CONTEXT` was planned by the
+  chaining table but never claimable, so those rows sat `OPEN` for ever and the
+  processor's `BUILD_CONTEXT` branch was unreachable.
+* **Run through the shared runner.** `lib/ai/qualification.ts` projects the facts
+  (person, company, research summary, up to twelve signals, contact kinds, ICP
+  criteria), hashes them, and calls `runAiTask` with the versioned `icp_qualify`
+  prompt, the task's own schema and temperature, and the resolved prompt version.
+* **Cached on the input, requalified on change.** The hash covers the facts, the
+  criteria, the prompt version and the model. `loadCached` materialises the stored
+  answer, so identical facts cost nothing and write a `CACHED` ledger row; changed
+  facts produce a new hash, which is the only trigger requalification needs. The
+  "is this answer current?" check consults both `lead_icp_matches.input_hash` and the
+  newest `SUCCEEDED` run, so a lead the model could not match to an ICP does not buy
+  the same answer on every pass.
+* **Persisted through the domain path.** A chosen ICP is applied with the audited
+  `set_primary_icp` (business check, single primary, `leads.primary_icp_id`, audit
+  event) and only when it actually changes; the rest of the answer — fit, intent,
+  reasons, disqualifiers, recommended angle, confidence, run id, input hash, the
+  timestamp — is written onto that match row. A model that names no ICP (or an ICP
+  from another business) does not get to invent a primary; the assessment lands on
+  the lead's existing primary match, and if the lead has no match at all the ledger
+  row is the record. A lead carrying `primary_icp_id` without a match row (an import)
+  is materialised through the same audited function rather than silently dropping a
+  paid-for answer.
+* **Context updates itself.** Because the pack's input hash includes the match score,
+  intent and reason, a qualification invalidates the stored pack by construction. The
+  processor rebuilds it right after a successful qualification, so the draft prompt
+  sees the new fit and intent — and `buildContextPackInput` now reads the intent
+  score and angle from the match row instead of the hard `null` that the old comment
+  promised qualification would fill in.
+* **Failures are typed and leave the lead alone.** `prerequisites_unmet` and
+  `lead_not_found` are non-retryable and cost zero tokens; provider failures carry
+  the runner's own code and retryability; a persistence failure returns
+  `commit_failed` with the ledger row already written and no partial score or
+  half-applied ICP. A terminal failure is recorded on the job so the queue shows it.
+* **No duplicate work.** The dedupe key is `QUALIFY_LEAD:<leadId>:<scope>` under the
+  existing partial unique index over open jobs, and the input-hash check stops a new
+  job once the answer matches.
+
+### 15.2 `REPLY_CLASSIFICATION` on the reply-capture path
+
+* **Capture first, always.** All three capture paths — the business lead page
+  (`captureReplyAction`), the Companion (`capture-reply`), and MCP
+  (`nexus.capture_reply`) — now run `capture_reply` to completion and only then
+  classify. The classification is best-effort by construction
+  (`classifyCapturedReplyQuietly` returns its failures and never throws), so a
+  missing provider key, a rate limit or a schema failure cannot turn a saved reply
+  into an error. It is deliberately not fire-and-forget: a floating promise can be
+  killed with the request, and the capture has already committed, so awaiting it is
+  what makes "classification happens afterwards" a guarantee rather than a wish.
+* **The verbatim text is never touched.** The reading is a new `interactions` row
+  (`type = 'system'`, `direction = 'internal'`, `source_client = 'ai_pipeline'`)
+  carrying the structured reading and its provenance. No statement in the module
+  updates a reply interaction, and the reading deliberately does not repeat the reply
+  text — there is one copy of the bytes, in the row `capture_reply` wrote.
+* **The captured outcome stands.** `conversation_outcomes.outcome` and `is_terminal`
+  are never written by this path, so a reply captured as `Do not contact` remains DNC
+  even when the model reads it as interested; the disagreement is recorded
+  (`agrees_with_captured_outcome: false`) rather than acted on. Only an empty
+  `reason` is filled, so an operator's note is never overwritten. DNC suppression and
+  sequence pausing remain the trigger's and the RPC's work.
+* **Cached only where it is safe.** The input hash covers the exact reply text, the
+  reply interaction, the channel, the bounded prior-outreach summary and the prompt
+  version, so re-asking about the *same* reply reuses the stored reading while a
+  different reply with identical words can never be served it.
+
+### 15.3 What this adds to the schema
+
+Migration `0036_lead_qualification.sql` is additive and forward-only:
+
+* seven columns on `lead_icp_matches` (intent score, recommended angle, reasons,
+  disqualifiers, confidence, ai-run id, qualified-at, input hash) with their checks
+  and two partial indexes;
+* `nexus_claim_ai_direct_work(limit, business, lease, types, capabilities)` and
+  `nexus_complete_direct_agent_job(job, ai_run, agent)`.
+
+The completion rule is unchanged in substance: the job must be held by the claiming
+processor, and no un-consumed `raw_staging` row may remain for it. For a model-only
+job there is no staged body at all, and the caller has already persisted the
+structured result before it completes.
+
+### 15.4 Evidence
+
+`apps/web/test/v1-2-qualification.test.ts` (16 tests) drives the real planner, the
+real claim function, the real runner and the real persistence with injected
+providers, and asserts the whole list: chaining into qualification, the job actually
+processed and completed, the primary ICP and assessment persisted, no second provider
+call for unchanged facts, requalification with a new hash and a new ledger row on
+changed facts, a typed non-retryable failure leaving the lead untouched, the exact
+reply saved when classification fails, the reading stored separately, DNC remaining
+authoritative, the ledger recording both tasks with tokens and cost, and the staged
+raw marker absent from every row and prompt this work writes. A tenth of the suite
+runs through the MCP transport (`v1-2-mcp-agents.test.ts`): a reply captured by
+`nexus.capture_reply` with no provider configured answers `captured: true` with
+`classification: null` and a typed `classification_error`.
+
 
 ## 14. Deployment actions for ChatGPT
 
@@ -335,6 +438,7 @@ migrations do themselves (`lead_enrichment` for existing leads,
 0033_ai_runs_prompts_context.sql
 0034_v1_2_processor_and_read_models.sql
 0035_companion_binding_scope.sql
+0036_lead_qualification.sql
 ```
 
 Before applying, confirm the `nexus_raw_writer` role can be created and granted to
@@ -374,6 +478,12 @@ token is the intended shape; a 5-minute cadence keeps an abandoned staging row's
 lifetime at 24h plus at most one interval. The route is idempotent, bounded and safe
 to call concurrently (the work claim is lease-guarded).
 
+This schedule is also what runs **ICP qualification and context building**: the same
+pass claims the model-only jobs (`QUALIFY_LEAD`, `BUILD_CONTEXT`) created by the
+chaining planner, runs the versioned tasks, persists the result and completes the
+job. No additional schedule or manual step is needed, and a qualification is never
+planned twice for the same facts.
+
 **5. Create the agent tokens.**
 * OpenCode: `jobs:read`, `jobs:claim`, `jobs:submit` scoped to the businesses it
   works. It never needs `jobs:create` unless ChatGPT-style planning is intended.
@@ -395,10 +505,21 @@ stage a paste, confirm the structured commit, confirm the `raw_staging` row is g
 (`select count(*) from public.raw_staging where lead_id = '<id>'` is 0), and confirm
 the job reached `COMPLETE` only after that.
 
-**8. Two follow-ups that are deliberately not in this branch** (limitations §13.9,
-both additive and schema-free): invoke `ICP_QUALIFICATION` from the `QUALIFY_LEAD`
-job and write the decision through `set_primary_icp`, and invoke
-`REPLY_CLASSIFICATION` from the reply-capture path into `conversation_outcomes` and
-`interactions`. The prompts, schemas and ledger rows already exist, so each is a
-call site plus its persistence, not new plumbing.
+**8. Watch one qualification and one reply too**, in the same sitting:
+
+```sql
+-- The qualification ran, was paid for, and is attached to the lead.
+select status, cache_hit, tokens_in, tokens_out, estimated_cost_usd, prompt_version_id
+  from public.ai_runs where task = 'ICP_QUALIFICATION' order by created_at desc limit 3;
+select icp_id, is_primary, match_score, intent_score, reasons, recommended_angle, input_hash
+  from public.lead_icp_matches where lead_id = '<id>' and is_primary;
+-- The reply is verbatim, and the reading is a separate row.
+select type, direction, summary from public.interactions
+ where lead_id = '<id>' and type in ('inbound_reply','system') order by created_at desc limit 5;
+```
+
+A second processor pass with no new facts must record a `cache_hit = true` run and
+must **not** create a second `QUALIFY_LEAD` job. A `Do not contact` reply must leave
+`conversation_outcomes.is_terminal` true and an active `contact_suppressions` row
+even when the reading disagrees with it.
 

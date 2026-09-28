@@ -49,6 +49,9 @@ function credentialFor(): ServiceCredential {
       'profile:capture',
       'evidence:add',
       'candidate:submit',
+      // The reply-capture tool, so the transport half of the "capture then
+      // classify" path is exercised here rather than only in the repo suites.
+      'reply:capture',
     ],
     // One business only, so "not scoped to that business" is a real refusal path.
     businessIds: [BUSINESS_ID],
@@ -526,8 +529,43 @@ describe('v1.2 mcp lead intelligence tools', () => {
     expect(second.structured['lead_id']).toBe(first.structured['lead_id']);
   });
 
-  it('records source metadata without storing a raw body', async () => {
-    const answer = await call('nexus.submit_source_metadata', {
+  it('captures a reply verbatim and reports the AI reading as a separate result', async () => {
+    /**
+     * The transport-level half of the reply rule: the reply is stored by
+     * `capture_reply` before any model call, and this deployment has no provider
+     * key, so the answer must say "captured, no reading" rather than "failed".
+     * The classifier's own behaviour is covered in `v1-2-qualification.test.ts`.
+     */
+    const exact = 'MCP-REPLY-MARKER Thanks, but we already have a supplier.';
+    const answer = await call('nexus.capture_reply', {
+      business_id: BUSINESS_ID,
+      idempotency_key: key('capture-reply'),
+      lead_id: LEAD_ID,
+      exact_text: exact,
+      outcome: 'Already has supplier',
+    });
+    expect(answer.isError, answer.text).toBe(false);
+    expect(answer.structured['captured']).toBe(true);
+    expect(answer.structured['lead_id']).toBe(LEAD_ID);
+    expect(answer.structured['outcome']).toBe('Already has supplier');
+    // No provider here: the reading is missing and named as missing.
+    expect(answer.structured['classification']).toBeNull();
+    const failure = answer.structured['classification_error'] as { code: string } | null;
+    expect(failure?.code).toBe('provider_not_configured');
+
+    // The exact bytes are in the inbound interaction, and the reply exists.
+    const stored = await h.db.query<{ summary: string }>(
+      `select summary from public.interactions
+        where lead_id = $1 and type = 'inbound_reply' order by created_at desc limit 1`,
+      [LEAD_ID],
+    );
+    expect(stored.rows[0]?.summary).toBe(exact);
+
+    // The transport never echoed the paste back in its own payload.
+    expect(JSON.stringify(answer.structured)).not.toContain(exact);
+  });
+
+  it('records source metadata without storing a raw body', async () => {    const answer = await call('nexus.submit_source_metadata', {
       business_id: BUSINESS_ID,
       idempotency_key: key('metadata'),
       lead_id: LEAD_ID,

@@ -56,6 +56,19 @@ export interface Viewer {
   readonly isService: boolean;
 }
 
+/**
+ * Anything that carries an actor.
+ *
+ * A `Viewer` satisfies this, and so does a bare actor wrapped as `{ actor }`. It is
+ * the right parameter for the parts of the AI layer that genuinely need nothing but
+ * the identity to run in — the runner and the prompt resolver — because requiring a
+ * full `Viewer` there forced callers that only have an actor (an MCP credential, a
+ * background job) to load one they never use.
+ */
+export interface ActorCarrier {
+  readonly actor: Actor;
+}
+
 function quoteLiteral(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }

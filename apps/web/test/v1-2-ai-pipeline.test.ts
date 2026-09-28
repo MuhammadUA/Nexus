@@ -84,16 +84,29 @@ const AGENT_CAPS = [
 function validatingProvider(
   value: unknown | ((request: AiJsonRequest<z.ZodTypeAny>) => unknown),
   options: { configured?: boolean } = {},
-): AiProvider & { calls: number } {
+): AiProvider & { calls: number; callsFor(operation: string): number } {
   const provider = {
     name: 'deepseek' as const,
     model: 'deepseek-chat',
     configured: options.configured ?? true,
     calls: 0,
+    byOperation: {} as Record<string, number>,
+    /**
+     * Calls for one operation.
+     *
+     * The processor claims *all* the model-only work in a business — a
+     * qualification or a context rebuild planned by an earlier test is legitimate
+     * work for a later pass — so a test that cares about one hop must count that hop
+     * rather than every call the pass happened to make.
+     */
+    callsFor(operation: string): number {
+      return provider.byOperation[operation] ?? 0;
+    },
     async complete<Schema extends z.ZodTypeAny>(
       request: AiJsonRequest<Schema>,
     ): Promise<AiResult<z.infer<Schema>>> {
       provider.calls += 1;
+      provider.byOperation[request.operation] = (provider.byOperation[request.operation] ?? 0) + 1;
       const raw = typeof value === 'function' ? value(request) : value;
       const parsed = request.schema.safeParse(raw);
       if (!parsed.success) {
@@ -949,7 +962,11 @@ describe('processAiQueue', () => {
     const second = await processAiQueue(admin, { businessId: BUSINESS_ID, limit: 5, provider: working });
 
     expect(second.jobsCompleted).toBeGreaterThanOrEqual(1);
-    expect(working.calls).toBe(1);
+    // Exactly one *extraction* call: the retry reused the staged row instead of
+    // re-reading it, which is the property this test is about. Other jobs the pass
+    // happens to claim (a qualification planned by an earlier hop) are counted
+    // separately rather than folded into this number.
+    expect(working.callsFor('company_extraction')).toBe(1);
     expect((await getAgentJob(admin, created.jobId))?.status).toBe('COMPLETE');
     expect(await countRows('raw_staging', 'agent_job_id = $1', [created.jobId])).toBe(0);
     expect(await countRows('raw_staging', 'id = $1', [submitted.rawStagingId])).toBe(0);

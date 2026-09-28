@@ -3,10 +3,21 @@ import {
   AGENT_JOB_CAPABILITIES,
   defaultPriority,
   planChainedJobs,
+  qualificationPrerequisites,
   type AgentJobPlan,
   type ChainInput,
+  type QualificationPrerequisites,
 } from './agent-jobs.js';
 import { AGENT_JOB_PRIORITIES, AGENT_JOB_TYPES, ENRICHMENT_STATES } from './vocabulary.js';
+
+/** The bar for scoring a lead: person, company, and something to score against. */
+const READY_PREREQUISITES: QualificationPrerequisites = {
+  personResolved: true,
+  companyResolved: true,
+  hasCompanyResearch: true,
+  signalCount: 2,
+  hasAiContext: true,
+};
 
 /** A lead whose profile is ready, with the company still unresearched. */
 function input(overrides: Partial<ChainInput> = {}): ChainInput {
@@ -84,7 +95,7 @@ describe('planChainedJobs', () => {
     }
   });
 
-  it('returns at most two plans, never two of the same type, for every state and fact combination', () => {
+  it('returns at most three plans, never two of the same type, for every state and fact combination', () => {
     for (const enrichmentState of ENRICHMENT_STATES) {
       for (const hasCompanyResearch of [false, true]) {
         for (const hasAiContext of [false, true]) {
@@ -95,12 +106,161 @@ describe('planChainedJobs', () => {
         }
       }
     }
+
+    // With qualification state supplied the ceiling is three: the research branch
+    // and the signals/context branch are mutually exclusive, and qualification adds
+    // at most one more.
+    for (const enrichmentState of ENRICHMENT_STATES) {
+      const plans = planChainedJobs(
+        input({
+          enrichmentState,
+          hasCompanyResearch: false,
+          hasAiContext: false,
+          qualification: { prerequisites: READY_PREREQUISITES, qualifiedForCurrentInput: false },
+        }),
+      );
+      expect(plans.length).toBeLessThanOrEqual(3);
+      expect(new Set(types(plans)).size).toBe(plans.length);
+    }
   });
 
   it('keeps the plan stable across repeated calls (same facts, same plan)', () => {
     const first = planChainedJobs(input({ hasCompanyResearch: true, hasAiContext: false }));
     const second = planChainedJobs(input({ hasCompanyResearch: true, hasAiContext: false }));
     expect(second).toEqual(first);
+  });
+});
+
+/* ----------------------------------------------------- qualification ----- */
+
+describe('qualificationPrerequisites', () => {
+  it('is ready on a person, a company and one piece of intelligence', () => {
+    expect(qualificationPrerequisites(READY_PREREQUISITES).ready).toBe(true);
+    expect(qualificationPrerequisites(READY_PREREQUISITES).missing).toEqual([]);
+  });
+
+  it('accepts a signal or a context pack in place of company research', () => {
+    const base = { ...READY_PREREQUISITES, hasCompanyResearch: false };
+    expect(qualificationPrerequisites({ ...base, signalCount: 1, hasAiContext: false }).ready).toBe(true);
+    expect(qualificationPrerequisites({ ...base, signalCount: 0, hasAiContext: true }).ready).toBe(true);
+  });
+
+  it('is not ready without a person, a company, or anything to score against', () => {
+    const noPerson = qualificationPrerequisites({ ...READY_PREREQUISITES, personResolved: false });
+    expect(noPerson.ready).toBe(false);
+    expect(noPerson.missing).toContain('person');
+
+    const noCompany = qualificationPrerequisites({ ...READY_PREREQUISITES, companyResolved: false });
+    expect(noCompany.ready).toBe(false);
+    expect(noCompany.missing).toContain('company');
+
+    const nothingToScore = qualificationPrerequisites({
+      ...READY_PREREQUISITES,
+      hasCompanyResearch: false,
+      signalCount: 0,
+      hasAiContext: false,
+    });
+    expect(nothingToScore.ready).toBe(false);
+    expect(nothingToScore.missing.join(' ')).toContain('intelligence');
+  });
+});
+
+describe('planChainedJobs qualification', () => {
+  it('plans QUALIFY_LEAD last, once the facts are there and no answer covers them', () => {
+    const plans = planChainedJobs(
+      input({
+        hasCompanyResearch: true,
+        hasAiContext: false,
+        qualification: { prerequisites: READY_PREREQUISITES, qualifiedForCurrentInput: false },
+      }),
+    );
+    expect(types(plans)).toEqual(['RESEARCH_SIGNALS', 'BUILD_CONTEXT', 'QUALIFY_LEAD']);
+    const qualification = plans[2];
+    expect(qualification?.dedupeKey).toBe('QUALIFY_LEAD:lead-1:company-1');
+    expect(qualification?.requiredCapabilities).toEqual(['ai_qualify']);
+    expect(qualification?.priority).toBe('normal');
+    expect(qualification?.reason).toContain('no qualification answers the current facts');
+  });
+
+  it('plans nothing for qualification when the stored answer matches the current facts', () => {
+    const plans = planChainedJobs(
+      input({
+        hasCompanyResearch: true,
+        hasAiContext: true,
+        qualification: { prerequisites: READY_PREREQUISITES, qualifiedForCurrentInput: true },
+      }),
+    );
+    expect(types(plans)).toEqual([]);
+  });
+
+  it('requalifies from READY when the facts have changed', () => {
+    const plans = planChainedJobs(
+      input({
+        enrichmentState: 'READY',
+        hasCompanyResearch: true,
+        hasAiContext: true,
+        qualification: { prerequisites: READY_PREREQUISITES, qualifiedForCurrentInput: false },
+      }),
+    );
+    expect(types(plans)).toEqual(['QUALIFY_LEAD']);
+  });
+
+  it('plans nothing for qualification when the prerequisites are unmet', () => {
+    for (const prerequisites of [
+      { ...READY_PREREQUISITES, personResolved: false },
+      { ...READY_PREREQUISITES, companyResolved: false },
+      { ...READY_PREREQUISITES, hasCompanyResearch: false, signalCount: 0, hasAiContext: false },
+    ] satisfies QualificationPrerequisites[]) {
+      const plans = planChainedJobs(
+        input({
+          enrichmentState: 'READY',
+          hasCompanyResearch: true,
+          hasAiContext: true,
+          qualification: { prerequisites, qualifiedForCurrentInput: false },
+        }),
+      );
+      expect(types(plans)).toEqual([]);
+    }
+  });
+
+  it('plans no qualification for a lead that is mid-ingestion or waiting on a human', () => {
+    for (const enrichmentState of ['NEEDS_PROFILE', 'MINIMAL', 'AI_PROCESSING', 'NEEDS_REVIEW', 'FAILED'] as const) {
+      const plans = planChainedJobs(
+        input({
+          enrichmentState,
+          hasCompanyResearch: true,
+          hasAiContext: true,
+          qualification: { prerequisites: READY_PREREQUISITES, qualifiedForCurrentInput: false },
+        }),
+      );
+      expect(types(plans)).not.toContain('QUALIFY_LEAD');
+    }
+  });
+
+  it('is loop-free at the facts level: an open qualification job suppresses the plan', () => {
+    const first = planChainedJobs(
+      input({
+        hasCompanyResearch: true,
+        hasAiContext: true,
+        qualification: { prerequisites: READY_PREREQUISITES, qualifiedForCurrentInput: false },
+      }),
+    );
+    const second = planChainedJobs(
+      input({
+        hasCompanyResearch: true,
+        hasAiContext: true,
+        openJobKeys: first.map((plan) => plan.dedupeKey),
+        qualification: { prerequisites: READY_PREREQUISITES, qualifiedForCurrentInput: false },
+      }),
+    );
+    expect(second).toEqual([]);
+  });
+
+  it('plans no qualification when the caller cannot report its state', () => {
+    const plans = planChainedJobs(
+      input({ enrichmentState: 'READY', hasCompanyResearch: true, hasAiContext: true }),
+    );
+    expect(types(plans)).not.toContain('QUALIFY_LEAD');
   });
 });
 

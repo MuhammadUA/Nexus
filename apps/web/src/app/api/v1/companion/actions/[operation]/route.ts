@@ -1,4 +1,4 @@
-﻿/**
+/**
  * POST /api/v1/companion/mark-connection-sent
  * POST /api/v1/companion/mark-message-sent
  * POST /api/v1/companion/capture-reply
@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { REPLY_OUTCOMES } from '@nexus/core';
 
 import { loadViewer } from '@/lib/actor';
+import { classifyCapturedReplyQuietly } from '@/lib/ai/reply-classification';
 import {
   captureReply,
   markConnectionSent,
@@ -106,7 +107,28 @@ export async function POST(
           outcome: parsed.data.outcome,
           note: parsed.data.note,
         });
-        return result.ok ? jsonOk({ ok: true }) : jsonError(result.error ?? 'That did not work.', 400);
+
+        // The reply is saved before the reading is attempted, and the reading is
+        // best-effort: the Companion's answer stays "that worked" even when no
+        // provider is configured, because the reply itself did work.
+        let reading: { outcome: string; agreesWithCapturedOutcome: boolean } | null = null;
+        if (result.ok && result.reply !== undefined) {
+          const classified = await classifyCapturedReplyQuietly(viewer.actor, {
+            reply: result.reply,
+            exactText: parsed.data.exactText,
+          });
+          reading =
+            classified !== null && classified.ok
+              ? {
+                  outcome: classified.classification.outcome,
+                  agreesWithCapturedOutcome: classified.agreesWithCapturedOutcome,
+                }
+              : null;
+        }
+
+        return result.ok
+          ? jsonOk({ ok: true, classification: reading })
+          : jsonError(result.error ?? 'That did not work.', 400);
       }
 
       case 'snooze': {

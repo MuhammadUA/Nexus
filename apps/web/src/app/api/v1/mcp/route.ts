@@ -391,8 +391,14 @@ const TOOL_HANDLERS: Readonly<
       if (leadId === null || exactText === null || outcome === null) {
         throw new Error('lead_id, exact_text and outcome are required');
       }
-      const { recordExternalReply } = await import('@/lib/repo/ingest');
-      await recordExternalReply(credential.actor, {
+
+      // Capture first, classify second, and never the other way round: the reply
+      // exists before any model call is attempted, and a classification failure is
+      // reported as a missing reading rather than as a failed capture. The exact
+      // text is stored verbatim by `capture_reply`; the reading goes into its own
+      // interaction row.
+      const { captureReplyAndClassify } = await import('@/lib/ai/reply-classification');
+      const { reply, classification } = await captureReplyAndClassify(credential.actor, {
         leadId,
         exactText,
         outcome,
@@ -400,7 +406,29 @@ const TOOL_HANDLERS: Readonly<
         // transport's own name rather than something an argument could spoof.
         sourceClient: 'mcp',
       });
-      return { lead_id: leadId, captured: true };
+
+      return {
+        lead_id: reply.leadId,
+        captured: true,
+        outcome: reply.outcome,
+        // `null` means "no reading", never "the reply failed": the capture above
+        // already committed.
+        classification:
+          classification !== null && classification.ok
+            ? {
+                outcome: classification.classification.outcome,
+                sentiment: classification.classification.sentiment,
+                intent: classification.classification.intent,
+                recommended_next_action: classification.classification.recommended_next_action,
+                agrees_with_captured_outcome: classification.agreesWithCapturedOutcome,
+                cached: classification.cached,
+              }
+            : null,
+        classification_error:
+          classification !== null && !classification.ok
+            ? { code: classification.errorCode, message: classification.error }
+            : null,
+      };
     },
   },
 

@@ -24,6 +24,7 @@ import {
 import { acceptDraftVersion, draftMessageForLead } from '@/lib/ai/drafting';
 import type { DraftErrorCode } from '@/lib/ai/draft-outcome';
 import { enrichProfileFromPaste } from '@/lib/ai/extract';
+import { classifyCapturedReplyQuietly } from '@/lib/ai/reply-classification';
 import { formString, formStringOrNull } from '@/lib/form-data';
 import { authorizeAction } from '@/lib/route-guard';
 import { chainJobsForLead, createAgentJob } from '@/lib/repo/agent-jobs';
@@ -235,10 +236,32 @@ export async function captureReplyAction(_previous: ActionResult, formData: Form
       outcome: parsed.data.outcome ?? undefined,
       note: parsed.data.note ?? null,
     });
+
+    /**
+     * The reply is saved before this runs, and the reading is best-effort by
+     * construction (`classifyCapturedReplyQuietly` returns its failures): a
+     * deployment with no provider key, or a rate limit, must not turn a saved reply
+     * into an error on screen. The classification is a *separate* record — the
+     * verbatim text was written by `capture_reply` and is not touched here.
+     */
+    let readingSuffix = '';
+    if (result.ok && result.reply !== undefined) {
+      const reading = await classifyCapturedReplyQuietly(viewer.actor, {
+        reply: result.reply,
+        exactText: parsed.data.exactText ?? '',
+      });
+      readingSuffix =
+        reading !== null && reading.ok
+          ? ` AI reading: ${reading.classification.outcome}${reading.agreesWithCapturedOutcome ? '' : ' (differs from the outcome you chose)'}.`
+          : ' The AI reading could not be added; the reply itself is saved.';
+    }
+
     return {
       ok: result.ok,
       error: result.error ?? null,
-      message: result.ok ? 'Reply recorded. Pending steps were paused.' : undefined,
+      message: result.ok
+        ? `Reply recorded. Pending steps were paused.${readingSuffix}`
+        : undefined,
     };
   });
 }

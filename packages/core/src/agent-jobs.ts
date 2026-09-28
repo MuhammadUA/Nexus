@@ -72,6 +72,69 @@ export interface ChainInput {
   readonly hasCompanyResearch: boolean;
   readonly hasAiContext: boolean;
   readonly openJobKeys: readonly string[]; // dedupe keys of jobs already OPEN/RUNNING/WAITING_AI
+  /**
+   * ICP qualification state, when the caller can supply it.
+   *
+   * Optional so every existing caller keeps its behaviour: without it the planner
+   * plans no qualification, which is the conservative default — a caller that
+   * cannot say whether the current facts have already been scored must not cause a
+   * model call. The AI processor computes it and passes it.
+   */
+  readonly qualification?: QualificationChainInput;
+}
+
+/** What the planner needs to know about qualification, all of it stored facts. */
+export interface QualificationChainInput {
+  readonly prerequisites: QualificationPrerequisites;
+  /**
+   * True when a committed qualification already answers exactly today's facts.
+   *
+   * The comparison is the qualification *input hash*: identical facts, prompt
+   * version and model mean the stored answer is still the answer, so a new job
+   * would only buy the same result again. Changed facts change the hash, which is
+   * what makes requalification automatic rather than manual.
+   */
+  readonly qualifiedForCurrentInput: boolean;
+}
+
+/* ------------------------------------------------------ qualification --- */
+
+export interface QualificationPrerequisites {
+  /** A canonical person with a committed name. */
+  readonly personResolved: boolean;
+  /** A canonical company. */
+  readonly companyResolved: boolean;
+  /** A committed company research snapshot exists. */
+  readonly hasCompanyResearch: boolean;
+  /** Active signals recorded for the lead, its person or its company. */
+  readonly signalCount: number;
+  /** A cached AI context pack exists for the lead. */
+  readonly hasAiContext: boolean;
+}
+
+export interface QualificationReadiness {
+  readonly ready: boolean;
+  /** What is missing, named so the queue can say why a lead is not being scored. */
+  readonly missing: readonly string[];
+}
+
+/**
+ * Whether there is enough committed structure to score a lead against an ICP.
+ *
+ * The bar is deliberate: a person, a company, and at least one piece of
+ * *intelligence* (company research, a signal, or an AI context pack) to score
+ * against. Scoring a bare name would be the model inventing the evidence, and
+ * scoring before the company is resolved would put a fit score on the lead that
+ * the next enrichment hop invalidates.
+ */
+export function qualificationPrerequisites(facts: QualificationPrerequisites): QualificationReadiness {
+  const missing: string[] = [];
+  if (!facts.personResolved) missing.push('person');
+  if (!facts.companyResolved) missing.push('company');
+  if (!facts.hasCompanyResearch && facts.signalCount <= 0 && !facts.hasAiContext) {
+    missing.push('intelligence (company research, a signal or an AI context pack)');
+  }
+  return { ready: missing.length === 0, missing };
 }
 
 /**
@@ -117,6 +180,24 @@ const RESEARCH_PLANNABLE_STATES: ReadonlySet<EnrichmentState> = new Set<Enrichme
   'AGENT_RESEARCH_PENDING',
 ]);
 
+/**
+ * States from which a qualification hop may be planned.
+ *
+ * Wider than the research list by exactly one state: `READY`. A ready lead that
+ * has not been scored — or whose facts have changed since it was scored — needs a
+ * qualification, and refusing one would leave the fit and intent the drafts depend
+ * on permanently stale. Research is not re-planned from READY because it is
+ * expensive and its absence would have blocked readiness in the first place;
+ * qualification is cheap, cached by input hash, and only planned when the stored
+ * answer no longer matches the facts.
+ */
+const QUALIFICATION_PLANNABLE_STATES: ReadonlySet<EnrichmentState> = new Set<EnrichmentState>([
+  'PROFILE_READY',
+  'COMPANY_RESEARCH_PENDING',
+  'AGENT_RESEARCH_PENDING',
+  'READY',
+]);
+
 const INSTRUCTIONS: Readonly<Record<AgentJobType, string>> = {
   RESEARCH_COMPANY:
     'Research the company: what it does, size, locations, services and recent activity. Record each finding with its source URL.',
@@ -143,7 +224,9 @@ const INSTRUCTIONS: Readonly<Record<AgentJobType, string>> = {
  *   * PROFILE_READY with no company research -> RESEARCH_COMPANY;
  *   * company research present and signals absent -> RESEARCH_SIGNALS;
  *   * company research + context absent -> BUILD_CONTEXT (only when company
- *     research exists).
+ *     research exists);
+ *   * prerequisites met and the stored qualification does not answer the current
+ *     facts -> QUALIFY_LEAD (only when the caller supplied the qualification state).
  *
  * There is no separate `signalCount` on the input by design: while a company
  * research snapshot exists and no context pack has been built yet, signal
@@ -152,13 +235,15 @@ const INSTRUCTIONS: Readonly<Record<AgentJobType, string>> = {
  * job is re-planned.
  *
  * Never returns a job whose dedupe key is in `openJobKeys`. Never returns more
- * than two plans: the research branch and the signals/context branch are mutually
- * exclusive (`!hasCompanyResearch` versus `hasCompanyResearch`), and each branch
- * pushes each type at most once.
+ * than three plans: the research branch and the signals/context branch are mutually
+ * exclusive (`!hasCompanyResearch` versus `hasCompanyResearch`), each branch pushes
+ * each type at most once, and qualification adds at most one more.
  *
  * Loop-free by construction: a type whose dedupe key is already open is never
  * re-created, so feeding a plan's own keys back in as `openJobKeys` yields
- * nothing.
+ * nothing. Qualification carries the same guarantee at the *facts* level as well —
+ * once it succeeds, `qualifiedForCurrentInput` becomes true and the plan is not
+ * produced again until the facts actually change.
  */
 export function planChainedJobs(input: ChainInput): readonly AgentJobPlan[] {
   // A lead with no usable profile is a human task: the operator is already
@@ -198,6 +283,21 @@ export function planChainedJobs(input: ChainInput): readonly AgentJobPlan[] {
       'BUILD_CONTEXT',
       'company research exists but this lead has no cached AI context pack',
     );
+  }
+
+  // Qualification, when the caller could tell us whether it is outstanding. It is
+  // planned last so the hops that *create* the facts it scores against are already
+  // in the queue, and it is skipped entirely once the stored answer matches the
+  // current input hash — which is what stops a page view or a sweep from buying
+  // the same model call again.
+  if (input.qualification !== undefined) {
+    const readiness = qualificationPrerequisites(input.qualification.prerequisites);
+    if (readiness.ready && !input.qualification.qualifiedForCurrentInput && QUALIFICATION_PLANNABLE_STATES.has(input.enrichmentState)) {
+      plan(
+        'QUALIFY_LEAD',
+        'structured person, company and intelligence facts are committed and no qualification answers the current facts',
+      );
+    }
   }
 
   return plans;

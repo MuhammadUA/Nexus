@@ -66,6 +66,28 @@ outlive the deletion policy that removes the payload.
 `FAILED` and `CANCELLED` are terminal until an operator explicitly retries.
 `COMPLETE` is reachable from `WAITING_AI` only.
 
+### 3.1 The model-only jobs
+
+Two job types need no worker and no staged body: `QUALIFY_LEAD` and `BUILD_CONTEXT`.
+Their prerequisites are committed structured facts, so the chaining planner creates
+them `OPEN` and the AI processor claims them directly:
+
+```
+   OPEN ──── nexus_claim_ai_direct_work ────▶ RUNNING ──── model call ────▶ persist result
+            (lease, attempts, SKIP LOCKED)                    │                    │
+                                                              │             nexus_complete_direct_agent_job
+                                                              │             (refuses while any un-consumed
+                                                              ▼              raw_staging row remains)
+                                                     typed failure ──▶ OPEN / FAILED
+```
+
+The completion rule is the same in substance as the extraction path's: only the
+processor holding the running lease may complete, and no un-consumed `raw_staging`
+row may remain for the job. For a model-only job there is never a staged body, and
+the caller has already persisted the structured result before it completes. Before
+migration `0036` these two types were planned but unclaimable, so they sat `OPEN` for
+ever.
+
 ## 4. Claim, lease and crash recovery
 
 Claiming is one statement:
@@ -141,7 +163,7 @@ product too.
 
 `planChainedJobs()` in `@nexus/core` is pure, so the decision is testable without
 a database. It is given the lead's real facts and the dedupe keys of currently
-`OPEN`/`RUNNING`/`WAITING_AI` jobs and returns at most two plans:
+`OPEN`/`RUNNING`/`WAITING_AI` jobs and returns at most three plans:
 
 | Situation | Plan |
 | --- | --- |
@@ -149,10 +171,21 @@ a database. It is given the lead's real facts and the dedupe keys of currently
 | profile ready, no company research | `RESEARCH_COMPANY` (`high`) |
 | company research present, signals absent | `RESEARCH_SIGNALS` (`high`) |
 | company research present, no context pack | `BUILD_CONTEXT` (`normal`) |
+| person + company + intelligence present, and the stored qualification does not answer the current facts | `QUALIFY_LEAD` (`normal`) |
+
+The qualification row is only produced when the caller supplies the qualification
+state — the prerequisites plus whether the stored answer already matches the current
+input hash. A caller that cannot report that plans nothing, because a caller that
+cannot judge staleness must not be able to cause a model call. `READY` is a planning
+state for qualification (and only for qualification): a ready lead whose facts have
+changed since it was scored needs a new answer, and research is not re-planned there
+because its absence would have blocked readiness in the first place.
 
 Loop-freedom is by construction: a type whose dedupe key is already open is never
 re-created, and the dedupe key is unique per `(business_id, dedupe_key)` among
 active jobs, enforced by a partial unique index rather than by application care.
+Qualification carries a second guarantee at the facts level — once an answer matches
+the current input hash, no new job is planned until the facts actually change.
 `reason` records why each automatic job was created, so an operator looking at the
 queue can tell a chained job from a hand-made one.
 
@@ -164,9 +197,14 @@ queue can tell a chained job from a hand-made one.
 2. `nexus_cleanup_raw_staging` — the 24h TTL sweep for abandoned raw evidence.
 3. `nexus_claim_ai_work` — a bounded batch of `WAITING_AI` jobs, leased so two
    processors never extract the same evidence.
-4. For each claimed job: extract → validate → commit → verify → delete raw →
-   complete → chain the next job → rebuild the context pack.
-5. A failure on one job records a typed error and does not abort the batch.
+4. `nexus_claim_ai_direct_work` — a bounded batch of the model-only jobs
+   (`QUALIFY_LEAD`, `BUILD_CONTEXT`), claimed from `OPEN` under the same lease.
+5. For each claimed job: extract → validate → commit → verify → delete raw →
+   complete → chain the next job → rebuild the context pack. A `QUALIFY_LEAD` job
+   runs the versioned `icp_qualify` task, persists through `set_primary_icp` and the
+   match row, completes, and rebuilds the context pack so drafting sees the new fit
+   and intent. A `BUILD_CONTEXT` job builds the pack.
+6. A failure on one job records a typed error and does not abort the batch.
 
 It is exposed at `POST /api/v1/ai/processor` and is safe to call repeatedly: every
 step is idempotent and bounded. It is the intended target for a Vercel Cron entry

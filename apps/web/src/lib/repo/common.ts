@@ -40,6 +40,26 @@ export interface MutationResult {
   readonly message?: string;
 }
 
+/**
+ * What `capture_reply` wrote, as it returns it.
+ *
+ * Declared here rather than in the AI layer so the capture repositories do not
+ * have to import a model-facing module to describe their own result: the AI reply
+ * classifier consumes this shape, not the other way round.
+ */
+export interface CapturedReply {
+  readonly leadId: string;
+  readonly conversationId: string | null;
+  readonly interactionId: string | null;
+  readonly outcomeId: string | null;
+  readonly outcome: string;
+}
+
+/** A capture result that also hands back the rows the reply was written to. */
+export interface ReplyMutationResult extends MutationResult {
+  readonly reply?: CapturedReply;
+}
+
 /** Clamps caller-supplied paging into a sane window. */
 export function normalizePaging(params: ListParams = {}): { limit: number; offset: number } {
   const rawLimit = params.limit ?? DEFAULT_PAGE_SIZE;

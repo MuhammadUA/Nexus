@@ -22,10 +22,10 @@ the extension suite seeds a fresh demo database in the worktree.
 | Command | Result |
 | --- | --- |
 | `pnpm install --frozen-lockfile` | pass (3.2s) |
-| `pnpm run typecheck` | pass (5 packages, no errors) |
+| `pnpm run typecheck` | pass (every package, no errors) |
 | `pnpm run lint` | pass (`--max-warnings 0` per package) |
-| `pnpm run test` | pass — 41 files, 704 tests (144 core + 110 db + 9 extension + 441 web) |
-| `pnpm run db:verify` | pass — 35 migrations, 71 tables, 198 policies, 111 triggers, 127 functions, 218 indexes |
+| `pnpm run test` | pass — 42 files, 730 tests (154 core + 110 db + 9 extension + 457 web) |
+| `pnpm run db:verify` | pass — 36 migrations, 71 tables, 198 policies, 111 triggers, 129 functions, 220 indexes |
 | `pnpm run build` | pass (Next.js production build, all V1.2 routes present) |
 | `pnpm --filter @nexus/extension run build` | pass (`manifest valid, no credentials in the bundle`) |
 | `pnpm --filter @nexus/web run e2e` | pass — 15 tests |
@@ -91,21 +91,22 @@ them.
 
 | Suite | Files | Tests | Result |
 | --- | --- | --- | --- |
-| `@nexus/core` | 6 | 144 | pass |
+| `@nexus/core` | 6 | 154 | pass |
 | `@nexus/db` | 8 | 110 | pass |
-| `@nexus/web` | 26 | 441 | pass |
+| `@nexus/web` | 27 | 457 | pass |
 | `@nexus/extension` (unit) | 1 | 9 | pass |
-| **Total** | **41** | **704** | **pass** |
+| **Total** | **42** | **730** | **pass** |
 
-The V1.2 additions inside those totals: 56 core tests (37 deterministic enrichment
-and search links, 19 job chaining), 24 database tests (7 raw lifecycle, 17 agent
-jobs), and 148 web tests (16 MCP agent tools, 22 AI pipeline, 13 enrichment repo,
-59 Lead UI, 18 Agent Jobs UI, 17 metrics, 18 channel vocabulary) — plus the
-Companion binding suite grown from 6 to 31 and `rls-access` from 28 to 31.
+The V1.2 additions inside those totals: 66 core tests (37 deterministic enrichment
+and search links, 29 job chaining and qualification prerequisites), 24 database tests
+(7 raw lifecycle, 17 agent jobs), and 164 web tests (17 MCP agent tools, 22 AI
+pipeline, 16 qualification and reply classification, 13 enrichment repo, 59 Lead UI,
+18 Agent Jobs UI, 17 metrics, 18 channel vocabulary) — plus the Companion binding
+suite grown from 6 to 31 and `rls-access` from 28 to 31.
 
 ### 3.1 V1.2 MCP agent surface
 
-`apps/web/test/v1-2-mcp-agents.test.ts` — **16 tests** through the real JSON-RPC
+`apps/web/test/v1-2-mcp-agents.test.ts` — **17 tests** through the real JSON-RPC
 transport with the credential resolver replaced by a fixed token: the published
 schemas and idempotency requirements; the absence of any tool that could complete a
 job or accept SQL; listing durable work while no agent is online; dedupe; atomic
@@ -114,7 +115,9 @@ idempotent replay (one staging row, `idempotent: true`); idempotency mismatch
 refusal; retryable failure and release; cross-business refusal without confirming
 existence; the enrichment context's deterministic score, its four available
 channels and its **exact** Google query strings; the minimal-lead path landing in
-`NEEDS_PROFILE`; minimal-lead replay; and metadata-only evidence storage.
+`NEEDS_PROFILE`; minimal-lead replay; reply capture returning `captured: true` with a
+null reading and a typed `classification_error` when no provider is configured; and
+metadata-only evidence storage.
 
 ### 3.2 AI pipeline
 
@@ -139,6 +142,43 @@ channels and its **exact** Google query strings; the minimal-lead path landing i
 * **Processor** — a `WAITING_AI` job reaches `COMPLETE` only after extraction and
   deletion; a retryable failure reuses the same staging row on the next pass and then
   completes; a terminal failure leaves the job `FAILED` with its evidence retained.
+
+### 3.3 Qualification and reply classification
+
+`apps/web/test/v1-2-qualification.test.ts` — **16 tests** against the real planner,
+claim function, runner and persistence, with injected providers so the call count is
+itself an assertion:
+
+* **Prerequisites** — a lead with no company is refused with `prerequisites_unmet`,
+  non-retryable, and **zero** provider calls.
+* **Chaining** — a research hop's facts plan `QUALIFY_LEAD` with the documented dedupe
+  key, and a second planning pass while one is open creates nothing.
+* **Processing** — the processor claims the `OPEN` job through
+  `nexus_claim_ai_direct_work`, runs the versioned `icp_qualify` task, persists, and
+  completes it; `no_processor_for_job_type` never appears; the completed job carries
+  the AI run id.
+* **Persistence** — the primary ICP moves through `set_primary_icp` (audited, and the
+  audit event is asserted), and fit, intent, reasons, angle, confidence, run id and
+  input hash land on that match row.
+* **Cache** — identical facts make **no** provider call and answer `cached: true`, and
+  the planner stops producing jobs for them.
+* **Requalification** — a newly committed signal changes the hash, plans a new job,
+  makes exactly one qualification call, appends a second `SUCCEEDED` run, and rebuilds
+  the context pack so drafting sees the new fit and intent.
+* **Typed failure** — an out-of-schema answer returns `schema_invalid`, leaves the
+  match row byte-for-byte unchanged, and records a `FAILED` run.
+* **Reply** — the exact bytes are stored when classification cannot run at all, and no
+  reading row is created; a successful reading is a separate `system` interaction with
+  the model, prompt version and run id, while the inbound row still holds the exact
+  text and the outcome row keeps the operator's outcome, its `is_terminal` and any
+  note a person wrote; re-asking about the same reply is a cache hit with zero calls.
+* **DNC** — a reply captured as `Do not contact` that the model reads as *Interested*
+  stays terminal, keeps its active suppression, and records the disagreement instead
+  of acting on it.
+* **Ledger** — both tasks write runs with tokens, cost and a prompt version.
+* **No raw payload** — the staged marker body is absent from `ai_runs`,
+  `interactions`, `lead_icp_matches` and the prompt the provider received, and the
+  qualification path stages nothing of its own.
 
 
 ## 4. End-to-end
@@ -187,20 +227,18 @@ committed so the live provider can be confirmed in one command after deployment.
 
 ## 6. Final gate results
 
-Produced by the clean-checkout run described in §1. The whole gate is green:
+The whole gate is green, run in the integration tree after the AI call sites landed
+(migration `0036`) and previously from a clean worktree at `ef1c8ce`:
 
 ```
 pnpm install --frozen-lockfile                     pass
 pnpm run typecheck                                 pass
 pnpm run lint                                      pass
-pnpm run test                                      41 files / 704 tests pass
-pnpm run db:verify                                 35 migrations, verification passed
+pnpm run test                                      42 files / 730 tests pass
+pnpm run db:verify                                 36 migrations, verification passed
 pnpm run build                                     pass
 pnpm --filter @nexus/extension run build           pass
 pnpm --filter @nexus/web run e2e                   15 passed
 pnpm --filter @nexus/extension run e2e             38 passed
 ```
-
-The only commits after the gated commit are documentation, so the result applies to
-the final tree of the branch.
 

@@ -41,7 +41,7 @@ import { createHash } from 'node:crypto';
 import { canonicalJson, type AiTaskType, type PromptKey } from '@nexus/core';
 import type { z } from 'zod';
 
-import { withActor, type Viewer } from '../actor';
+import { withActor, type ActorCarrier } from '../actor';
 import type { Db } from '../sql';
 import { describeDbError } from '../repo/common';
 import { redactSecrets } from './config';
@@ -187,7 +187,7 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 export async function runAiTask<T>(
-  viewer: Viewer,
+  viewer: ActorCarrier,
   ctx: AiRunContext,
   request: AiTaskRequest<T>,
 ): Promise<AiRunOutcome<T>> {
@@ -431,7 +431,7 @@ interface MarkSucceededInput {
  * time the winner has committed and the guard succeeds.
  */
 async function markRunSucceeded(
-  viewer: Viewer,
+  viewer: ActorCarrier,
   input: MarkSucceededInput,
 ): Promise<'SUCCEEDED' | 'CACHED'> {
   const sqlText = `
