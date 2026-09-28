@@ -205,11 +205,25 @@ export async function createTeamUser(
       input.password === undefined || input.password.length === 0 ? null : await hash(input.password);
 
     return await withActor(viewer.actor, async (sql) => {
+      /*
+       * `public.users` has NO `created_by` column and never has: 0002_tenancy.sql defines
+       * (id, email, full_name, role, status, avatar_url, timezone, last_seen_at, created_at,
+       * updated_at, deleted_at), and no later migration adds one. An earlier version of this
+       * INSERT named `created_by` anyway, so every attempt failed with SQLSTATE 42703
+       * (undefined_column) — production Create User could never succeed.
+       *
+       * Actor provenance is NOT lost by omitting it here. `public.users` is in the audited-table
+       * list in 0011_triggers_invariants.sql, so `trg_users_audit` fires `audit_row_change()` on
+       * this very INSERT and records actor_type/actor_id from the session
+       * (`current_user_id()` / `acting_api_client_id()`), which is stronger than a nullable
+       * column: the audit row cannot be forged by the caller and is written for every mutation,
+       * not only creation.
+       */
       const created = await sql.query<{ id: string }>(
-        `insert into public.users (email, full_name, role, status, created_by)
-         values ($1, $2, $3, $4, $5)
+        `insert into public.users (email, full_name, role, status)
+         values ($1, $2, $3, $4)
          returning id`,
-        [input.email, input.fullName, input.role, input.status, viewer.userId],
+        [input.email, input.fullName, input.role, input.status],
       );
       const id = created.rows[0]?.id;
       if (id === undefined) return { ok: false, error: 'The user was not created.' };
@@ -241,7 +255,7 @@ export async function createTeamUser(
       return { ok: true, id };
     });
   } catch (error) {
-    return { ok: false, error: describeDbError(error) };
+    return { ok: false, error: describeDbError(error, 'createTeamUser') };
   }
 }
 
