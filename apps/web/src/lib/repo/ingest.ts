@@ -18,7 +18,8 @@
  */
 import 'server-only';
 
-import { contentHash, normalizeLinkedInUrl, slugify } from '@nexus/core';
+import { contentHash, legacyLeadSourceFor, normalizeLinkedInUrl, slugify } from '@nexus/core';
+import type { DiscoverySource } from '@nexus/core';
 
 import { withActor, type Actor } from '../actor';
 import type { Row } from '../sql';
@@ -48,6 +49,16 @@ export interface IngestInput {
   /** ISO-8601. The envelope schema normalises a `Date` to a string before this. */
   readonly observedAt: string;
   readonly businessKeyOrId: string;
+  /**
+   * V1.2 discovery source, when the caller knows it (MCP, Companion, the UI form).
+   *
+   * `sourceClient` names the *transport* ('mcp', 'companion', 'web') and is what
+   * `ingest_requests` keys on; the discovery source names the *surface the person
+   * was found on* (linkedin, reddit, upwork, …). They are different facts, so the
+   * evidence row records the discovery source and falls back to the transport when
+   * a caller does not know one.
+   */
+  readonly discoverySource?: DiscoverySource;
 }
 
 export interface IngestOutcome {
@@ -226,7 +237,7 @@ export async function submitIngest(actor: Actor, input: IngestInput): Promise<In
         input.businessId,
         personId,
         companyId,
-        input.sourceClient,
+        input.discoverySource ?? input.sourceClient,
         sourceUrl ?? linkedin.canonicalUrl,
         JSON.stringify(input.payload).slice(0, 100_000),
         hash,
@@ -262,19 +273,26 @@ export async function submitIngest(actor: Actor, input: IngestInput): Promise<In
       );
     } else {
       const inserted = await sql.query<{ id: string }>(
-        // `external_ingest` is the declared source type for this path
-        // (`LEAD_SOURCE_TYPES` in `@nexus/core`, and `leads_source_type_check`). The literal here used
-        // to be `api_ingest`, which is not in the vocabulary — so this insert was rejected and every
-        // externally ingested candidate failed. The filter bar offers a label, not a value.
+        // `leads.source_type` is constrained to the V1.1 vocabulary, so the V1.2
+        // discovery source is projected onto it rather than written raw. The exact
+        // source is recorded on the evidence row above; this column keeps a coarse,
+        // backward-compatible value that the existing filters understand. The
+        // literal here used to be `api_ingest`, which was not in the vocabulary at
+        // all — so this insert was rejected and every externally ingested candidate
+        // failed. The filter bar offers a label, not a value.
         `insert into public.leads
            (business_id, person_id, company_id, status, source_type, source_url, needs_profile, last_activity_at)
-         values ($1, $2, $3, $4, 'external_ingest', $5, $6, now())
+         values ($1, $2, $3, $4, $5, $6, $7, now())
          returning id`,
         [
           input.businessId,
           personId,
           companyId,
           needsProfile ? 'needs_profile' : 'ready',
+          // Untouched V1.1 callers keep `external_ingest`, exactly as before.
+          input.discoverySource === undefined
+            ? 'external_ingest'
+            : legacyLeadSourceFor(input.discoverySource),
           sourceUrl ?? linkedin.canonicalUrl,
           needsProfile,
         ],

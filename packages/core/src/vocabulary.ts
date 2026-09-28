@@ -569,6 +569,43 @@ export const LEGACY_SOURCE_TO_DISCOVERY: Readonly<Record<LeadSourceType, Discove
   research_agent: 'web',
 };
 
+/**
+ * The inverse bridge: the V1.1 `leads.source_type` value a V1.2 discovery source
+ * maps onto.
+ *
+ * The V1.2 source of truth for where a lead came from is
+ * `source_evidence.source`, which is free text and carries the exact discovery
+ * source. `leads.source_type` predates V1.2 and is constrained to the V1.1
+ * vocabulary, so it keeps a coarse, backward-compatible value: surfaces that map
+ * one-to-one do so exactly, and every browser-research surface (LinkedIn, Upwork,
+ * Reddit, job boards, video, Instagram, a company site, the open web) lands on
+ * `research_agent`, which is what it is. Nothing is discarded — the precise value
+ * is in the evidence row.
+ */
+export const DISCOVERY_TO_LEGACY_SOURCE: Readonly<Record<DiscoverySource, LeadSourceType>> = {
+  linkedin: 'research_agent',
+  upwork: 'research_agent',
+  reddit: 'research_agent',
+  job_board: 'research_agent',
+  youtube: 'research_agent',
+  instagram: 'research_agent',
+  company_website: 'research_agent',
+  web: 'research_agent',
+  other: 'research_agent',
+  google: 'google_search',
+  apollo: 'apollo_basic',
+  csv: 'file_csv',
+  paste: 'paste_list',
+  manual: 'manual_add',
+  companion: 'manual_companion',
+  mcp: 'mcp_agent',
+};
+
+/** The `leads.source_type` value to store for a V1.2 discovery source. */
+export function legacyLeadSourceFor(discovery: DiscoverySource): LeadSourceType {
+  return DISCOVERY_TO_LEGACY_SOURCE[discovery];
+}
+
 const DISCOVERY_SOURCE_SET: ReadonlySet<string> = new Set<string>(DISCOVERY_SOURCES);
 const LEAD_SOURCE_TYPE_SET: ReadonlySet<string> = new Set<string>(LEAD_SOURCE_TYPES);
 const OUTREACH_CHANNEL_SET: ReadonlySet<string> = new Set<string>(OUTREACH_CHANNELS);

@@ -24,6 +24,7 @@ import {
   OUTREACH_CHANNELS,
   searchLinks,
   sha256Hex,
+  validateMessage,
 } from '@nexus/core';
 
 import { withActor } from '@/lib/actor';
@@ -59,6 +60,26 @@ interface JsonRpcError {
 const PARSE_ERROR: JsonRpcError = { code: -32700, message: 'Parse error' };
 const INVALID_REQUEST: JsonRpcError = { code: -32600, message: 'Invalid Request' };
 const METHOD_NOT_FOUND: JsonRpcError = { code: -32601, message: 'Method not found' };
+
+/**
+ * Message-rule violations that refuse a submitted draft outright.
+ *
+ * The remaining codes (`too_short`, `too_long`, `missing_personalization`,
+ * `missing_explanation`, `missing_low_pressure_cta`) are style rules that exist to
+ * shape *generated* text; they are returned as warnings so an agent that is editing
+ * or excerpting a body is not blocked, while a body that asserts an unapproved
+ * claim, quotes a prohibited phrase or names a client without permission is refused.
+ * Before V1.2 this tool validated nothing at all and labelled the row as
+ * model-generated, which is what made an unapproved claim persistable.
+ */
+const BLOCKING_DRAFT_VIOLATIONS: readonly string[] = [
+  'empty',
+  'prohibited_phrase',
+  'generic_praise',
+  'high_pressure_cta',
+  'unapproved_claim',
+  'unauthorized_client_name',
+];
 
 function rpcError(id: unknown, error: JsonRpcError): Response {
   // JSON-RPC errors are part of the protocol, so they are returned with HTTP 200.
@@ -476,13 +497,59 @@ const TOOL_HANDLERS: Readonly<
       if (instanceId === null || content === null) {
         throw new Error('message_instance_id and content are required');
       }
+
+      const { loadViewer } = await import('@/lib/actor');
+      const { loadAssertableContext, loadDraftContext, resolveMessageRules } = await import(
+        '@/lib/ai/drafting'
+      );
+      const viewer = await loadViewer(credential.actor);
+
+      // A body submitted by an external client is a *manual edit*, and it faces the
+      // same rules one would: the previous revision stored it without validating it
+      // and labelled it as model-generated, so an unapproved numeric claim or a
+      // prohibited phrase could be persisted through this tool and then sent. The
+      // rules and the assertable-claim set are the same ones the drafting path uses,
+      // so the two cannot disagree about what is acceptable.
+      const context = await loadDraftContext(viewer, instanceId);
+      if (context === null) {
+        // Includes the SENT case: `loadDraftContext` refuses a sent instance, which
+        // is what keeps sent content immutable.
+        throw new Error('That message is not available for drafting.');
+      }
+
+      const assertable = await loadAssertableContext(viewer, context);
+      const validation = validateMessage({
+        content,
+        rules: resolveMessageRules(context.step.wordMax, null),
+        approvedClaims: assertable.claims,
+        mayMentionNumericResults: assertable.mayMentionNumericResults,
+        mayMentionClientName: assertable.mayMentionClientName,
+      });
+
+      // Blocking violations are the ones that make the text unsafe or untrue to
+      // send: a prohibited phrase, generic praise, high-pressure pressure, an
+      // unapproved numeric claim, or an unauthorised client name. The style rules
+      // (length, personalisation, CTA shape) are reported as warnings instead: an
+      // external client may legitimately be submitting an edit or an excerpt, and
+      // refusing it for being five words long would push callers to bypass Nexus.
+      const blocked = validation.violations.filter((violation) =>
+        BLOCKING_DRAFT_VIOLATIONS.includes(violation.code),
+      );
+      if (blocked.length > 0) {
+        throw new Error(
+          `The submitted draft does not satisfy the messaging rules: ${blocked
+            .map((violation) => violation.code)
+            .join(', ')}`,
+        );
+      }
+
       return withActor(credential.actor, async (sql) => {
         // A draft is a NEW version, never an overwrite: sent content is immutable
         // (spec `sequence_engine.message_states`).
         const result = await sql.query<{ id: string }>(
           `insert into public.message_versions
              (message_instance_id, content, generated_by_model, prompt_version_id, sequence_version_id, is_manual_edit, created_by)
-           values ($1, $2, $3, null, null, false, null)
+           values ($1, $2, $3, null, null, true, null)
            returning id`,
           [instanceId, content, stringArg(args, 'model')],
         );
@@ -495,7 +562,12 @@ const TOOL_HANDLERS: Readonly<
             [instanceId, versionId],
           );
         }
-        return { message_version_id: versionId };
+        return {
+          message_version_id: versionId,
+          is_manual_edit: true,
+          words: validation.words,
+          warnings: validation.violations.map((violation) => violation.code),
+        };
       });
     },
   },
@@ -956,6 +1028,8 @@ const TOOL_HANDLERS: Readonly<
         idempotencyKey,
         observedAt: new Date().toISOString(),
         businessKeyOrId: businessId,
+        // The *surface the person was found on* is provenance; the transport is not.
+        discoverySource,
       });
 
       return {
