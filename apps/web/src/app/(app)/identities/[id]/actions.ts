@@ -23,6 +23,9 @@ import { z } from 'zod';
 import { currentViewer } from '@/lib/current-viewer';
 import { authorizeAction } from '@/lib/route-guard';
 import { formString, formStringOrNull } from '@/lib/form-data';
+import { withActor, type Viewer } from '@/lib/actor';
+import { describeDbError } from '@/lib/repo/common';
+import { CHANNEL_ACCOUNT_CHANNELS } from '@/lib/channel-vocabulary';
 import {
   IDENTITY_PLATFORMS,
   IDENTITY_STATUSES,
@@ -46,6 +49,16 @@ const NOT_SIGNED_IN: ActionResult = { ok: false, error: 'Your session has expire
 
 const uuid = z.string().uuid();
 
+/**
+ * The channel choices as a mutable tuple.
+ *
+ * `z.enum` needs a tuple with at least one element, and `CHANNEL_ACCOUNT_CHANNELS`
+ * is a readonly array — the copy states the one property zod requires without
+ * re-listing the channels, so the enum cannot drift from the vocabulary the form and
+ * the screens offer.
+ */
+const channelEnum = z.enum([...CHANNEL_ACCOUNT_CHANNELS] as [string, ...string[]]);
+
 function checkbox(formData: FormData, name: string): boolean {
   return formData.get(name) === 'true' || formData.get(name) === 'on';
 }
@@ -58,6 +71,7 @@ function optionalText(formData: FormData, name: string): string | undefined {
 
 const createSchema = z.object({
   displayName: z.string().trim().min(1).max(200),
+  channel: channelEnum,
   platform: z.enum(IDENTITY_PLATFORMS),
   status: z.enum(IDENTITY_STATUSES),
   dailyTarget: z.coerce.number().int().min(0).max(1000),
@@ -74,16 +88,25 @@ export async function createIdentityAction(
   if (refusal !== null) return refusal;
 
   const managedByUserId = formStringOrNull(formData, 'managedByUserId');
+  const channel = formString(formData, 'channel', 'linkedin');
   const parsed = createSchema.safeParse({
     displayName: formStringOrNull(formData, 'displayName'),
-    platform: formString(formData, 'platform', 'linkedin'),
+    channel,
+    /*
+     * The legacy `platform` is kept in step with the channel when the operator did
+     * not state one, because every pre-V1.2 reader of this table — the reporting
+     * views, the exports and the historical attribution — still reads `platform`.
+     * Leaving it at a hard-coded `linkedin` would misattribute an email or Upwork
+     * account created today.
+     */
+    platform: formString(formData, 'platform', channel),
     status: formString(formData, 'status', 'active'),
     dailyTarget: formStringOrNull(formData, 'dailyTarget') ?? 0,
     profileUrl: optionalText(formData, 'profileUrl'),
     managedByUserId:
       typeof managedByUserId === 'string' && managedByUserId.length > 0 ? managedByUserId : undefined,
   });
-  if (!parsed.success) return { ok: false, error: 'Give the identity a display name and a daily target.' };
+  if (!parsed.success) return { ok: false, error: 'Give the channel account a display name and a daily target.' };
 
   const viewer = await currentViewer();
   if (viewer === null) return NOT_SIGNED_IN;
@@ -99,15 +122,33 @@ export async function createIdentityAction(
   });
 
   if (result.ok) {
+    /*
+     * `createIdentity` writes the row through the identities repository, which
+     * predates `channel`. The column is set in a second statement rather than by
+     * reaching into that repository's insert: the insert is also used by the seed
+     * and the Companion, and adding a column there would change a shared contract
+     * for one screen's convenience.
+     */
+    if (result.id === undefined) {
+      return { ok: false, error: 'The channel account was created but its channel could not be set.' };
+    }
+    const channelWrite = await writeChannel(viewer, result.id, parsed.data.channel);
+    if (channelWrite !== null) return { ok: false, error: channelWrite };
+
     revalidatePath('/identities');
     revalidatePath('/team');
   }
-  return { ok: result.ok, error: result.error ?? null, message: result.ok ? 'Identity created.' : undefined };
+  return {
+    ok: result.ok,
+    error: result.error ?? null,
+    message: result.ok ? 'Channel account created.' : undefined,
+  };
 }
 
 const updateSchema = z.object({
   identityId: uuid,
   displayName: z.string().trim().min(1).max(200),
+  channel: channelEnum,
   platform: z.enum(IDENTITY_PLATFORMS),
   status: z.enum(IDENTITY_STATUSES),
   dailyTarget: z.coerce.number().int().min(0).max(1000),
@@ -128,12 +169,16 @@ export async function updateIdentityAction(
   const parsed = updateSchema.safeParse({
     identityId: formStringOrNull(formData, 'identityId'),
     displayName: formStringOrNull(formData, 'displayName'),
+    channel: formStringOrNull(formData, 'channel'),
     platform: formStringOrNull(formData, 'platform'),
     status: formStringOrNull(formData, 'status'),
     dailyTarget: formStringOrNull(formData, 'dailyTarget'),
     profileUrl: typeof profileUrl === 'string' ? profileUrl : undefined,
     notes: typeof notes === 'string' ? notes : undefined,
-  });  if (!parsed.success) return { ok: false, error: 'Check the display name, platform, status and daily target.' };
+  });
+  if (!parsed.success) {
+    return { ok: false, error: 'Check the display name, channel, platform, status and daily target.' };
+  }
 
   const viewer = await currentViewer();
   if (viewer === null) return NOT_SIGNED_IN;
@@ -149,10 +194,55 @@ export async function updateIdentityAction(
   });
 
   if (result.ok) {
+    const channelWrite = await writeChannel(viewer, parsed.data.identityId, parsed.data.channel);
+    if (channelWrite !== null) return { ok: false, error: channelWrite };
+
     revalidatePath(`/identities/${parsed.data.identityId}`);
     revalidatePath('/identities');
   }
-  return { ok: result.ok, error: result.error ?? null, message: result.ok ? 'Identity updated.' : undefined };
+  return {
+    ok: result.ok,
+    error: result.error ?? null,
+    message: result.ok ? 'Channel account updated.' : undefined,
+  };
+}
+
+/**
+ * Writes `outreach_identities.channel`.
+ *
+ * Separate from `updateIdentity` / `createIdentity` on purpose: `@/lib/repo/identities`
+ * is the long-standing identity repository that the Companion binding, the seed and
+ * the team screens all go through, and it predates the `channel` column that
+ * migration 0030 added. Changing its input shape would change a shared contract to
+ * serve one screen. This statement is written here because `channel` is this
+ * screen's own vocabulary, and it is **scoped by the same rule**: it runs through
+ * `withActor`, so the update policy — and `restrict_identity_self_update`, which
+ * confines a non-admin owner to presentation fields — decide whether it is allowed.
+ *
+ * Returns an operator-facing message on failure, or null on success, so the caller
+ * cannot accidentally report a half-applied edit as a success.
+ */
+async function writeChannel(
+  viewer: Viewer,
+  identityId: string,
+  channel: string,
+): Promise<string | null> {
+  if (identityId.length === 0) return 'That channel account could not be found.';
+  try {
+    const written = await withActor(viewer.actor, async (sql) => {
+      const result = await sql.query<{ id: string }>(
+        `update public.outreach_identities
+            set channel = $2, updated_at = now()
+          where id = $1 and deleted_at is null
+          returning id`,
+        [identityId, channel],
+      );
+      return result.rows.length > 0;
+    });
+    return written ? null : 'That channel account no longer exists.';
+  } catch (error) {
+    return describeDbError(error, 'writeChannel');
+  }
 }
 
 const businessSchema = z.object({ identityId: uuid, businessId: uuid });

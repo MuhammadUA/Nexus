@@ -1,0 +1,38 @@
+/*
+ * Overview V1.2 — the enrichment funnel's bar column.
+ *
+ * **Why a stylesheet exists at all.** The funnel is the one shape on this screen
+ * the design system does not already have: a per-state lead count rendered as a
+ * proportional bar beside its percentage. Everything else on the page is composed
+ * from `@nexus/ui` primitives and inline `var(--nx-*)` spacing, per spec §75.4
+ * ("a new hard-coded colour or spacing value is a defect").
+ *
+ * Scope is deliberately one component: `.nx-funnel`. No global selector, no token
+ * redefinition, no new colour — the bar fill is `--nx-accent-indigo-border`, an
+ * existing token, so the accent still comes from the token source rather than
+ * from this file.
+ */
+
+.nx-funnel {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-sm);
+  min-width: 96px;
+}
+
+.nx-funnel__bar {
+  display: block;
+  height: 6px;
+  min-width: 2px;
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-accent-indigo-border);
+  flex: 0 0 auto;
+  max-width: 64px;
+}
+
+.nx-funnel__value {
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-font-size-xs);
+  color: var(--nx-text-muted);
+  font-variant-numeric: tabular-nums;
+}

@@ -86,33 +86,57 @@ function ActionShell({
 /* -------------------------------------------------------- identities index -- */
 
 /**
- * Creates a sender identity.
+ * Creates a channel account.
  *
- * spec `identity_model.outreach_identity.fields`: platform, display name, profile
- * URL, manager, status and daily target. RLS permits the insert to an admin only
+ * spec `identity_model.outreach_identity.fields`: channel, display name, profile
+ * URL, manager, status and daily target. The V1.2 channel is chosen explicitly
+ * because discovery source and outreach channel are independent — the account's
+ * channel is a decision, never inferred from the lead that will be contacted
+ * through it. `platform` is still posted, derived from the channel on the server,
+ * because the column remains the historical attribution a Companion binding and
+ * the reporting views read. RLS permits the insert to an admin only
  * (`outreach_identities_insert`).
  */
 export function CreateIdentityForm({
   users,
+  channels,
   platforms,
   statuses,
 }: {
   readonly users: readonly SelectChoice[];
+  readonly channels: readonly SelectChoice[];
   readonly platforms: readonly string[];
   readonly statuses: readonly string[];
 }): ReactElement {
   return (
-    <ActionShell action={createIdentityAction} submitLabel="Add identity" hidden={{}}>
+    <ActionShell action={createIdentityAction} submitLabel="Add channel account" hidden={{}}>
       <div className="nx-grid nx-grid--2">
         <Field
           label="Display name"
           htmlFor="new-identity-name"
           required
-          hint="The account as it appears on the network, for example a person's name plus the platform."
+          hint="The account as it appears on the network, for example a person's name plus the channel."
         >
           <TextInput id="new-identity-name" name="displayName" defaultValue="" required />
         </Field>
-        <Field label="Platform" htmlFor="new-identity-platform" required>
+        <Field
+          label="Channel"
+          htmlFor="new-identity-channel"
+          required
+          hint="How this account reaches people. Independent of where a lead was discovered."
+        >
+          <Select
+            id="new-identity-channel"
+            name="channel"
+            defaultValue="linkedin"
+            options={channels.map((channel) => ({ value: channel.value, label: channel.label }))}
+          />
+        </Field>
+        <Field
+          label="Legacy platform"
+          htmlFor="new-identity-platform"
+          hint="Historical attribution only. Kept for reporting on accounts created before V1.2."
+        >
           <Select
             id="new-identity-platform"
             name="platform"
@@ -144,7 +168,7 @@ export function CreateIdentityForm({
       <Field
         label="Managed by"
         htmlFor="new-identity-manager"
-        hint="Optional. An identity with no manager is unassigned and may be self-assigned later."
+        hint="Optional. An account with no manager is unassigned and may be self-assigned later."
       >
         <Select
           id="new-identity-manager"
@@ -155,8 +179,8 @@ export function CreateIdentityForm({
         />
       </Field>
       <p className="nx-hint">
-        Business access is granted on the identity&rsquo;s own screen. Companion visibility is the intersection of the
-        operator&rsquo;s grants and the identity&rsquo;s grants — never their union.
+        Business access is granted on the account&rsquo;s own screen. Companion visibility is the intersection of
+        the operator&rsquo;s grants and the account&rsquo;s grants — never their union.
       </p>
     </ActionShell>
   );
@@ -166,15 +190,18 @@ export function CreateIdentityForm({
 
 export function IdentityEditForm({
   identityId,
+  channels,
   platforms,
   statuses,
   current,
 }: {
   readonly identityId: string;
+  readonly channels: readonly SelectChoice[];
   readonly platforms: readonly string[];
   readonly statuses: readonly string[];
   readonly current: {
     readonly displayName: string;
+    readonly channel: string;
     readonly platform: string;
     readonly status: string;
     readonly dailyTarget: number;
@@ -183,24 +210,29 @@ export function IdentityEditForm({
   };
 }): ReactElement {
   return (
-    <ActionShell action={updateIdentityAction} submitLabel="Save identity" hidden={{ identityId }}>
+    <ActionShell action={updateIdentityAction} submitLabel="Save channel account" hidden={{ identityId }}>
       <Field label="Display name" htmlFor="identity-name" required>
         <TextInput id="identity-name" name="displayName" defaultValue={current.displayName} required />
       </Field>
       <div className="nx-grid nx-grid--2">
-        <Field label="Platform" htmlFor="identity-platform" required>
+        <Field
+          label="Channel"
+          htmlFor="identity-channel"
+          required
+          hint="How this account reaches people. Changing it does not change which leads are assigned to it."
+        >
           <Select
-            id="identity-platform"
-            name="platform"
-            defaultValue={current.platform}
-            options={platforms.map((platform) => ({ value: platform, label: platform }))}
+            id="identity-channel"
+            name="channel"
+            defaultValue={current.channel}
+            options={channels.map((channel) => ({ value: channel.value, label: channel.label }))}
           />
         </Field>
         <Field
           label="Status"
           htmlFor="identity-status"
           required
-          hint="Only an active identity may be bound by a browser session."
+          hint="Only an active account may be bound by a browser session."
         >
           <Select
             id="identity-status"
@@ -210,6 +242,18 @@ export function IdentityEditForm({
           />
         </Field>
       </div>
+      <Field
+        label="Legacy platform"
+        htmlFor="identity-platform"
+        hint="Historical attribution, shown beside the channel when the two disagree. It is not the account's channel."
+      >
+        <Select
+          id="identity-platform"
+          name="platform"
+          defaultValue={current.platform}
+          options={platforms.map((platform) => ({ value: platform, label: platform }))}
+        />
+      </Field>
       <Field label="Daily target" htmlFor="identity-target" required>
         <TextInput
           id="identity-target"

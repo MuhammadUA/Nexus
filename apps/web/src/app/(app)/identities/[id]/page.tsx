@@ -39,11 +39,18 @@ import {
   type IdentityBusinessAccess,
   type IdentityTransferRow,
 } from '@/lib/repo/identities';
+import {
+  CHANNEL_ACCOUNT_CHANNELS,
+  CHANNEL_LABELS,
+  channelLabel,
+  getChannelAccount,
+  legacyPlatformLabel,
+} from '@/lib/channel-vocabulary';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * A17 — Outreach Identity Detail.
+ * A17 — **Channel Account** detail (V1.1 name: "Outreach Identity Detail").
  *
  * Contract: "Manager, business access, targets, browser sessions, conversation
  * ownership, transfer behavior."
@@ -51,9 +58,15 @@ export const dynamic = 'force-dynamic';
  * spec `identity_model.outreach_identity.rule`: "CRM lead owner, actual sender
  * identity, and business are separate dimensions and may differ." The screen
  * therefore keeps the three apart — the manager is not the lead owner, and the
- * identity's business access is its own grant, not the manager's.
+ * account's business access is its own grant, not the manager's.
+ *
+ * V1.2 adds one dimension and renames none of the storage: the account's
+ * **channel** is read from `outreach_identities.channel` (or equivalently from the
+ * `channel_accounts` view) and the legacy `platform` is presented strictly as
+ * history beside it. The Companion's LinkedIn binding is untouched — it still
+ * resolves accounts through `outreach_identity_business_access` on the same table.
  */
-export default async function IdentityDetailPage({
+export default async function ChannelAccountDetailPage({
   params,
 }: {
   readonly params: Promise<{ id: string }>;
@@ -63,18 +76,31 @@ export default async function IdentityDetailPage({
   const context = await loadViewerContext();
   requireRouteAccess(context, { route: '/identities/:identityId' });
   const identity = await getIdentity(context.viewer.actor, id);
-  // An identity outside the viewer's scope is invisible through RLS, so it reads as
-  // missing. Rendering "not found" rather than "forbidden" avoids confirming that
-  // someone else's identity exists.
+  // An account outside the viewer's scope is invisible through RLS, so it reads
+  // as missing. Rendering "not found" rather than "forbidden" avoids confirming
+  // that someone else's account exists.
   if (identity === null) notFound();
 
-  const [access, sessions, transfers, allBusinesses, users] = await Promise.all([
+  const [account, access, sessions, transfers, allBusinesses, users] = await Promise.all([
+    getChannelAccount(context.viewer.actor, id),
     listIdentityBusinessAccess(context.viewer.actor, id),
     listBrowserSessions(context.viewer.actor, id),
     listIdentityTransfers(context.viewer.actor, id),
     listBusinessOptions(context.viewer.actor),
     listAssignableUsers(context.viewer.actor),
   ]);
+
+  /*
+   * `getIdentity` and `getChannelAccount` read the same row through the same
+   * policy, so a missing channel is a real inconsistency rather than a case to
+   * paper over with a guess about which channel the account sends on.
+   */
+  if (account === null) {
+    throw new Error(`channel account ${id} is missing from the channel-account read`);
+  }
+
+  const channel = account.channel;
+  const legacy = legacyPlatformLabel(account.platform, channel);
 
   /*
    * spec `roles_and_permissions.same_user_multiple_browsers`: "Concurrent use of the
@@ -173,13 +199,17 @@ export default async function IdentityDetailPage({
       <PageHead
         subtitle={
           <>
-            {identity.platform}
+            {channelLabel(channel)}
+            {legacy === null ? '' : ` · ${legacy}`}
             {identity.profileUrl === null ? '' : ' · '}
             {identity.profileUrl ?? ''}
           </>
         }
         actions={
           <>
+            <Chip accent="indigo" dataState={channel}>
+              {channelLabel(channel)}
+            </Chip>
             <Chip
               accent={identity.status === 'active' ? 'green' : identity.status === 'paused' ? 'amber' : 'neutral'}
             >
@@ -209,9 +239,20 @@ export default async function IdentityDetailPage({
       {conflict.action !== 'allow' && (
         <Alert accent="amber" role="alert" title="Concurrent browser sessions">
           {conflict.reason}. {String(conflict.conflictingSessionIds.length)} of the sessions below are bound to this
-          identity at the same time. spec `roles_and_permissions.same_user_multiple_browsers` requires this to warn.
+          channel account at the same time. spec `roles_and_permissions.same_user_multiple_browsers` requires this to
+          warn.
         </Alert>
       )}
+
+      <Alert accent="neutral" title="This account's channel is not a discovery source">
+        <span>
+          {channelLabel(channel)} is how <strong>{identity.displayName}</strong> reaches people
+          {legacy === null ? '' : ` (historically recorded as ${legacy})`}. Which leads it contacts is decided by its
+          business access and the lead&rsquo;s own state — a lead discovered on Reddit can be contacted by email, and a
+          LinkedIn-discovered lead can be contacted on Upwork, because discovery source and outreach channel are
+          independent (spec §20).
+        </span>
+      </Alert>
 
       <Grid cols={4}>
         <Stat
@@ -219,7 +260,7 @@ export default async function IdentityDetailPage({
           label="Sent today"
           meta={identity.dailyTarget === 0 ? 'no target set' : `${String(remaining)} remaining`}
         />
-        <Stat value={access.length} label="Business access" meta="per-identity grants" />
+        <Stat value={access.length} label="Business access" meta="per-account grants" />
         <Stat
           value={sessions.filter((session) => session.status === 'active').length}
           label="Live browser sessions"
@@ -234,22 +275,33 @@ export default async function IdentityDetailPage({
         <Stack size="lg">
           {canManage ? (
             <Card
-              title="Identity"
-              actions={<Chip accent="indigo">{identity.platform}</Chip>}
+              title="Channel account"
+              actions={
+                <div className="nx-row nx-row--wrap">
+                  <Chip accent="indigo">{channelLabel(channel)}</Chip>
+                  {legacy !== null && <Chip accent="neutral">{legacy}</Chip>}
+                </div>
+              }
               footer={
                 <span className="nx-hint">
-                  The manager is edited below, because handing an identity to someone else is a confirmed, audited
-                  transfer rather than an ordinary field edit.
+                  The manager is edited below, because handing an account to someone else is a confirmed, audited
+                  transfer rather than an ordinary field edit. The channel is an ordinary field: it says how this
+                  account reaches people, and it is independent of where any lead was discovered.
                 </span>
               }
             >
               <IdentityEditForm
                 identityId={identity.id}
+                channels={CHANNEL_ACCOUNT_CHANNELS.map((option) => ({
+                  value: option,
+                  label: CHANNEL_LABELS[option],
+                }))}
                 platforms={IDENTITY_PLATFORMS}
                 statuses={IDENTITY_STATUSES}
                 current={{
                   displayName: identity.displayName,
-                  platform: identity.platform,
+                  channel,
+                  platform: account.platform ?? identity.platform,
                   status: identity.status,
                   dailyTarget: identity.dailyTarget,
                   profileUrl: identity.profileUrl ?? '',
@@ -258,9 +310,10 @@ export default async function IdentityDetailPage({
               />
             </Card>
           ) : (
-            <Card title="Identity">
+            <Card title="Channel account">
               <span className="nx-hint">
-                You do not hold <code>identity.manage</code>, so this identity is read-only for you.
+                You do not hold <code>identity.manage</code>, so this account is read-only for you. Its channel is{' '}
+                <strong>{channelLabel(channel)}</strong>.
               </span>
             </Card>
           )}
@@ -280,11 +333,11 @@ export default async function IdentityDetailPage({
                 columns={accessColumns}
                 rows={access}
                 rowKey={(row) => row.businessId}
-                caption="Businesses this sender identity may work"
+                caption="Businesses this channel account may work"
                 empty={
                   <EmptyState
                     title="No business access"
-                    body="No business is granted to this identity, so it can send nothing anywhere."
+                    body="No business is granted to this channel account, so it can send nothing anywhere."
                   />
                 }
               />
@@ -314,9 +367,9 @@ export default async function IdentityDetailPage({
               columns={sessionColumns}
               rows={sessions}
               rowKey={(session) => session.id}
-              caption="Browser sessions bound to this identity"
+              caption="Browser sessions bound to this channel account"
               empty={
-                <span className="nx-hint">No browser profile has bound this identity yet.</span>
+                <span className="nx-hint">No browser profile has bound this channel account yet.</span>
               }
             />
           </Card>
@@ -325,10 +378,10 @@ export default async function IdentityDetailPage({
             {transfers.length === 0 ? (
               <EmptyState
                 title="No transfers"
-                body="This identity has never changed hands. A transfer is only recorded when an identity assigned to one user is taken over by another, with explicit confirmation."
+                body="This channel account has never changed hands. A transfer is only recorded when an account assigned to one user is taken over by another, with explicit confirmation."
               />
             ) : (
-              <Timeline label="Identity transfer history">
+              <Timeline label="Channel account transfer history">
                 {transfers.map((transfer) => (
                   <TimelineItem key={transfer.id} dot={transfer.confirmed ? 'system' : 'danger'} meta={transferMeta(transfer)}>
                     {transferBody(transfer)}
@@ -347,7 +400,7 @@ export default async function IdentityDetailPage({
                 <span>{identity.managerName ?? 'Unassigned'}</span>
               </div>
               <div className="nx-row nx-row--between">
-                <span className="nx-hint">Identity owner is separate from lead owner</span>
+                <span className="nx-hint">Account owner is separate from lead owner</span>
                 <span className="nx-hint">spec identity_model</span>
               </div>
               {canManage ? (
@@ -359,7 +412,7 @@ export default async function IdentityDetailPage({
                 />
               ) : (
                 <span className="nx-hint">
-                  Only an identity manager or an administrator may change this identity.
+                  Only an account manager or an administrator may change this channel account.
                 </span>
               )}
             </Stack>
@@ -373,8 +426,8 @@ export default async function IdentityDetailPage({
                 <span className="nx-hint">
                   Unassign is not a transfer: it records an <code>identity_unassign</code> audit event and deliberately
                   writes no <code>identity_transfers</code> row, because every row in that table names a recipient.
-                  Deleting an identity is refused whenever history references it; the refusal names what would be lost
-                  and offers retirement instead. There is no restore, because <code>retired</code> is terminal.
+                  Deleting a channel account is refused whenever history references it; the refusal names what would
+                  be lost and offers retirement instead. There is no restore, because <code>retired</code> is terminal.
                 </span>
               }
             >
@@ -391,9 +444,10 @@ export default async function IdentityDetailPage({
           <Card title="Conversation ownership">
             <Stack size="sm">
               <p className="nx-hint">
-                spec `identity_model.conversation_ownership`: the first sender identity to touch a channel becomes its
-                default conversation sender. A lead&rsquo;s recorded sender stays visible even when a different identity
-                is selected, which is what triggers the duplicate-outreach warning on the lead screen.
+                spec `identity_model.conversation_ownership`: the first channel account to touch a conversation
+                becomes its default conversation sender. A lead&rsquo;s recorded sender stays visible even when a
+                different account is selected, which is what triggers the duplicate-outreach warning on the lead
+                screen.
               </p>
               <div className="nx-row nx-row--between">
                 <span className="nx-hint">Bound browser profiles</span>
@@ -430,6 +484,14 @@ export default async function IdentityDetailPage({
           <Card title="Record">
             <Stack size="sm">
               <div className="nx-row nx-row--between">
+                <span className="nx-hint">Channel</span>
+                <span>{channelLabel(channel)}</span>
+              </div>
+              <div className="nx-row nx-row--between">
+                <span className="nx-hint">Legacy platform</span>
+                <span className="nx-table__mono">{account.platform ?? '—'}</span>
+              </div>
+              <div className="nx-row nx-row--between">
                 <span className="nx-hint">Created</span>
                 <span className="nx-table__mono">{identity.createdAt?.slice(0, 10) ?? '—'}</span>
               </div>
@@ -450,6 +512,12 @@ export default async function IdentityDetailPage({
                 </div>
               )}
               {identity.notes !== null && <p>{identity.notes}</p>}
+              <p className="nx-hint">
+                The record still lives in <code>outreach_identities</code>; <code>channel_accounts</code> is a
+                security-invoker view over the same row, so the Companion&rsquo;s binding and every historical sender
+                attribution keep working unchanged. <code>platform</code> is retained for historical attribution and
+                is never the account&rsquo;s current channel.
+              </p>
             </Stack>
           </Card>
         </Stack>

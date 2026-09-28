@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { Alert, Card, Chip, DataTable, Grid, PageHead, Row, Stat, type Column } from '@nexus/ui';
 import { notFound } from 'next/navigation';
@@ -117,7 +117,7 @@ export default async function MessagingInsightsPage({
         <Stat
           value={dnc}
           label="Do Not Contact"
-          meta="suppressed across every sender"
+          meta="suppressed across every channel account"
         />
       </Grid>
 
