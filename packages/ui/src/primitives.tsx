@@ -37,7 +37,14 @@ export function PageHead({ children, subtitle, actions, id }: HeadingProps): Rea
         <h1 className="nx-page-title" id={id}>
           {children}
         </h1>
-        {subtitle !== undefined && <p className="nx-page-subtitle">{subtitle}</p>}
+        {/*
+          A `div`, not a `p`: `subtitle` is a `ReactNode`, and a caller that passes block
+          content (a meter, a steps list, a row of chips) inside a `<p>` produces HTML the
+          browser repairs by closing the paragraph early. The DOM then differs from what
+          React rendered and hydration fails — React error #418 — on every load of that
+          page. The class carries the styling, so the element change is invisible.
+        */}
+        {subtitle !== undefined && <div className="nx-page-subtitle">{subtitle}</div>}
       </div>
       {actions !== undefined && <div className="nx-page-head__actions">{actions}</div>}
     </div>

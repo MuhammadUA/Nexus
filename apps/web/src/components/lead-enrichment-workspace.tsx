@@ -64,194 +64,25 @@ const IDLE_RESEARCH: ResearchCompanyActionResult = {
 
 /* ------------------------------------------------------------ search links -- */
 
-export interface SearchLinkInputFacts {
-  readonly fullName: string | null;
-  readonly companyName: string | null;
-  readonly location: string | null;
-  readonly companyDomain?: string | null;
-  readonly linkedinUrl?: string | null;
-}
-
-export interface UnavailableSearchLink {
-  readonly key: SearchLink['key'];
-  readonly label: string;
-  /** The fact that is missing, named so the operator knows what to supply. */
-  readonly reason: string;
-}
-
-/**
- * The §30.2 actions that cannot be built from the stored facts, with the missing field
- * named (§30.3.4). `searchLinks` omits an unbuildable link; the UI still has to *account*
- * for it, which is what this returns.
- */
-export function missingSearchLinks(input: SearchLinkInputFacts): readonly UnavailableSearchLink[] {
-  const has = (value: string | null | undefined): boolean =>
-    typeof value === 'string' && value.trim().length > 0;
-  const missing: UnavailableSearchLink[] = [];
-
-  if (!has(input.fullName) && !has(input.linkedinUrl)) {
-    missing.push({
-      key: 'find_linkedin',
-      label: 'Find LinkedIn profile',
-      reason: 'person name is missing',
-    });
-  }
-  if (!has(input.fullName) || (!has(input.companyName) && !has(input.location))) {
-    missing.push({
-      key: 'search_person',
-      label: 'Search this person',
-      reason: has(input.fullName)
-        ? 'company or location is missing'
-        : 'person name is missing',
-    });
-  }
-  if (!has(input.companyName) && !has(input.companyDomain)) {
-    missing.push({ key: 'search_company', label: 'Search this company', reason: 'company is missing' });
-    missing.push({
-      key: 'search_signals',
-      label: 'Search for buying signals',
-      reason: 'company is missing',
-    });
-  }
-  return missing;
-}
+// Kept server-safe (see apps/web/src/lib/lead-search-links.ts): the Lead Detail page
+// calls this while rendering, and a Server Component cannot call an export of a
+// client module.
+import { missingSearchLinks } from '../lib/lead-search-links';
+import type { SearchLinkInputFacts, UnavailableSearchLink } from '../lib/lead-search-links';
+export type { SearchLinkInputFacts, UnavailableSearchLink } from '../lib/lead-search-links';
+export { missingSearchLinks } from '../lib/lead-search-links';
 
 /* -------------------------------------------------------- processing steps -- */
 
-export type ProcessingStepState = 'done' | 'current' | 'pending' | 'waiting' | 'failed';
-
-export interface ProcessingStep {
-  readonly key: string;
-  readonly label: string;
-  readonly state: ProcessingStepState;
-  readonly detail: string;
-}
-
-export interface ProcessingStepInput {
-  /** The lead row exists: the discovery source has been captured. */
-  readonly leadExists: boolean;
-  /** A full name is committed. */
-  readonly personResolved: boolean;
-  /** A company with a domain is committed. */
-  readonly companyResolved: boolean;
-  /** A profile extraction has committed facts (`last_profile_enrichment_at`). */
-  readonly profileExtractionDone: boolean;
-  /** A committed company research snapshot exists. */
-  readonly companyResearchDone: boolean;
-  /** A `RESEARCH_COMPANY` job is OPEN/RUNNING/WAITING_AI. */
-  readonly companyResearchJobOpen: boolean;
-  /** A qualification (`lead_icp_matches`) is recorded. */
-  readonly qualificationDone: boolean;
-  /** `lead_enrichment.status`. */
-  readonly enrichmentState: string;
-  /** `lead_enrichment.last_error_code`, when the last attempt failed. */
-  readonly lastErrorCode: string | null;
-}
-
-/**
- * §67.2 — the named processing steps, each derived from stored rows rather than from
- * client-side optimism. The first unfinished step is marked `current`, so the indicator
- * always names exactly what is happening next.
- *
- * A step waiting on an agent is `waiting`, not `current`: §67.5 requires the screen to say
- * it is waiting and offer the manual alternative rather than showing an indefinite spinner.
- */
-export function processingSteps(input: ProcessingStepInput): readonly ProcessingStep[] {
-  const failed = input.enrichmentState === 'FAILED';
-  const inReview = input.enrichmentState === 'NEEDS_REVIEW';
-  const aiProcessing = input.enrichmentState === 'AI_PROCESSING';
-
-  const steps: ProcessingStep[] = [
-    {
-      key: 'source_captured',
-      label: 'Source captured',
-      state: input.leadExists ? 'done' : 'pending',
-      detail: 'the lead row exists with its discovery source and provenance',
-    },
-    {
-      key: 'person_resolved',
-      label: 'Person resolved',
-      state: input.personResolved ? 'done' : 'pending',
-      detail: 'a canonical person is linked to this lead',
-    },
-    {
-      key: 'company_resolved',
-      label: 'Company resolved',
-      state: input.companyResolved ? 'done' : 'pending',
-      detail: 'a company with a website is linked to this lead',
-    },
-    {
-      key: 'profile_extraction',
-      label: 'Profile extraction',
-      state: input.profileExtractionDone ? 'done' : 'pending',
-      detail: 'structured facts committed from the captured profile',
-    },
-    {
-      key: 'company_research',
-      label: 'Company research pending',
-      state: input.companyResearchDone
-        ? 'done'
-        : input.companyResearchJobOpen
-          ? 'waiting'
-          : 'pending',
-      detail: input.companyResearchJobOpen
-        ? 'an agent job is open and waits durably; you may leave this page'
-        : 'a committed company research snapshot with provenance',
-    },
-    {
-      key: 'qualification',
-      label: 'Qualification pending',
-      state: input.qualificationDone ? 'done' : 'pending',
-      detail: 'an ICP match and intent assessment recorded for this lead',
-    },
-    {
-      key: 'ready',
-      label: 'Ready for outreach',
-      state: input.enrichmentState === 'READY' ? 'done' : 'pending',
-      detail: 'the readiness threshold and a context pack are both satisfied',
-    },
-  ];
-
-  // The first unfinished step is the current one, unless it is waiting on an agent.
-  const firstOpen = steps.find((step) => step.state !== 'done');
-  const mapped = steps.map((step) =>
-    step === firstOpen && step.state === 'pending' ? { ...step, state: 'current' as const } : step,
-  );
-
-  if (failed) {
-    const target = mapped.find((step) => step.state === 'current') ?? mapped[mapped.length - 1];
-    if (target !== undefined) {
-      return mapped.map((step) =>
-        step.key === target.key
-          ? { ...step, state: 'failed' as const, detail: `failed: ${input.lastErrorCode ?? 'unknown error code'}` }
-          : step,
-      );
-    }
-  }
-
-  if (inReview) {
-    const review = mapped.find((step) => step.state === 'current') ?? mapped[0];
-    return mapped.map((step) =>
-      step === review
-        ? { ...step, state: 'failed' as const, detail: 'a user-confirmed value conflicts; a review decision is required' }
-        : step,
-    );
-  }
-
-  if (aiProcessing) {
-    const first = mapped.findIndex((step) => step.state === 'current');
-    if (first >= 0) {
-      const step = mapped[first];
-      if (step !== undefined) {
-        return mapped.map((candidate, index) =>
-          index === first ? { ...candidate, state: 'waiting' as const, detail: 'AI work is in flight; nothing blocks the page' } : candidate,
-        );
-      }
-    }
-  }
-
-  return mapped;
-}
+// The pure derivation lives in a module without a 'use client' boundary, because a
+// Server Component cannot call an export of a client module: Next.js throws
+// "Attempted to call processingSteps() from the server but processingSteps is on the client",
+// which made the Lead Detail page answer 500 in a production build. The component below
+// stays here; the derivation is imported for local use and re-exported for callers that
+// are themselves client code.
+import type { ProcessingStep } from '../lib/lead-processing-steps';
+export type { ProcessingStep, ProcessingStepInput, ProcessingStepState } from '../lib/lead-processing-steps';
+export { processingSteps } from '../lib/lead-processing-steps';
 
 /* ------------------------------------------------------------ sub-controls -- */
 

@@ -14,7 +14,8 @@
     "smoke": "node scripts/smoke-gateway.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint src --max-warnings 0",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "e2e": "playwright test --config=e2e/playwright.config.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",

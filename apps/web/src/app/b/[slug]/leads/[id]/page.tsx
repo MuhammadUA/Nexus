@@ -49,9 +49,12 @@ import {
   ProcessingStepsIndicator,
   RecomputeEnrichmentButton,
   RefreshContextButton,
-  missingSearchLinks,
-  processingSteps,
 } from '@/components/lead-enrichment-workspace';
+// Both are called *during* this page's render, so they come from modules without a
+// `'use client'` boundary: a Server Component cannot call an export of a client
+// module, and doing so made this page answer 500 in a production build.
+import { processingSteps } from '@/lib/lead-processing-steps';
+import { missingSearchLinks } from '@/lib/lead-search-links';
 import {
   LeadIntelligenceBrief,
   IntelligenceMeter,
