@@ -887,6 +887,59 @@ body {
   color: var(--nx-text-muted);
 }
 
+/*
+ * Secondary navigation for a top-level destination (`AppShell`).
+ *
+ * **Why this block exists.** `app-shell.tsx` has always emitted `nx-subnav` and `nx-subnav__item`
+ * for the second level of the Admin IA (Business Setup -> ICPs / Sequences / Knowledge / Signals,
+ * Team & Accounts -> Permissions / Outreach Identities / My Access), but no rule for either class
+ * was ever written. An unstyled `<div>` of unstyled anchors renders as one run of inline text, so on
+ * `/team` the two links appeared as `Outreach IdentitiesMy Access` — no gap, no separation, and easy
+ * to mistake for a caption rather than navigation. The markup and its `role="tablist"`/`role="tab"`
+ * semantics were correct the whole time; only the presentation was missing.
+ *
+ * The strip is deliberately more prominent than `.nx-tab`: these are peer destinations of the
+ * section, so each one is a filled control rather than an underlined word. That is a presentation
+ * change to the existing component, not a redesign — the DOM, the IA and the permissions are
+ * untouched.
+ */
+.nx-subnav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--nx-space-sm);
+  padding: var(--nx-space-md) var(--nx-space-shell);
+  background: var(--nx-surface-card);
+  border-bottom: var(--nx-border-width) solid var(--nx-border-color);
+}
+
+.nx-subnav__item {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 var(--nx-space-md);
+  border: var(--nx-border-width) solid var(--nx-border-color);
+  border-radius: var(--nx-radius-control);
+  background: var(--nx-surface-card);
+  color: var(--nx-text-secondary);
+  font-size: var(--nx-font-size-base);
+  font-weight: var(--nx-font-weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nx-subnav__item:hover {
+  border-color: var(--nx-border-color-strong);
+  color: var(--nx-text-primary);
+}
+
+.nx-subnav__item[aria-selected='true'] {
+  border-color: var(--nx-accent-cyan-border);
+  background: var(--nx-accent-cyan-fill);
+  color: var(--nx-accent-cyan-fg);
+  font-weight: var(--nx-font-weight-semibold);
+}
+
 /* --------------------------------------------------------------- states -- */
 
 .nx-empty {
