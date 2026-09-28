@@ -78,3 +78,4 @@ scripts/baseline-verify/secrets.json
 .env.*
 !.env.example
 !.env.*.example
+.vercel

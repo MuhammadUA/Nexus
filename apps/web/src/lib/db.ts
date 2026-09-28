@@ -104,6 +104,12 @@ export function sessionSecret(): string | null {
  * use so a fresh checkout is immediately usable.
  */
 export function getConnection(): Promise<Connection> {
+  // Tests may inject a fixed connection, and PGlite is intentionally a single
+  // process-wide engine. PostgreSQL is different: every actor transaction must
+  // check out its own pool client so concurrent requests cannot interleave
+  // transaction-local RLS identity on one connection.
+  if (globalForDb.__nexusDb !== undefined) return globalForDb.__nexusDb;
+  if (externalUrl() !== null) return connect();
   globalForDb.__nexusDb ??= connect();
   return globalForDb.__nexusDb;
 }

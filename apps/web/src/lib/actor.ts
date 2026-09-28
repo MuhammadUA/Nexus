@@ -110,6 +110,7 @@ async function transaction<T>(
         // The connection is already unusable; the next query will surface it.
       }
     }
+    sql.release?.();
   }
 }
 
@@ -160,6 +161,8 @@ export async function withServiceRole<T>(reason: string, fn: (sql: Db) => Promis
       /* see above */
     }
     throw error;
+  } finally {
+    sql.release?.();
   }
 }
 

@@ -12,6 +12,8 @@ export type { QueryResult, Row };
 export interface SqlExecutor {
   query<T extends Row = Row>(text: string, params?: readonly unknown[]): Promise<QueryResult<T>>;
   exec(text: string): Promise<void>;
+  /** Return a checked-out production connection to its pool. */
+  release?(): void;
 }
 
 /** A handle bound to one open transaction and one acting identity. */
@@ -54,6 +56,7 @@ interface PgPool {
 
 interface PgClient {
   query<T extends Row>(text: string, params?: readonly unknown[]): Promise<QueryResult<T>>;
+  release(): void;
 }
 
 export async function createPgDb(connectionString: string): Promise<Db> {
@@ -62,7 +65,11 @@ export async function createPgDb(connectionString: string): Promise<Db> {
     const pg = (await import(/* webpackIgnore: true */ moduleName)) as {
       Pool: new (config: { connectionString: string; max: number }) => PgPool;
     };
-    return new pg.Pool({ connectionString, max: 10 });
+    const configuredMax = Number.parseInt(process.env.NEXUS_DB_POOL_MAX ?? '', 10);
+    const max = Number.isFinite(configuredMax) && configuredMax >= 1 && configuredMax <= 10
+      ? configuredMax
+      : 10;
+    return new pg.Pool({ connectionString, max });
   })();
 
   const pool = await poolPromise;
@@ -75,6 +82,9 @@ export async function createPgDb(connectionString: string): Promise<Db> {
     },
     async exec(text: string) {
       await client.query(text);
+    },
+    release() {
+      client.release();
     },
   };
 }
