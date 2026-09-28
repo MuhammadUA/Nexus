@@ -98,6 +98,7 @@ import {
   sequenceStepsForLead,
   type SequenceStep,
 } from '@/lib/repo/sequence';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,6 +135,7 @@ export default async function LeadDetailPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+  requireRouteAccess(context, { route: '/b/:businessSlug/leads/:leadId', businessId: business.id });
 
   const lead = await getLead(context.viewer.actor, id);
   // A lead in another business is invisible through RLS, so it reads as missing.

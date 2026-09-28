@@ -42,12 +42,17 @@ export function Shell({
   /**
    * The business used to resolve sidebar links on screens that are not themselves business-scoped.
    *
-   * `businesses` is the switcher list, which already honours the viewer's grants, so its first entry
-   * is a business this operator can actually reach. Substituting it keeps the full seven-destination
-   * sidebar visible on `/`, `/team`, `/integrations` and the user surfaces. Without it every
-   * business-scoped entry is dropped for want of a slug and the sidebar collapses.
+   * `businesses` is the switcher list, which already honours the viewer's grants, so its first
+   * *real* entry is a business this operator can actually reach. Substituting it keeps the full
+   * seven-destination sidebar visible on `/`, `/team`, `/integrations` and the user surfaces.
+   *
+   * The roll-up is skipped. For an administrator the switcher's first entry is "All Businesses",
+   * whose slug is a placeholder (`__all__`) with no screens behind it — substituting it produced
+   * `/b/__all__/overview` and `/b/__all__/insights` links that answered 404 from every global screen.
+   * The roll-up stays in the dropdown; it is simply never used as a route segment.
    */
-  const effectiveSlug = businessSlug ?? businesses[0]?.slug;
+  const defaultBusiness = businesses.find((business) => business.isRollUp !== true) ?? businesses[0];
+  const effectiveSlug = businessSlug ?? defaultBusiness?.slug;
 
   return (
     <AppShell
@@ -61,6 +66,14 @@ export function Shell({
       onSelectBusiness={(businessId) => {
         const target = businesses.find((business) => business.id === businessId);
         if (target === undefined) return;
+        /**
+         * The roll-up has no screens of its own, so choosing it lands on the admin hub that lists
+         * every business rather than on a `/b/__all__/...` route that does not exist.
+         */
+        if (target.isRollUp === true) {
+          router.push('/businesses');
+          return;
+        }
         // Swap the slug segment in place, so the operator keeps their position in
         // the same screen when switching business context.
         const next = businessSlug === undefined

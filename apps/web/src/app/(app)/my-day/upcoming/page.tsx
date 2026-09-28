@@ -7,6 +7,7 @@ import { loadViewerContext } from '@/lib/viewer-context';
 import { getTodayQueue, focusHref } from '@/lib/repo/today';
 import { DueChip, LeadStatusChip } from '@nexus/ui';
 import { MyDayNav } from '@/components/my-day-nav';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,7 @@ export const dynamic = 'force-dynamic';
 export default async function UpcomingPage(): Promise<ReactNode> {
   const viewer = await requireViewer();
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-day/upcoming' });
 
   const items = (
     await Promise.all(

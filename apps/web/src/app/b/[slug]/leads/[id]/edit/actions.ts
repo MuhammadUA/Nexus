@@ -18,12 +18,21 @@
  * sender-identity selects are only read when the viewer actually holds
  * `lead.assign_owner` / `lead.change_sender_identity`, and the database refuses the write
  * either way.
+ *
+ * The file lives beside the canonical page it belongs to (`/b/:slug/leads/:id/edit`) rather than
+ * with the legacy alias, and on success it redirects back to the canonical lead detail — the round
+ * trip an operator expects after saving, with no intermediate page to get stranded on.
  */
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
-import { currentViewer } from '@/lib/current-viewer';
 import { LEAD_STATES } from '@nexus/core';
+
+import { currentViewer } from '@/lib/current-viewer';
+import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
+import { authorizeAction } from '@/lib/route-guard';
+import { canonicalLeadPath } from '@/lib/lead-links';
 import { updateLead } from '@/lib/repo/leads';
 import { updateLeadProfile } from '@/lib/repo/user-sources';
 import { formStringOrNull } from '@/lib/form-data';
@@ -53,6 +62,7 @@ const optionalText = (max: number) =>
 
 const editSchema = z.object({
   leadId: z.string().uuid(),
+  businessSlug: z.string().trim().min(1).max(200),
   fullName: optionalText(200),
   jobTitle: optionalText(200),
   headline: optionalText(400),
@@ -71,6 +81,7 @@ export async function updateLeadAction(
 ): Promise<ActionResult> {
   const parsed = editSchema.safeParse({
     leadId: formStringOrNull(formData, 'leadId'),
+    businessSlug: formStringOrNull(formData, 'businessSlug'),
     fullName: formStringOrNull(formData, 'fullName'),
     jobTitle: formStringOrNull(formData, 'jobTitle'),
     headline: formStringOrNull(formData, 'headline'),
@@ -95,6 +106,22 @@ export async function updateLeadAction(
 
   const viewer = await currentViewer();
   if (viewer === null) return { ok: false, error: 'Your session has expired. Sign in again.' };
+
+  /**
+   * The action is a public endpoint once its page has rendered anywhere, so it verifies the same
+   * route requirement its page declares — against the business named in the form, resolved through
+   * the viewer's own visible businesses. A posted slug the viewer cannot see is refused, not merely
+   * unlisted. `authorizeAction` returns a typed refusal rather than a 404, because an action has no
+   * page to not find.
+   */
+  const context = await loadViewerContext();
+  const business = resolveBusiness(context, parsed.data.businessSlug);
+  if (business === null) return { ok: false, error: 'That lead could not be found.' };
+  const refusal = await authorizeAction(context, {
+    route: '/b/:businessSlug/leads/:leadId/edit',
+    businessId: business.id,
+  });
+  if (refusal !== null) return { ok: false, error: refusal.error };
 
   // 1. Canonical person/company fields.
   const profile = await updateLeadProfile(viewer, parsed.data.leadId, {
@@ -124,17 +151,20 @@ export async function updateLeadAction(
     if (!lead.ok) return { ok: false, error: lead.error ?? 'The lead could not be updated.' };
   }
 
-  revalidatePath(`/leads/${parsed.data.leadId}`);
-  revalidatePath(`/leads/${parsed.data.leadId}/edit`);
+  // Revalidate the paths that actually exist, resolved rather than assumed: a `revalidatePath` for
+  // a route that is not a page is a silent no-op, which is how the previous `/leads/:id` target
+  // never refreshed anything.
+  const canonical = await canonicalLeadPath(context.viewer.actor, parsed.data.leadId);
+  if (canonical !== null) {
+    revalidatePath(canonical);
+    revalidatePath(`${canonical}/edit`);
+  }
   revalidatePath('/my-leads');
   revalidatePath('/my-day');
+  revalidatePath(`/b/${business.key}/leads`);
 
-  return {
-    ok: true,
-    error: null,
-    message:
-      parsed.data.primaryIcpId === undefined
-        ? 'Lead updated.'
-        : 'Lead updated. The Primary ICP change is recorded in the audit log.',
-  };
+  if (canonical === null) {
+    return { ok: true, error: null, message: 'Lead updated.' };
+  }
+  redirect(canonical);
 }

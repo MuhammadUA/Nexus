@@ -52,6 +52,7 @@ export default async function AppLayout({ children }: { readonly children: React
         id: option.id,
         slug: option.slug,
         name: option.name,
+        isRollUp: option.isRollUp,
       }))}
       userLabel={context.viewer.fullName ?? context.viewer.email ?? ''}
     >

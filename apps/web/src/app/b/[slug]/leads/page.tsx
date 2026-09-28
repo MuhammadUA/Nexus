@@ -55,6 +55,7 @@ import {
 import { loadViewerContext, resolveBusiness } from '@/lib/viewer-context';
 
 import './leads.css';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -610,6 +611,7 @@ export default async function LeadsPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
+  requireRouteAccess(context, { route: '/b/:businessSlug/leads', businessId: business.id });
 
   const page = Math.max(Number(query.page ?? '1') || 1, 1);
   const pageSize = parsePageSize(query.pageSize);

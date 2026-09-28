@@ -24,11 +24,11 @@ the extension suite seeds a fresh demo database in the worktree.
 | `pnpm install --frozen-lockfile` | pass (3.2s) |
 | `pnpm run typecheck` | pass (every package, no errors) |
 | `pnpm run lint` | pass (`--max-warnings 0` per package) |
-| `pnpm run test` | pass — 42 files, 731 tests (154 core + 110 db + 9 extension + 458 web) |
+| `pnpm run test` | pass — 43 files, 763 tests (170 core + 110 db + 9 extension + 474 web) |
 | `pnpm run db:verify` | pass — 36 migrations, 71 tables, 198 policies, 111 triggers, 129 functions, 220 indexes |
 | `pnpm run build` | pass (Next.js production build, all V1.2 routes present) |
 | `pnpm --filter @nexus/extension run build` | pass (`manifest valid, no credentials in the bundle`) |
-| `pnpm --filter @nexus/web run e2e` | pass — 15 tests |
+| `pnpm --filter @nexus/web run e2e` | pass — 26 tests (15 screen + 11 route crawl) |
 | `pnpm --filter @nexus/extension run e2e` | pass — 38 tests |
 
 
@@ -91,18 +91,43 @@ them.
 
 | Suite | Files | Tests | Result |
 | --- | --- | --- | --- |
-| `@nexus/core` | 6 | 154 | pass |
+| `@nexus/core` | 6 | 170 | pass |
 | `@nexus/db` | 8 | 110 | pass |
-| `@nexus/web` | 27 | 458 | pass |
+| `@nexus/web` | 28 | 474 | pass |
 | `@nexus/extension` (unit) | 1 | 9 | pass |
-| **Total** | **42** | **731** | **pass** |
+| **Total** | **43** | **763** | **pass** |
 
-The V1.2 additions inside those totals: 66 core tests (37 deterministic enrichment
-and search links, 29 job chaining and qualification prerequisites), 24 database tests
-(7 raw lifecycle, 17 agent jobs), and 165 web tests (17 MCP agent tools, 22 AI
-pipeline, 16 qualification and reply classification, 13 enrichment repo, 59 Lead UI,
-18 Agent Jobs UI, 17 metrics, 18 channel vocabulary) — plus the Companion binding
-suite grown from 6 to 31 and `rls-access` from 28 to 31.
+The V1.2 additions inside those totals: 82 core tests (37 deterministic enrichment
+and search links, 29 job chaining and qualification prerequisites, 16 route
+authorization), 24 database tests (7 raw lifecycle, 17 agent jobs), and 181 web tests
+(17 MCP agent tools, 22 AI pipeline, 16 qualification and reply classification,
+**16 route and link wiring**, 13 enrichment repo, 59 Lead UI, 18 Agent Jobs UI,
+17 metrics, 18 channel vocabulary) — plus the Companion binding suite grown from 6 to
+31 and `rls-access` from 28 to 31.
+
+### 3.4 Route and link wiring
+
+`apps/web/test/route-wiring.test.ts` — **16 tests**, built from the filesystem rather
+than from a list someone maintains:
+
+* every physical page has a `ROUTE_PERMISSIONS` entry, and every declared application
+  route has a page (including the dynamic ones, which an exact-string lookup silently
+  skips);
+* every alias names a declared, non-alias route whose page redirects;
+* every page that declares a permission calls a guard, and names its own route —
+  a page guarding an undeclared route is the `/trash` defect that made a screen answer
+  404 to everybody;
+* every navigation entry is declared, has a page, and carries the same permission the
+  matrix does;
+* every internal destination in the source (243 occurrences of 41 distinct shapes,
+  from `href`, template literals, `router.push`, `redirect` and `revalidatePath`)
+  resolves to a page that exists; none uses the old slug-less `/leads/...` shape; and
+  none names a business screen without its business;
+* a grantless administrator is allowed on every declared screen, while a restricted
+  operator is refused the administration and keeps every work screen they hold.
+
+It also prints the per-route audit table used by `docs/V1_2_ROUTE_WIRING_AUDIT.md`, so
+the document cannot drift from the matrix.
 
 ### 3.1 V1.2 MCP agent surface
 
@@ -185,17 +210,14 @@ itself an assertion:
 
 | Suite | Result |
 | --- | --- |
-| Web browser E2E (`apps/web/e2e`, production build on port 3100, isolated database) | **15 passed, 0 failed** |
+| Web browser E2E (`apps/web/e2e`, production build on port 3100, isolated database) | **26 passed, 0 failed** — 15 screen tests + 11 route-crawl tests |
+| Route crawl (dedicated suite, reported separately) | **11 passed** — 56 clicks over 46 destinations, 0 404s, 0 500s, 0 console errors |
 | Extension E2E (real MV3 extension in Chromium, seeded demo server on 3000) | **38 passed, 0 failed** |
 
-The web suite is new in V1.2 and covers the Overview metrics and enrichment funnel,
-the Leads columns and a real deterministic Find-LinkedIn link, the Agent Jobs
-summary plus the absence of any manual complete control, the twelve prompt keys and
-the provider state on the AI tab, the Channel Accounts vocabulary, the secondary
-navigation (including that the V1.1 concatenation defect is gone), and the
-enrichment workspace's "discarded raw text is never re-displayed" rule.
-
-It found three defects that no unit test could, all fixed before this run:
+The web suite runs as an administrator with **zero `user_business_access` rows** — the
+production condition that exposed the routing defects — and provisioning fails if a
+grant is ever added back. It found three defects that no unit test could, all fixed
+before this run:
 
 * the Lead Detail page answered **500** in a production build — the page called
   `processingSteps()` and `missingSearchLinks()`, which were exported from a
@@ -227,18 +249,17 @@ committed so the live provider can be confirmed in one command after deployment.
 
 ## 6. Final gate results
 
-The whole gate is green, run in the integration tree after the AI call sites landed
-(migration `0036`) and previously from a clean worktree at `ef1c8ce`:
+The whole gate is green, run in the integration tree after the route remediation:
 
 ```
 pnpm install --frozen-lockfile                     pass
 pnpm run typecheck                                 pass
 pnpm run lint                                      pass
-pnpm run test                                      42 files / 731 tests pass
+pnpm run test                                      43 files / 763 tests pass
 pnpm run db:verify                                 36 migrations, verification passed
 pnpm run build                                     pass
 pnpm --filter @nexus/extension run build           pass
-pnpm --filter @nexus/web run e2e                   15 passed
+pnpm --filter @nexus/web run e2e                   26 passed (15 screen + 11 route crawl)
 pnpm --filter @nexus/extension run e2e             38 passed
 ```
 

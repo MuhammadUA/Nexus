@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 /**
  * A19 — Automation Mapping actions.
@@ -11,6 +11,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
+import { loadViewerContext } from '@/lib/viewer-context';
 import { upsertAutomation } from '@/lib/repo/integrations';
 import { formString, formStringOrNull } from '@/lib/form-data';
 
@@ -66,7 +67,23 @@ export async function saveAutomationAction(
     icpId: optional(parsed.data.icpId ?? undefined) === null ? null : (parsed.data.icpId as string),
   });
 
-  if (result.ok) revalidatePath('/automations');
+  /**
+   * Revalidate the screen that actually exists.
+   *
+   * This used to call `revalidatePath('/automations')`, which is not a page — the screen is
+   * `/b/:slug/automations` — so the refresh was a silent no-op and the list kept showing the state
+   * from before the save. The slug is resolved through the viewer's own visible businesses rather
+   * than guessed.
+   */
+  if (result.ok) {
+    const context = await loadViewerContext();
+    const business = context.businesses.find((candidate) => candidate.id === parsed.data.businessId);
+    if (business === undefined) {
+      revalidatePath('/b/[slug]/automations', 'page');
+    } else {
+      revalidatePath(`/b/${business.key}/automations`);
+    }
+  }
 
   return {
     ok: result.ok,

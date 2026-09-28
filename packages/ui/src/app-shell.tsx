@@ -46,6 +46,16 @@ export interface BusinessOption {
   readonly id: string;
   readonly slug: string;
   readonly name: string;
+  /**
+   * True for the administrator's "All Businesses" roll-up.
+   *
+   * The roll-up is a *switcher* entry, not a business: there is no `/b/__all__/overview` screen, and
+   * substituting its placeholder slug into a navigation route produced dead links
+   * (`/b/__all__/overview`, `/b/__all__/insights`) that answered 404 whenever a global screen such as
+   * `/team` rendered the sidebar. It is marked here so the shell can keep it in the dropdown while
+   * never using it as the slug for a link.
+   */
+  readonly isRollUp?: boolean;
 }
 
 export interface AppShellProps {

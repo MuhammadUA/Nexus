@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { withActor } from '@/lib/actor';
 import { loadViewerContext, defaultBusiness } from '@/lib/viewer-context';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,7 @@ export default async function MyLeadAlias({
 }): Promise<never> {
   const { id } = await params;
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-leads/:leadId' });
 
   const businessSlug = await withActor(context.viewer.actor, async (sql) => {
     const result = await sql.query<{ key: string }>(

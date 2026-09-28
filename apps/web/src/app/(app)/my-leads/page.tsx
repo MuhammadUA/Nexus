@@ -28,6 +28,7 @@ import { listSavedViews, viewHref } from '@/lib/repo/saved-views';
 import { filterHref } from '@/lib/filter-url';
 import { LeadFilterBar } from '@/components/lead-filter-bar';
 import { deleteLeadViewAction, saveLeadViewAction } from './actions';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +95,7 @@ export default async function MyLeadsPage({
 }): Promise<ReactNode> {
   const query = await searchParams;
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-leads' });
 
   if (context.businesses.length === 0) {
     return (
@@ -153,7 +155,9 @@ export default async function MyLeadsPage({
       header: 'Person',
       cell: (lead) => (
         <div className="nx-stack nx-stack--sm">
-          <a className="nx-nav__item" style={{ padding: 0 }} href={`/leads/${lead.id}`}>
+          {/* The user-surface alias resolves the owning business and redirects to the canonical
+              detail; the list deliberately does not put a business slug in a user's URL. */}
+          <a className="nx-nav__item" style={{ padding: 0 }} href={`/my-leads/${lead.id}`}>
             <strong>{lead.personName}</strong>
           </a>
           {lead.jobTitle !== null && <span className="nx-hint">{lead.jobTitle}</span>}
@@ -203,7 +207,7 @@ export default async function MyLeadsPage({
       header: '',
       cell: (lead) => (
         <Row wrap>
-          <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/leads/${lead.id}/edit`}>
+          <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/my-leads/${lead.id}/edit`}>
             Edit
           </a>
           <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/tasks/new?lead=${lead.id}`}>
@@ -229,7 +233,7 @@ export default async function MyLeadsPage({
             <a className="nx-btn nx-btn--primary" href="/my-lead-sources">
               Add lead
             </a>
-            <a className="nx-btn nx-btn--secondary" href="/trash">
+            <a className="nx-btn nx-btn--secondary" href="/my-trash">
               Trash
             </a>
           </Row>

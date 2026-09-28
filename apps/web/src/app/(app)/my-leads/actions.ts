@@ -153,7 +153,7 @@ export async function restoreLeadAction(
   const result = await restoreLead(viewer, parsed.data.leadId);
   if (!result.ok) return { ok: false, error: result.error ?? 'The lead could not be restored.' };
 
-  revalidatePath('/trash');
+  revalidatePath('/my-trash');
   revalidatePath('/my-leads');
   revalidatePath('/my-day');
   return { ok: true, error: null, message: 'Lead restored.' };

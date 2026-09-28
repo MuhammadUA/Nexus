@@ -6,6 +6,7 @@ import { loadViewerContext } from '@/lib/viewer-context';
 import { getBoundLead } from '@/lib/repo/user-sources';
 import { openTasksForLead } from '@/lib/repo/sequence';
 import { SnoozeForm, SNOOZE_PRESETS } from '@/components/snooze-form';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,7 @@ export default async function SnoozePage({
 }): Promise<ReactNode> {
   const query = await searchParams;
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/snooze' });
 
   const canSnooze = context.permissions.has('lead.snooze');
   const lead =
@@ -99,7 +101,7 @@ export default async function SnoozePage({
               <Stack size="sm">
                 <Row between>
                   <span className="nx-hint">Lead</span>
-                  <a className="nx-nav__item" style={{ padding: 0 }} href={`/leads/${lead.id}`}>
+                  <a className="nx-nav__item" style={{ padding: 0 }} href={`/my-leads/${lead.id}`}>
                     <strong>{lead.fullName}</strong>
                   </a>
                 </Row>

@@ -18,6 +18,7 @@ import {
 import { loadViewerContext } from '@/lib/viewer-context';
 import type { ImportBatch } from '@/lib/repo/ingestion';
 import { getUserSourceCounts, listRecentImports } from '@/lib/repo/user-sources';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,7 @@ interface ModeLink {
  */
 export default async function MyLeadSourcesPage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-lead-sources' });
   const businessIds = context.businesses.map((business) => business.id);
 
   const canUseLeadSources = context.permissions.has('lead_source.use');

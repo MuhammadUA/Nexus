@@ -3,10 +3,9 @@
 **Branch:** `v1.2/ai-first-redesign` (pushed to `MuhammadUA/Nexus`)
 **Source branch:** `integration/final`, treated as read-only
 **Source SHA:** `50aa3c19005c7ac34777554ff4bbc7035c13aef4`
-**Final V1.2 SHA:** the head of `v1.2/ai-first-redesign` after the AI call-site commit
-in §15; the clean-checkout gate ran at `ef1c8ce`, and the only commits after it are the
-gate report, the disclosure of the two then-unwired tasks, and the change that wired
-them (which re-ran the whole gate — see §12).
+**Final V1.2 SHA:** the head of `v1.2/ai-first-redesign` after the route and access remediation
+commit (see the returned SHA); the clean-checkout gate ran at `ef1c8ce`, and the commits after it are
+the gate report, the AI call sites, and this remediation — each of which re-ran the whole gate.
 **Production / Supabase / Vercel:** not touched. Nothing was deployed, merged or
 force-pushed; no tag was moved.
 
@@ -204,28 +203,28 @@ preserved.
 
 ## 12. Gate results
 
-The full release gate was run twice: once from a **clean worktree** (`git worktree add
---detach E:\CRM\v12-cleancheck v1.2/ai-first-redesign`) at the code commit `ef1c8ce`,
-and again in the integration tree after the AI call sites in §15 landed (migration
-`0036`, 17 new tests). Nothing depended on this machine's scratch state: the web E2E
-suite provisions its own database in the OS temp directory and removes it afterwards,
-and the extension suite seeds a fresh demo database in `apps/web/.data`.
+The full release gate was run three times: from a **clean worktree** (`git worktree add
+--detach E:\CRM\v12-cleancheck v1.2/ai-first-redesign`) at the code commit `ef1c8ce`, again in the
+integration tree after the AI call sites in §15 landed (migration `0036`), and once more after the
+route and access remediation in §16. Nothing depended on this machine's scratch state: the web E2E
+suite provisions its own database in the OS temp directory and removes it afterwards, and the
+extension suite seeds a fresh demo database in `apps/web/.data`.
 
 ```
 pnpm install --frozen-lockfile                     pass (3.2s)
 pnpm run typecheck                                 pass — every package, no errors
 pnpm run lint                                      pass — --max-warnings 0 per package
-pnpm run test                                      pass — 42 files, 731 tests
+pnpm run test                                      pass — 43 files, 763 tests
 pnpm run db:verify                                 pass — 36 migrations, 71 tables,
                                                    198 policies, 111 triggers,
                                                    129 functions, 220 indexes
 pnpm run build                                     pass — Next.js production build
 pnpm --filter @nexus/extension run build           pass — manifest valid, no credentials
-pnpm --filter @nexus/web run e2e                   pass — 15 tests
+pnpm --filter @nexus/web run e2e                   pass — 26 tests (15 screen + 11 crawl)
 pnpm --filter @nexus/extension run e2e             pass — 38 tests
 ```
 
-Per suite: `@nexus/core` 154, `@nexus/db` 110, `@nexus/web` 458, `@nexus/extension`
+Per suite: `@nexus/core` 170, `@nexus/db` 110, `@nexus/web` 474, `@nexus/extension`
 (unit) 9. The extension E2E baseline on `integration/final` was 36 passed / 2 skipped;
 it is now 38 passed / 0 failed, with the two previously skipped cases covered by the
 account-scoped bind work. Full detail: `docs/V1_2_TEST_REPORT.md`.
@@ -421,6 +420,72 @@ runs through the MCP transport (`v1-2-mcp-agents.test.ts`): a reply captured by
 `nexus.capture_reply` with no provider configured answers `captured: true` with
 `classification: null` and a typed `classification_error`.
 
+
+## 16. Route and access remediation
+
+A Preview deployment exposed a class of defect the suite could not see, because every browser test
+opened the screens it already knew about with `page.goto`, signed in as an administrator who had been
+granted the business. Both halves of that are blind spots, and this branch now closes them.
+
+**1. A global administrator with no business grant got 404 on every business screen.**
+`routeAccessAllowed()` derived a business-scoped route's permissions from that business's
+`user_business_access` row alone, and a production administrator has none — their reach comes from the
+role, and the grant table records *delegated* access for everyone else. So Business Setup, ICPs,
+Sequences, Knowledge, Signals, AI, Agent Jobs, Insights and Automations all answered `notFound()` for
+the account meant to administer them. `scopedPermissions()` now returns `ADMIN_PERMISSIONS` for a
+global administrator in any business, with visibility checked before the guard runs (a hidden business
+still 404s) and the grant still authoritative for managers and users. A grant's revocations are
+deliberately not applied to an admin: revoking from an account that can grant itself anything is not a
+boundary, and honouring it made adding a grant *reduce* an admin's access. The end-to-end provisioning
+no longer inserts the workaround grant and now **asserts the administrator has zero grants**, so the
+suite cannot silently start passing for the wrong reason.
+
+**2. The user Trash screen answered 404 to everybody.** Its guard named `/trash`, which was not in
+`ROUTE_PERMISSIONS`; the guard fails closed, so the screen was unreachable and the `/my-trash` entry
+the navigation offers redirected straight into it. The screen now lives at `/my-trash` and `/trash` is
+a declared alias.
+
+**3. Six call sites linked to `/leads/<id>`, which is not a page.** Detail is
+`/b/:businessSlug/leads/:leadId` with `/my-leads/:leadId` as the user alias. `lib/lead-links.ts`
+resolves the owning business through RLS rather than guessing a slug, and the same helper now supplies
+the real targets for `revalidatePath` — which had been pointing at paths that are not pages, so those
+invalidations were silent no-ops.
+
+**4. The lead forms saved and went nowhere.** Edit, Create Task and Snooze now redirect to the
+canonical lead detail, and the edit screen carries a real "Back to lead" link.
+
+**5. The "All Businesses" roll-up was used as a business slug.** The shell substituted the switcher's
+first entry — the `__all__` placeholder — into business-scoped nav routes on global screens, so
+`/team` and `/integrations` rendered `/b/__all__/overview` and `/b/__all__/insights` links that 404'd.
+The roll-up is now marked and never used as a route segment.
+
+**6. Sixteen pages declared a requirement and did not enforce it.** They now call
+`requireRouteAccess` with their own declared route.
+
+Four drifted screens were given one coherent answer each, recorded in the matrix with a new `aliasOf`
+field: the canonical Edit Lead is `/b/:businessSlug/leads/:leadId/edit` (with `/my-leads/:leadId/edit`
+and `/leads/:leadId/edit` as aliases), Create Task and Snooze are the real routes with the
+`/my-leads/:leadId/*` paths as aliases onto them, the team user detail is `/team/:userId` with
+`/team/:userId/permissions` as an alias, and four stale business lead-source declarations were removed.
+
+**Two new suites** hold this down, and both are reported separately:
+
+* `apps/web/test/route-wiring.test.ts` (**16 tests**) builds the inventory from the filesystem and
+  compares it with `ROUTE_PERMISSIONS`, `ADMIN_NAV`, `USER_NAV` and every internal destination
+  (`href`, template literals, `router.push`, `redirect`, `revalidatePath`). It resolves each declared
+  route to its physical page — including dynamic ones, which a naive lookup silently skips — asserts
+  that every alias points at a declared non-alias route whose page redirects, that every page with a
+  requirement calls a guard and names its own route, and that a grantless administrator is allowed on
+  every declared screen while a restricted operator is refused the administration and keeps their own
+  work screens. It also *prints* the audit table, so the document cannot drift from the code.
+* `apps/web/e2e/v1-2-route-crawl.spec.mjs` (**11 tests, 56 clicks over 46 destinations**) clicks the
+  whole navigation rather than typing URLs: every sidebar destination, every secondary tab, the
+  operational strip, every lead row's Open plus Edit and Add task, the user surfaces, the alias round
+  trips, the Edit/Task/Snooze form round trips, and every internal link on the configuration and
+  account screens. Then it signs in as a restricted operator and asserts the mirror image: the admin
+  screens are not offered and typing one fails closed. It records 0 404s, 0 500s and 0 console errors.
+
+Full detail, the per-route table and the per-screen ownership decisions: `docs/V1_2_ROUTE_WIRING_AUDIT.md`.
 
 ## 14. Deployment actions for ChatGPT
 

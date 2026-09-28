@@ -7,6 +7,7 @@ import { getTodayQueue, todayCounts, TODAY_CATEGORIES, TODAY_CATEGORY_LABELS, ty
 import { TodayList } from '@/components/today-list';
 import { MyDayNav } from '@/components/my-day-nav';
 import { requireViewer } from '@/lib/current-viewer';
+import { requireRouteAccess } from '@/lib/route-guard';
 export const dynamic = 'force-dynamic';
 
 interface SearchParams {
@@ -31,6 +32,7 @@ export default async function MyDayPage({
   const query = await searchParams;
   const viewer = await requireViewer();
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-day' });
 
   // Without a business in the URL, My Day rolls up every business the operator can
   // see, which is what makes it a single daily queue rather than a per-business one.

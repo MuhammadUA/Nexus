@@ -5,6 +5,7 @@ import { Alert, Card, Chip, EmptyState, Grid, PageHead, Row, Stack, Stat } from 
 import { loadViewerContext } from '@/lib/viewer-context';
 import { listDuplicatesForViewer } from '@/lib/repo/user-sources';
 import { DuplicateReviewPanel } from '@/components/user-duplicate-review';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function MyDuplicatesPage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-duplicates' });
 
   const canReview = context.permissions.has('duplicate.review');
   const rows = canReview ? await listDuplicatesForViewer(context.viewer.actor, context.businesses, 50) : [];

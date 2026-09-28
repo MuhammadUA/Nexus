@@ -6,6 +6,7 @@ import { requireViewer } from '@/lib/current-viewer';
 import { loadViewerContext } from '@/lib/viewer-context';
 import { getRecentCompletions, type CompletionEntry } from '@/lib/repo/activity';
 import { MyDayNav } from '@/components/my-day-nav';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,7 @@ export const dynamic = 'force-dynamic';
 export default async function DonePage(): Promise<ReactNode> {
   const viewer = await requireViewer();
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-day/done' });
 
   const entries = (
     await Promise.all(
@@ -57,7 +59,7 @@ export default async function DonePage(): Promise<ReactNode> {
       key: 'lead',
       header: '',
       cell: (entry) => (
-        <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/leads/${entry.leadId}`}>
+        <a className="nx-btn nx-btn--ghost nx-btn--sm" href={`/my-leads/${entry.leadId}`}>
           Open
         </a>
       ),

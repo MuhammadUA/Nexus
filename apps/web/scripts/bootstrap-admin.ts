@@ -16,35 +16,20 @@
  * the embedded PGlite database under `apps/web/.data`), so the account this creates is
  * the account the server authenticates against.
  */
-import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { promisify } from 'node:util';
 
 import { PGlite } from '@electric-sql/pglite';
 import { applyMigrations } from '@nexus/db/migrate';
 
-const scrypt = promisify(scryptCallback) as (
-  password: string,
-  salt: Buffer,
-  keylen: number,
-  options: { N: number; r: number; p: number; maxmem: number },
-) => Promise<Buffer>;
-
-/** Must match `apps/web/src/lib/password.ts` so the server can verify what we store here. */
-async function hashPassword(password: string): Promise<string> {
-  const N = 32_768;
-  const r = 8;
-  const p = 1;
-  const salt = randomBytes(16);
-  const derived = await scrypt(password.normalize('NFKC'), salt, 64, {
-    N,
-    r,
-    p,
-    maxmem: 256 * N * r * 2,
-  });
-  return ['scrypt', String(N), String(r), String(p), salt.toString('base64'), derived.toString('base64')].join('$');
-}
+/**
+ * The same implementation the login route verifies with.
+ *
+ * It is imported rather than copied: the KDF parameters and the stored layout live in exactly one
+ * module, so a change to either cannot leave this script writing a credential the server then
+ * refuses. (`lib/password.ts` re-exports the same functions behind `server-only` for the app.)
+ */
+import { hashPassword } from '../src/lib/scrypt-kdf.ts';
 
 const [emailArg, passwordArg, ...nameParts] = process.argv.slice(2);
 if (emailArg === undefined || passwordArg === undefined) {

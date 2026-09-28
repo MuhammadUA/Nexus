@@ -4,7 +4,7 @@ import { useActionState, type ReactElement } from 'react';
 
 import { Alert, Button, Field, Grid, Row, Select, Stack, TextInput } from '@nexus/ui';
 
-import { updateLeadAction } from '@/app/(app)/leads/[id]/edit/actions';
+import { updateLeadAction } from '@/app/b/[slug]/leads/[id]/edit/actions';
 
 /** Mirrored result shape: a client component may only import functions from `'use server'`. */
 interface ActionResult {
@@ -32,6 +32,7 @@ export interface EditOption {
  */
 export function LeadEditForm({
   leadId,
+  businessSlug,
   icps,
   identities,
   owners,
@@ -41,6 +42,8 @@ export function LeadEditForm({
   current,
 }: {
   readonly leadId: string;
+  /** The business the lead belongs to, so the cancel link lands on the canonical detail. */
+  readonly businessSlug: string;
   readonly icps: readonly EditOption[];
   readonly identities: readonly EditOption[];
   readonly owners: readonly EditOption[];
@@ -68,6 +71,7 @@ export function LeadEditForm({
   return (
     <form action={formAction}>
       <input type="hidden" name="leadId" value={leadId} />
+      <input type="hidden" name="businessSlug" value={businessSlug} />
       <Stack>
         <Grid cols={2}>
           <Field label="Full name" htmlFor="edit-name" required hint="The canonical person record.">
@@ -186,9 +190,16 @@ export function LeadEditForm({
           </Alert>
         )}
 
-        <Button type="submit" variant="primary" busy={pending}>
-          Save changes
-        </Button>
+        <Row wrap>
+          <Button type="submit" variant="primary" busy={pending}>
+            Save changes
+          </Button>
+          {/* A real link back to the lead, not a history call: it works from a bookmark and from
+              the alias routes, and it names the canonical detail this form belongs to. */}
+          <a className="nx-btn nx-btn--secondary" href={`/b/${businessSlug}/leads/${leadId}`}>
+            Back to lead
+          </a>
+        </Row>
       </Stack>
     </form>
   );

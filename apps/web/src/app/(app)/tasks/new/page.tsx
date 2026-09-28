@@ -7,6 +7,7 @@ import { loadViewerContext } from '@/lib/viewer-context';
 import { getBoundLead } from '@/lib/repo/user-sources';
 import { openTasksForLead } from '@/lib/repo/sequence';
 import { TaskForm } from '@/components/task-form';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +34,7 @@ export default async function CreateTaskPage({
 }): Promise<ReactNode> {
   const query = await searchParams;
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/tasks/new' });
 
   const canCreateTask = context.permissions.has('task.create');
   const lead =
@@ -110,7 +112,7 @@ export default async function CreateTaskPage({
               <Stack size="sm">
                 <Row between>
                   <span className="nx-hint">Lead</span>
-                  <a className="nx-nav__item" style={{ padding: 0 }} href={`/leads/${lead.id}`}>
+                  <a className="nx-nav__item" style={{ padding: 0 }} href={`/my-leads/${lead.id}`}>
                     <strong>{leadLabel}</strong>
                   </a>
                 </Row>

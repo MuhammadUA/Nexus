@@ -15,10 +15,12 @@
  * viewer's scope already covers.
  */
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
 import { TASK_PRIORITIES, TASK_TYPES } from '@nexus/core';
+import { canonicalLeadPath } from '@/lib/lead-links';
 import { createTask } from '@/lib/repo/leads';
 import { formString, formStringOrNull } from '@/lib/form-data';
 
@@ -96,17 +98,26 @@ export async function createTaskAction(
     note: parsed.data.note == null || parsed.data.note.length === 0 ? null : parsed.data.note,
   });
 
-  if (result.ok) {
-    // A new task can land in My Day immediately (custom task), so both lists are stale.
-    revalidatePath('/my-day');
-    revalidatePath('/my-day/upcoming');
-    revalidatePath(`/leads/${parsed.data.leadId}`);
-    revalidatePath('/my-leads');
+  if (!result.ok) return { ok: false, error: result.error ?? 'The task could not be created.' };
+
+  /**
+   * The round trip: a task belongs to a lead, so the operator is returned to that lead's canonical
+   * detail rather than left on the form. The path is *resolved* (the business that owns the lead,
+   * through RLS) instead of guessed, and `revalidatePath` targets the same resolved path — the
+   * previous `/leads/:id` target was not a page, so it refreshed nothing.
+   *
+   * A new task can land in My Day immediately, so both list paths are revalidated too.
+   */
+  const leadId = parsed.data.leadId ?? '';
+  const canonical = leadId.length === 0 ? null : await canonicalLeadPath(viewer.actor, leadId);
+
+  revalidatePath('/my-day');
+  revalidatePath('/my-day/upcoming');
+  revalidatePath('/my-leads');
+  if (canonical !== null) {
+    revalidatePath(canonical);
+    redirect(canonical);
   }
 
-  return {
-    ok: result.ok,
-    error: result.error ?? null,
-    message: result.ok ? 'Task created. It appears in My Day when it is due.' : undefined,
-  };
+  return { ok: true, error: null, message: 'Task created. It appears in My Day when it is due.' };
 }

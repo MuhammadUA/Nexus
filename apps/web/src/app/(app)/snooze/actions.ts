@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 /**
  * U19 — Snooze & Reschedule.
@@ -10,9 +10,11 @@
  * tampered form must not be able to snooze a lead into the past.
  */
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { currentViewer } from '@/lib/current-viewer';
+import { canonicalLeadPath } from '@/lib/lead-links';
 import { snoozeLead } from '@/lib/repo/leads';
 import { formStringOrNull } from '@/lib/form-data';
 
@@ -93,20 +95,28 @@ export async function snoozeLeadAction(
     reason: reason.length === 0 ? null : reason,
   });
 
-  if (result.ok) {
-    // spec `tasks_and_my_day.today_engine_inputs`: snooze/reschedule is an input to
-    // the Today engine, so the queue is stale the moment this succeeds.
-    revalidatePath('/my-day');
-    revalidatePath('/my-day/upcoming');
-    revalidatePath('/my-leads');
-    revalidatePath(`/leads/${parsed.data.leadId}`);
+  if (!result.ok) return { ok: false, error: result.error ?? 'The lead could not be snoozed.' };
+
+  /**
+   * spec `tasks_and_my_day.today_engine_inputs`: snooze/reschedule is an input to the Today engine,
+   * so the queue is stale the moment this succeeds — and the operator is returned to the lead whose
+   * next action moved. The path is resolved through RLS rather than guessed; the previous
+   * `/leads/:id` target was not a page and revalidated nothing.
+   */
+  const leadId = parsed.data.leadId ?? '';
+  const canonical = leadId.length === 0 ? null : await canonicalLeadPath(viewer.actor, leadId);
+
+  revalidatePath('/my-day');
+  revalidatePath('/my-day/upcoming');
+  revalidatePath('/my-leads');
+  if (canonical !== null) {
+    revalidatePath(canonical);
+    redirect(canonical);
   }
 
   return {
-    ok: result.ok,
-    error: result.error ?? null,
-    message: result.ok
-      ? `Snoozed until ${until.toISOString().slice(0, 16).replace('T', ' ')}.`
-      : undefined,
+    ok: true,
+    error: null,
+    message: `Snoozed until ${until.toISOString().slice(0, 16).replace('T', ' ')}.`,
   };
 }

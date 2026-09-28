@@ -74,7 +74,7 @@ export function LeadRowMenu({
             </a>
           </li>
           <li>
-            <a className="nx-row-menu__item" href={`/leads/${leadId}/edit`}>
+            <a className="nx-row-menu__item" href={`/b/${businessSlug}/leads/${leadId}/edit`}>
               Edit lead
             </a>
           </li>

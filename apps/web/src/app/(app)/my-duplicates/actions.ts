@@ -54,7 +54,7 @@ export async function resolveDuplicateAction(
   revalidatePath('/my-duplicates');
   revalidatePath('/my-leads');
   revalidatePath('/my-day');
-  revalidatePath('/trash');
+  revalidatePath('/my-trash');
 
   const message =
     parsed.data.resolution === 'merge'

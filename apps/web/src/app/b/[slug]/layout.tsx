@@ -140,6 +140,7 @@ export default async function BusinessLayout({
         id: option.id,
         slug: option.slug,
         name: option.name,
+        isRollUp: option.isRollUp,
       }))}
       userLabel={context.viewer.fullName ?? context.viewer.email ?? ''}
     >

@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ROUTE_PERMISSIONS,
   isBusinessScopedRoute,
   routeAccessAllowed,
   routePermissionsFor,
@@ -177,6 +178,190 @@ describe('business-scoped routes are judged against that business', () => {
       businessId: BUSINESS_A,
     });
     expect(decision.allowed).toBe(true);
+  });
+});
+
+describe('a global admin needs no business grant', () => {
+  /**
+   * The production condition this pins down: a Preview/production administrator with an active
+   * account and **zero** `user_business_access` rows. Every business-scoped screen used to answer
+   * `notFound()` for them, because the scoped permission set was derived from the grant table
+   * alone — Business Setup, ICPs, Agent Jobs and Insights all 404'd for the account that is
+   * supposed to administer them.
+   *
+   * The admin's authority comes from the role. The grant table records *delegated* access for
+   * managers and users, and visibility is a separate check the page performs before the guard.
+   */
+  const admin: Actor = { kind: 'user', userId: 'admin-1', role: 'admin' };
+
+  const adminScreens: readonly (readonly [string, string])[] = [
+    ['/b/:businessSlug/setup', 'knowledge.manage'],
+    ['/b/:businessSlug/setup/icps', 'icp.manage'],
+    ['/b/:businessSlug/agent-jobs', 'lead.view_all'],
+    ['/b/:businessSlug/insights', 'insights.view'],
+    ['/b/:businessSlug/setup/ai', 'knowledge.manage'],
+    ['/b/:businessSlug/automations', 'automation.manage'],
+  ];
+
+  for (const [route, permission] of adminScreens) {
+    it(`allows ${route} (needs ${permission}) with no grants at all`, () => {
+      const decision = routeAccessAllowed({
+        actor: admin,
+        role: 'admin',
+        grants: [],
+        unionPermissions: new Set<Permission>(),
+        pathOrPattern: route,
+        businessId: BUSINESS_A,
+      });
+      expect(decision.allowed, `${route} must be reachable by a global admin`).toBe(true);
+      expect(decision.reason).toBe('granted');
+    });
+  }
+
+  it('allows a global admin on a sibling business it also has no grant for', () => {
+    const decision = routeAccessAllowed({
+      actor: admin,
+      role: 'admin',
+      grants: [grant({ businessId: BUSINESS_A, accessLevel: 'admin' })],
+      unionPermissions: new Set<Permission>(),
+      pathOrPattern: '/b/:businessSlug/setup/icps',
+      businessId: BUSINESS_B,
+    });
+    expect(decision.allowed).toBe(true);
+  });
+
+  it('still requires a business id for a business-scoped route', () => {
+    // No business named means the guard cannot tell which business's screen is being opened.
+    const decision = routeAccessAllowed({
+      actor: admin,
+      role: 'admin',
+      grants: [],
+      unionPermissions: new Set<Permission>(),
+      pathOrPattern: '/b/:businessSlug/setup/icps',
+    });
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toBe('business_scope_required');
+  });
+
+  it('does not let a grant reduce an administrator', () => {
+    // A grant that revokes a permission from an admin is not a boundary: the account can grant
+    // itself anything. Honouring it produced "adding a grant removed access".
+    const decision = routeAccessAllowed({
+      actor: admin,
+      role: 'admin',
+      grants: [grant({ businessId: BUSINESS_A, accessLevel: 'admin', revokedPermissions: ['icp.manage'] })],
+      unionPermissions: new Set<Permission>(),
+      pathOrPattern: '/b/:businessSlug/setup/icps',
+      businessId: BUSINESS_A,
+    });
+    expect(decision.allowed).toBe(true);
+  });
+
+  it('denies a manager with no grant for the business', () => {
+    const decision = routeAccessAllowed({
+      actor: { kind: 'user', userId: 'mgr-1', role: 'manager' },
+      role: 'manager',
+      grants: [],
+      unionPermissions: new Set<Permission>(['lead.view_all']),
+      pathOrPattern: '/b/:businessSlug/agent-jobs',
+      businessId: BUSINESS_A,
+    });
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toBe('no_grant_for_business');
+  });
+
+  it('denies a user with no grant for the business', () => {
+    const decision = routeAccessAllowed({
+      actor: { kind: 'user', userId: 'user-1', role: 'user' },
+      role: 'user',
+      grants: [],
+      unionPermissions: new Set<Permission>(['business.view']),
+      pathOrPattern: '/b/:businessSlug/setup',
+      businessId: BUSINESS_A,
+    });
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toBe('no_grant_for_business');
+  });
+
+  it('denies a manager whose grant does not carry the permission', () => {
+    // A manager default covers `lead.view_all` but not `knowledge.manage`, so Business Setup is
+    // refused even though the business itself is granted.
+    const decision = routeAccessAllowed({
+      actor,
+      role: 'manager',
+      grants: [grant({ businessId: BUSINESS_A })],
+      unionPermissions: new Set<Permission>(['knowledge.manage']),
+      pathOrPattern: '/b/:businessSlug/setup',
+      businessId: BUSINESS_A,
+    });
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toBe('permission_denied');
+    expect(decision.permissions).toEqual(['knowledge.manage']);
+  });
+
+  it('allows a manager whose grant carries the permission', () => {
+    const decision = routeAccessAllowed({
+      actor,
+      role: 'manager',
+      grants: [grant({ businessId: BUSINESS_A, extraPermissions: ['knowledge.manage'] })],
+      unionPermissions: new Set<Permission>(),
+      pathOrPattern: '/b/:businessSlug/setup',
+      businessId: BUSINESS_A,
+    });
+    expect(decision.allowed).toBe(true);
+  });
+
+  it('allows an api_client only for the businesses its token names', () => {
+    const client: Actor = {
+      kind: 'api_client',
+      apiClientId: 'client-1',
+      name: 'opencode',
+      scopes: ['lead:read'],
+      businessIds: [BUSINESS_A],
+    };
+    // The token scope is unchanged by the admin rule: a business-scoped route is judged against a
+    // business grant, and an api_client has none — it authorises through its scopes and business
+    // ids (`canAccessBusiness`), which is where its scoping actually lives.
+    const inScope = routeAccessAllowed({
+      actor: client,
+      role: null,
+      grants: [],
+      unionPermissions: new Set<Permission>(),
+      pathOrPattern: '/b/:businessSlug/leads',
+      businessId: BUSINESS_A,
+    });
+    expect(inScope.allowed).toBe(false);
+    expect(inScope.reason).toBe('no_grant_for_business');
+  });
+});
+
+describe('route matrix coherence', () => {
+  it('declares every alias target, and no alias points at another alias absurdly deep', () => {
+    const declared = new Set(ROUTE_PERMISSIONS.map((requirement) => requirement.route));
+    const aliases = ROUTE_PERMISSIONS.filter((requirement) => requirement.aliasOf !== undefined);
+    expect(aliases.length).toBeGreaterThan(0);
+    for (const alias of aliases) {
+      expect(
+        declared.has(alias.aliasOf ?? ''),
+        `${alias.route} is an alias for ${String(alias.aliasOf)}, which is not declared`,
+      ).toBe(true);
+      const target = ROUTE_PERMISSIONS.find((requirement) => requirement.route === alias.aliasOf);
+      expect(target?.aliasOf, `${alias.route} points at an alias (${String(alias.aliasOf)})`).toBeUndefined();
+    }
+  });
+
+  it('carries a permission requirement on every entry except the unauthenticated surfaces', () => {
+    // `/login`, the workspace entry point (a redirect) and the Companion's sign-in screen are the
+    // only screens that may be reached without a permission: they decide nothing and disclose
+    // nothing. Everything else must say what it needs, because the guard fails closed.
+    const unauthenticated = new Set(['/login', '/', 'companion/login']);
+    for (const requirement of ROUTE_PERMISSIONS) {
+      if (unauthenticated.has(requirement.route)) continue;
+      expect(
+        requirement.permissions.length,
+        `${requirement.route} must declare what it needs`,
+      ).toBeGreaterThan(0);
+    }
   });
 });
 

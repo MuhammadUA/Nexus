@@ -1,158 +1,36 @@
-﻿import type { ReactNode } from 'react';
+import { notFound, redirect } from 'next/navigation';
 
-import { Alert, Card, Chip, Grid, LeadStatusChip, PageHead, Row, Stack, Stat } from '@nexus/ui';
-import { LEAD_STATES } from '@nexus/core';
-import { notFound } from 'next/navigation';
-
+import { canonicalLeadPath } from '@/lib/lead-links';
 import { loadViewerContext } from '@/lib/viewer-context';
-import { listIcpOptions, listIdentityOptions, listOwnerOptions } from '@/lib/repo/leads';
-import { getLeadEditContext } from '@/lib/repo/user-sources';
-import { LeadEditForm } from '@/components/lead-edit-form';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * U20 — Edit Lead.
+ * Alias: `/leads/:id/edit` → `/b/:slug/leads/:id/edit`.
  *
- * Contract: "Editable lead fields within user permissions."
+ * This path was the physical Edit Lead page before the routes were reconciled. It is kept — rather
+ * than deleted — so a link or bookmark from the Preview keeps working, and it is declared in
+ * `ROUTE_PERMISSIONS` as an alias so the inventory can see that it is not a second implementation.
  *
- * spec `screen_inventory` U06 and `identity_model.outreach_identity.rule`: the CRM lead
- * *owner* and the LinkedIn *sender identity* are two separate dimensions, so they are
- * shown as two separate fields with an explanation, never collapsed into one "assigned
- * to". A lead outside the viewer's scope does not resolve through RLS, so this screen
- * 404s rather than confirming that somebody else's lead exists.
+ * The guard runs before the redirect and uses the canonical route's requirement, so an operator
+ * without `lead.update` is refused here exactly as they would be there: an alias must not be a way
+ * around the screen it points at.
  */
-export default async function EditLeadPage({
+export default async function LegacyEditLeadAlias({
   params,
 }: {
-  readonly params: Promise<{ id: string }>;
-}): Promise<ReactNode> {
+  readonly params: Promise<{ readonly id: string }>;
+}): Promise<never> {
   const { id } = await params;
   const context = await loadViewerContext();
+  // The alias's own requirement, which carries the same permission as the canonical screen it
+  // redirects to — so this path is refused for an operator who could not open that screen either.
+  requireRouteAccess(context, { route: '/leads/:leadId/edit' });
 
-  const canEdit = context.permissions.has('lead.update');
-  const canAssignOwner = context.permissions.has('lead.assign_owner');
-  const canChangeIdentity = context.permissions.has('lead.change_sender_identity');
+  const path = await canonicalLeadPath(context.viewer.actor, id);
+  // An invisible lead is indistinguishable from a non-existent one.
+  if (path === null) notFound();
 
-  const lead = await getLeadEditContext(context.viewer.actor, id);
-  if (lead === null) notFound();
-
-  const [icps, identities, owners] = await Promise.all([
-    listIcpOptions(context.viewer.actor, lead.businessId),
-    canChangeIdentity
-      ? listIdentityOptions(context.viewer.actor, lead.businessId)
-      : Promise.resolve([] as readonly { readonly value: string; readonly label: string }[]),
-    canAssignOwner
-      ? listOwnerOptions(context.viewer.actor, lead.businessId)
-      : Promise.resolve([] as readonly { readonly value: string; readonly label: string }[]),
-  ]);
-
-  return (
-    <>
-      <PageHead
-        subtitle={
-          <Row wrap>
-            <span>{lead.companyName ?? 'No company'}</span>
-            {lead.jobTitle !== null && <span>· {lead.jobTitle}</span>}
-            <span>· {lead.businessName}</span>
-          </Row>
-        }
-        actions={
-          <Row wrap>
-            <LeadStatusChip state={lead.status} />
-            {lead.needsProfile && <Chip accent="cyan">needs profile</Chip>}
-            <a className="nx-btn nx-btn--secondary" href={`/leads/${lead.leadId}`}>
-              Back to lead
-            </a>
-          </Row>
-        }
-      >
-        Edit {lead.fullName}
-      </PageHead>
-
-      {!canEdit && (
-        <Alert accent="amber" title="Read-only" role="alert">
-          Your access does not include editing leads, so this form will be refused. Ask an administrator for the
-          lead-update permission.
-        </Alert>
-      )}
-
-      <Grid split>
-        <Stack size="lg">
-          <Card
-            title="Lead details"
-            actions={<Chip accent="indigo">one canonical person</Chip>}
-          >
-            <LeadEditForm
-              leadId={lead.leadId}
-              icps={icps}
-              identities={identities}
-              owners={owners}
-              statuses={LEAD_STATES}
-              canAssignOwner={canAssignOwner}
-              canChangeIdentity={canChangeIdentity}
-              current={{
-                fullName: lead.fullName,
-                jobTitle: lead.jobTitle ?? '',
-                headline: lead.headline ?? '',
-                location: lead.location ?? '',
-                companyName: lead.companyName ?? '',
-                linkedinUrl: lead.linkedinUrl ?? '',
-                primaryIcpId: lead.primaryIcpId ?? '',
-                ownerUserId: lead.ownerUserId ?? '',
-                outreachIdentityId: lead.outreachIdentityId ?? '',
-                status: lead.status,
-                ownerLabel: lead.ownerName ?? 'Unassigned',
-                identityLabel: lead.identityName ?? 'Not bound',
-              }}
-            />
-          </Card>
-        </Stack>
-
-        <Stack size="lg">
-          <Card title="Owner vs sender identity">
-            <Stack size="sm">
-              <Row between>
-                <span className="nx-hint">Owner</span>
-                <span>{lead.ownerName ?? 'Unassigned'}</span>
-              </Row>
-              <Row between>
-                <span className="nx-hint">Sender identity</span>
-                <span>{lead.identityName ?? 'Not bound'}</span>
-              </Row>
-              <span className="nx-hint">
-                The owner is the team member responsible for the lead. The sender identity is the LinkedIn account
-                outreach goes out from. They are intentionally separate: reassigning the lead does not move the
-                conversation to another account, and changing the sender warns about duplicate outreach.
-              </span>
-            </Stack>
-          </Card>
-
-          <Card title="Primary ICP" actions={<Chip accent="indigo">{lead.primaryIcpName ?? 'unmatched'}</Chip>}>
-            <Stack size="sm">
-              <span className="nx-hint">
-                Changing the Primary ICP is audited: the previous ICP, the new ICP and the number of secondary
-                matches are recorded. Secondary matches are preserved and never create a second lead.
-              </span>
-              {lead.needsProfile && (
-                <span className="nx-hint">
-                  This lead is marked Needs profile. Capture the full LinkedIn profile from the Profile Queue before
-                  outreach.
-                </span>
-              )}
-            </Stack>
-          </Card>
-
-          <Grid cols={2}>
-            <Stat value={LEAD_STATES.length} label="Lifecycle states" meta="spec lead_lifecycle" />
-            <Stat
-              value={canAssignOwner || canChangeIdentity ? 'partial' : 'no'}
-              label="Assignment rights"
-              meta="what your grant allows"
-            />
-          </Grid>
-        </Stack>
-      </Grid>
-    </>
-  );
+  redirect(`${path}/edit`);
 }

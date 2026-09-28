@@ -387,7 +387,7 @@ export async function executeUserImportAction(
   revalidatePath('/my-leads');
   revalidatePath('/my-profile-queue');
   revalidatePath('/my-duplicates');
-  revalidatePath('/trash');
+  revalidatePath('/my-trash');
   revalidatePath('/my-day');
 
   return {

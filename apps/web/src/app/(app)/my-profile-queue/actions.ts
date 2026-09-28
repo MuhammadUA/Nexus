@@ -69,7 +69,8 @@ export async function captureProfileAction(
     revalidatePath('/my-profile-queue');
     revalidatePath('/my-leads');
     revalidatePath('/my-day');
-    revalidatePath(`/leads/${parsed.data.leadId}`);
+    // `/leads/:id` is not a page, so revalidating it refreshed nothing. The lists that show
+    // this lead are the ones above; the canonical detail is refreshed by the capture itself.
     return {
       ok: true,
       error: null,

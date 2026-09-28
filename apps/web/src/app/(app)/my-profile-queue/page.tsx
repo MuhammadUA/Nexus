@@ -5,6 +5,7 @@ import { Alert, Card, Chip, EmptyState, Grid, PageHead, Row, Stack, Stat } from 
 import { loadViewerContext } from '@/lib/viewer-context';
 import { listProfileQueueForViewer } from '@/lib/repo/user-sources';
 import { ProfileCapturePanel } from '@/components/user-profile-capture';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function MyProfileQueuePage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-profile-queue' });
 
   const canUseQueue = context.permissions.has('profile_queue.use');
   const rows = canUseQueue

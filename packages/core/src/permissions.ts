@@ -688,6 +688,23 @@ export interface RoutePermissionRequirement {
   readonly surface: 'admin' | 'user' | 'extension';
   readonly permissions: readonly Permission[];
   readonly anyOf?: boolean;
+  /**
+   * Set when this route is an *alias*: a screen that exists only to send the viewer to the
+   * canonical route named here.
+   *
+   * The alias carries its own permission requirement, so the guard still fails closed on it,
+   * and the canonical route is declared in its own entry. Two properties follow that the
+   * route inventory asserts: an alias always points at a declared route, and that route has a
+   * physical page. Without this field an alias and a real screen are indistinguishable in the
+   * matrix, which is exactly how a physical page ended up at one path while navigation and
+   * authorization used another.
+   */
+  readonly aliasOf?: string;
+}
+
+/** True when this requirement is an alias to another declared route. */
+export function isAliasRoute(requirement: RoutePermissionRequirement): boolean {
+  return typeof requirement.aliasOf === 'string' && requirement.aliasOf.length > 0;
 }
 
 /**
@@ -697,14 +714,17 @@ export interface RoutePermissionRequirement {
  */
 export const ROUTE_PERMISSIONS: readonly RoutePermissionRequirement[] = [
   { route: '/login', surface: 'admin', permissions: [] },
+  // The workspace entry point. A redirect-only screen: it sends an administrator to their first
+  // business Overview and everyone else to My Day, so it requires nothing itself — the
+  // destination it picks is judged by its own requirement.
+  { route: '/', surface: 'admin', permissions: [] },
   { route: '/b/:businessSlug/overview', surface: 'admin', permissions: ['insights.view'] },
   { route: '/b/:businessSlug/leads', surface: 'admin', permissions: ['lead.view_all'] },
   { route: '/b/:businessSlug/leads/:leadId', surface: 'admin', permissions: ['lead.view_all'] },
+  // The canonical Edit Lead screen. It lives under the business whose lead it edits, so the
+  // viewer stays inside the business context, and `/my-leads/:leadId/edit` is the user alias.
+  { route: '/b/:businessSlug/leads/:leadId/edit', surface: 'admin', permissions: ['lead.update'] },
   { route: '/b/:businessSlug/lead-sources', surface: 'admin', permissions: ['lead_source.use'] },
-  { route: '/b/:businessSlug/lead-sources/file', surface: 'admin', permissions: ['lead_source.use'] },
-  { route: '/b/:businessSlug/lead-sources/paste', surface: 'admin', permissions: ['lead_source.use'] },
-  { route: '/b/:businessSlug/lead-sources/google', surface: 'admin', permissions: ['lead_source.use'] },
-  { route: '/b/:businessSlug/lead-sources/apollo', surface: 'admin', permissions: ['lead_source.use'] },
   { route: '/b/:businessSlug/profile-queue', surface: 'admin', permissions: ['profile_queue.use'] },
   { route: '/b/:businessSlug/duplicates', surface: 'admin', permissions: ['duplicate.review'] },
   { route: '/b/:businessSlug/trash', surface: 'admin', permissions: ['trash.view'] },
@@ -718,7 +738,16 @@ export const ROUTE_PERMISSIONS: readonly RoutePermissionRequirement[] = [
   { route: '/b/:businessSlug/setup/knowledge', surface: 'admin', permissions: ['knowledge.manage'] },
   { route: '/b/:businessSlug/setup/signals', surface: 'admin', permissions: ['scoring.manage'] },
   { route: '/team', surface: 'admin', permissions: ['user.manage'] },
-  { route: '/team/:userId/permissions', surface: 'admin', permissions: ['user.manage'] },
+  // The user detail *is* the permissions screen: one page shows the account, its businesses,
+  // its grants and the permission matrix. `/team/:userId/permissions` is the alias the Team tab
+  // links to, kept so a link to the permissions section keeps working.
+  { route: '/team/:userId', surface: 'admin', permissions: ['user.manage'] },
+  {
+    route: '/team/:userId/permissions',
+    surface: 'admin',
+    permissions: ['user.manage'],
+    aliasOf: '/team/:userId',
+  },
   { route: '/identities', surface: 'admin', permissions: ['identity.manage'] },
   { route: '/identities/:identityId', surface: 'admin', permissions: ['identity.manage'] },
   { route: '/integrations', surface: 'admin', permissions: ['integration.manage'] },
@@ -743,10 +772,44 @@ export const ROUTE_PERMISSIONS: readonly RoutePermissionRequirement[] = [
   { route: '/my-day/upcoming', surface: 'user', permissions: ['business.view'] },
   { route: '/my-day/done', surface: 'user', permissions: ['business.view'] },
   { route: '/my-leads', surface: 'user', permissions: ['lead.view_assigned', 'lead.view_own'], anyOf: true },
-  { route: '/my-leads/:leadId', surface: 'user', permissions: ['lead.view_assigned', 'lead.view_own'], anyOf: true },
-  { route: '/my-leads/:leadId/edit', surface: 'user', permissions: ['lead.update'] },
-  { route: '/my-leads/:leadId/task', surface: 'user', permissions: ['task.create'] },
-  { route: '/my-leads/:leadId/snooze', surface: 'user', permissions: ['lead.snooze'] },
+  {
+    route: '/my-leads/:leadId',
+    surface: 'user',
+    permissions: ['lead.view_assigned', 'lead.view_own'],
+    anyOf: true,
+    aliasOf: '/b/:businessSlug/leads/:leadId',
+  },
+  {
+    route: '/my-leads/:leadId/edit',
+    surface: 'user',
+    permissions: ['lead.update'],
+    aliasOf: '/b/:businessSlug/leads/:leadId/edit',
+  },
+  // The user task and snooze screens are the same screens the admin surface offers, bound to a
+  // lead through a query parameter. The `:leadId` paths are aliases onto them rather than a
+  // second implementation, so there is one form and one save path.
+  { route: '/tasks/new', surface: 'user', permissions: ['task.create'] },
+  {
+    route: '/my-leads/:leadId/task',
+    surface: 'user',
+    permissions: ['task.create'],
+    aliasOf: '/tasks/new',
+  },
+  { route: '/snooze', surface: 'user', permissions: ['lead.snooze'] },
+  {
+    route: '/my-leads/:leadId/snooze',
+    surface: 'user',
+    permissions: ['lead.snooze'],
+    aliasOf: '/snooze',
+  },
+  // The one Edit Lead path the previous layout used physically, kept as an alias so an existing
+  // bookmark (and any older link) still lands on the canonical screen.
+  {
+    route: '/leads/:leadId/edit',
+    surface: 'user',
+    permissions: ['lead.update'],
+    aliasOf: '/b/:businessSlug/leads/:leadId/edit',
+  },
   { route: '/my-lead-sources', surface: 'user', permissions: ['lead_source.use'] },
   { route: '/my-lead-sources/file', surface: 'user', permissions: ['lead_source.use'] },
   { route: '/my-lead-sources/paste', surface: 'user', permissions: ['lead_source.use'] },
@@ -754,7 +817,11 @@ export const ROUTE_PERMISSIONS: readonly RoutePermissionRequirement[] = [
   { route: '/my-lead-sources/apollo', surface: 'user', permissions: ['lead_source.use'] },
   { route: '/my-profile-queue', surface: 'user', permissions: ['profile_queue.use'] },
   { route: '/my-duplicates', surface: 'user', permissions: ['duplicate.review'] },
+  // The user Trash screen is `/my-trash` because that is where `USER_NAV` and this matrix point;
+  // `/trash` was the physical page behind a guard that named an undeclared route, so it answered
+  // 404 to everybody. It is now the alias.
   { route: '/my-trash', surface: 'user', permissions: ['trash.view'] },
+  { route: '/trash', surface: 'user', permissions: ['trash.view'], aliasOf: '/my-trash' },
 
   { route: 'companion/login', surface: 'extension', permissions: [] },
   { route: 'companion/leads', surface: 'extension', permissions: ['lead.view_assigned', 'lead.view_own'], anyOf: true },
@@ -875,7 +942,7 @@ export function routeAccessAllowed(params: {
   const subject = isBusinessScopedRoute(requirement.route)
     ? scopedPermissions(params.role, params.grants, params.businessId ?? null)
     : params.role === 'admin'
-      ? params.unionPermissions
+      ? new Set<Permission>([...ADMIN_PERMISSIONS, ...params.unionPermissions])
       : unionFromGrants(params.role, params.grants);
 
   if (subject === null) {
@@ -892,13 +959,36 @@ export function routeAccessAllowed(params: {
   return { allowed, reason: allowed ? 'granted' : 'permission_denied', permissions: requirement.permissions };
 }
 
-/** The permissions a single business's grant confers, or null when the business is out of scope. */
+/**
+ * The permissions in force for one business, or null when the business is out of scope.
+ *
+ * **A global administrator holds `ADMIN_PERMISSIONS` in every visible business, with or without a
+ * `user_business_access` row.** That is not a convenience: an administrator's authority comes from
+ * the account's role, and the per-business table records *delegated* access for managers and users.
+ * A production administrator legitimately has no grant rows, and requiring one made every
+ * business-scoped screen answer `notFound()` — Business Setup, ICPs, Agent Jobs and Insights all
+ * 404'd for the one account that is supposed to be able to reach them.
+ *
+ * Two boundaries keep this narrow rather than a general loosening:
+ *
+ *   * **visibility is checked before the guard runs.** A page resolves the slug against the
+ *     businesses the viewer can actually see (`resolveBusiness`) and 404s there, so an
+ *     administrator cannot reach a hidden or deleted business by naming it. RLS is the data
+ *     boundary either way;
+ *   * **the grant is still authoritative for everyone else.** A manager or user with no grant for
+ *     this business gets `null`, which the caller reports as `no_grant_for_business`.
+ *
+ * A grant's `revokedPermissions` is deliberately *not* applied to an administrator. Revoking a
+ * permission from an account that can grant itself any permission is not a security boundary; it
+ * only produced a state where adding a grant to an admin reduced their access.
+ */
 function scopedPermissions(
   role: Role | null,
   grants: readonly UserBusinessGrant[],
   businessId: string | null,
 ): ReadonlySet<Permission> | null {
   if (role === null || businessId === null) return null;
+  if (role === 'admin') return new Set<Permission>(ADMIN_PERMISSIONS);
   const grant = grants.find((candidate) => candidate.businessId === businessId);
   if (grant === undefined) return null;
   return effectivePermissions(role, grant, businessId);

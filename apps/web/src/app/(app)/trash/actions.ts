@@ -47,7 +47,7 @@ export async function restoreLeadAction(
 
   if (result.ok) {
     // The lead reappears in the lists, and leaves this screen.
-    revalidatePath('/trash');
+    revalidatePath('/my-trash');
     revalidatePath('/my-leads');
     revalidatePath('/my-day');
   }

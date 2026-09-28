@@ -5,6 +5,7 @@ import { Alert, Card, Chip, PageHead, Row, Stack } from '@nexus/ui';
 import { loadViewerContext } from '@/lib/viewer-context';
 import { buildImportProps } from '@/lib/repo/user-sources';
 import { UserImportWizard } from '@/components/user-import';
+import { requireRouteAccess } from '@/lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function MyLeadSourcesGooglePage(): Promise<ReactNode> {
   const context = await loadViewerContext();
+  requireRouteAccess(context, { route: '/my-lead-sources/google' });
   const props = await buildImportProps(context.viewer.actor, context.businesses, context.permissions);
 
   return (
