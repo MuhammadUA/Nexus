@@ -3,7 +3,8 @@
 **Branch:** `v1.2/ai-first-redesign` (pushed to `MuhammadUA/Nexus`)
 **Source branch:** `integration/final`, treated as read-only
 **Source SHA:** `50aa3c19005c7ac34777554ff4bbc7035c13aef4`
-**Final V1.2 SHA:** _recorded in §12 after the clean-checkout gate_
+**Final V1.2 SHA:** `ef1c8ce` plus the documentation commit that carries this report;
+the clean-checkout gate ran at `ef1c8ce` and only documentation follows it.
 **Production / Supabase / Vercel:** not touched. Nothing was deployed, merged or
 force-pushed; no tag was moved.
 
@@ -42,7 +43,8 @@ NEXUS V1.2 turns the CRM from a database-shaped tool into an AI-first sales OS:
 | `c1de7f4` | `feat(mcp): V1.2 agent job and lead intelligence tools` |
 | `330806c` | `fix(mcp): validate submitted drafts, and record the discovery source as provenance` |
 | `4e787a7` | `docs: V1.2 agent jobs, AI pipeline, MCP contract, UI acceptance and test report` |
-| _see §12_ | remaining application, extension, test and report commits |
+| `69edb09` `0aecf20` `197c84a` `c4b4a43` `4446b5e` | the application: Companion, AI pipeline, Leads/Lead Detail, Agent Jobs + AI settings + navigation, Overview/Insights/Channel Accounts |
+| `7bd1d76` `ab29f66` `83f24e1` `ef1c8ce` | integration fixes, the document set, the browser E2E suite and its three defects, and the last MCP corrections |
 
 ## 3. Migrations (additive, forward-only)
 
@@ -197,7 +199,54 @@ preserved.
 
 ## 12. Gate results and the clean-checkout run
 
-_To be completed with the exact command output from the clean checkout._
+The full release gate was run from a **clean worktree** (`git worktree add --detach
+E:\CRM\v12-cleancheck v1.2/ai-first-redesign`, at the code commit `ef1c8ce`) after
+`pnpm install --frozen-lockfile`. Nothing depended on this machine's scratch state:
+the web E2E suite provisions its own database in the OS temp directory and removes it
+afterwards, and the extension suite seeds a fresh demo database inside the worktree.
+
+```
+pnpm install --frozen-lockfile                     pass (3.2s)
+pnpm run typecheck                                 pass — 5 packages, no errors
+pnpm run lint                                      pass — --max-warnings 0 per package
+pnpm run test                                      pass — 41 files, 704 tests
+pnpm run db:verify                                 pass — 35 migrations, 71 tables,
+                                                   198 policies, 111 triggers,
+                                                   127 functions, 218 indexes
+pnpm run build                                     pass — Next.js production build
+pnpm --filter @nexus/extension run build           pass — manifest valid, no credentials
+pnpm --filter @nexus/web run e2e                   pass — 15 tests
+pnpm --filter @nexus/extension run e2e             pass — 38 tests
+```
+
+Per suite: `@nexus/core` 144, `@nexus/db` 110, `@nexus/web` 441, `@nexus/extension`
+(unit) 9. The extension E2E baseline on `integration/final` was 36 passed / 2 skipped;
+it is now 38 passed / 0 failed, with the two previously skipped cases covered by the
+account-scoped bind work. Full detail: `docs/V1_2_TEST_REPORT.md`.
+
+The only commits after the gated commit are documentation, so the result applies to
+the final tree of the branch.
+
+### Defects the new browser E2E found and that are fixed here
+
+1. **Lead Detail answered 500 in a production build.** `processingSteps()` and
+   `missingSearchLinks()` were exported from a `'use client'` module and called by the
+   Server Component page; Next.js treats every export of a client module as a client
+   reference. Both derivations now live in dedicated server-safe modules
+   (`lib/lead-processing-steps.ts`, `lib/lead-search-links.ts`).
+2. **Every load of that page produced a hydration mismatch (React #418).** The shared
+   `PageHead` rendered its `subtitle` prop inside a `<p>` while the page passes a row
+   of chips, so the browser closed the paragraph early. The element is now a `<div>`
+   with the same class, which fixes every caller of the primitive.
+3. **The Companion's search blanked the side panel.** The search projection nested the
+   enrichment indicator while the panel and its own type read it flat, so
+   `EnrichmentChip` received `undefined` and threw inside render. The projection is
+   flat like every other Companion projection, and the presentation helpers now accept
+   `unknown` so a future shape drift degrades to a neutral chip.
+4. `nexus.submit_message_draft` stored a submitted body unvalidated and labelled it
+   model-generated (see §5), and `nexus.submit_source_metadata` ignored the
+   `observed_at` it accepted.
+
 
 ## 13. Limitations and known gaps
 

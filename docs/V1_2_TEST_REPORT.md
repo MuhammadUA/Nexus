@@ -12,15 +12,25 @@ triggers, RLS policies and `SECURITY DEFINER` functions a hosted project runs.
 
 ## 1. Release gate
 
+Run from a **clean worktree** of `v1.2/ai-first-redesign` (detached at the code
+commit `ef1c8ce`, created with `git worktree add --detach`), after
+`pnpm install --frozen-lockfile`. Nothing in the gate depends on this machine's
+`apps/web/.data`, an old build artefact or an earlier run's evidence: the web suite
+provisions its own database in the OS temp directory and removes it afterwards, and
+the extension suite seeds a fresh demo database in the worktree.
+
 | Command | Result |
 | --- | --- |
-| `pnpm install --frozen-lockfile` | see §6 |
-| `pnpm run typecheck` | see §6 |
-| `pnpm run lint` | see §6 |
-| `pnpm run test` | see §3 |
-| `pnpm run db:verify` | see §2 |
-| `pnpm run build` | see §6 |
-| `pnpm --filter @nexus/extension run build` | see §6 |
+| `pnpm install --frozen-lockfile` | pass (3.2s) |
+| `pnpm run typecheck` | pass (5 packages, no errors) |
+| `pnpm run lint` | pass (`--max-warnings 0` per package) |
+| `pnpm run test` | pass — 41 files, 704 tests (144 core + 110 db + 9 extension + 441 web) |
+| `pnpm run db:verify` | pass — 35 migrations, 71 tables, 198 policies, 111 triggers, 127 functions, 218 indexes |
+| `pnpm run build` | pass (Next.js production build, all V1.2 routes present) |
+| `pnpm --filter @nexus/extension run build` | pass (`manifest valid, no credentials in the bundle`) |
+| `pnpm --filter @nexus/web run e2e` | pass — 15 tests |
+| `pnpm --filter @nexus/extension run e2e` | pass — 38 tests |
+
 
 ## 2. Database
 
@@ -135,8 +145,32 @@ channels and its **exact** Google query strings; the minimal-lead path landing i
 
 | Suite | Result |
 | --- | --- |
-| Web browser E2E | see §6 |
-| Extension E2E | see §6 |
+| Web browser E2E (`apps/web/e2e`, production build on port 3100, isolated database) | **15 passed, 0 failed** |
+| Extension E2E (real MV3 extension in Chromium, seeded demo server on 3000) | **38 passed, 0 failed** |
+
+The web suite is new in V1.2 and covers the Overview metrics and enrichment funnel,
+the Leads columns and a real deterministic Find-LinkedIn link, the Agent Jobs
+summary plus the absence of any manual complete control, the twelve prompt keys and
+the provider state on the AI tab, the Channel Accounts vocabulary, the secondary
+navigation (including that the V1.1 concatenation defect is gone), and the
+enrichment workspace's "discarded raw text is never re-displayed" rule.
+
+It found three defects that no unit test could, all fixed before this run:
+
+* the Lead Detail page answered **500** in a production build — the page called
+  `processingSteps()` and `missingSearchLinks()`, which were exported from a
+  `'use client'` module, and Next.js treats every export of a client module as a
+  client reference;
+* every load of that page produced a **hydration mismatch (React #418)** — the shared
+  `PageHead` rendered its `subtitle` prop inside a `<p>`, and this page passes a row
+  of chips, so the browser closed the paragraph early and the DOM no longer matched
+  what React rendered;
+* the Companion's **search blanked the side panel** — the search projection returned
+  the enrichment indicator nested while the panel read it flat, so the chip received
+  `undefined` and `.toLowerCase()` threw during render. The extension suite caught it;
+  the extension suite's own drift (business lists are now scoped to the selected
+  channel account, spec §36) was corrected at the same time.
+
 
 ## 5. Live provider smoke (spec §62)
 
@@ -153,5 +187,20 @@ committed so the live provider can be confirmed in one command after deployment.
 
 ## 6. Final gate results
 
-Filled in by the integrating agent from the clean-checkout run; see
-`docs/V1_2_IMPLEMENTATION_REPORT.md` for the exact commands and their output.
+Produced by the clean-checkout run described in §1. The whole gate is green:
+
+```
+pnpm install --frozen-lockfile                     pass
+pnpm run typecheck                                 pass
+pnpm run lint                                      pass
+pnpm run test                                      41 files / 704 tests pass
+pnpm run db:verify                                 35 migrations, verification passed
+pnpm run build                                     pass
+pnpm --filter @nexus/extension run build           pass
+pnpm --filter @nexus/web run e2e                   15 passed
+pnpm --filter @nexus/extension run e2e             38 passed
+```
+
+The only commits after the gated commit are documentation, so the result applies to
+the final tree of the branch.
+
