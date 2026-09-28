@@ -2,7 +2,7 @@
 
 import type { ReactElement, ReactNode } from 'react';
 
-import { AppShell, type BusinessOption, type NavSection } from '@nexus/ui';
+import { AppShell, type BusinessOption, type NavSection, type SecondaryNavItem } from '@nexus/ui';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { signOutAction } from '@/app/login/actions';
@@ -17,6 +17,7 @@ import { signOutAction } from '@/app/login/actions';
 export function Shell({
   surface,
   nav,
+  secondaryNav,
   businessSlug,
   businesses,
   userLabel,
@@ -24,6 +25,12 @@ export function Shell({
 }: {
   readonly surface: 'admin' | 'user';
   readonly nav: readonly NavSection[];
+  /**
+   * The business operational surfaces (spec §73.2), already resolved and permission-filtered by
+   * the business layout. Passed through untouched: the shell is a client boundary and must not
+   * be the place where visibility is decided.
+   */
+  readonly secondaryNav?: readonly SecondaryNavItem[];
   readonly businessSlug?: string;
   readonly businesses: readonly BusinessOption[];
   readonly userLabel: string;
@@ -46,6 +53,7 @@ export function Shell({
     <AppShell
       surface={surface}
       nav={nav}
+      {...(secondaryNav === undefined ? {} : { secondaryNav })}
       activeRoute={pathname}
       {...(businessSlug === undefined ? {} : { businessSlug })}
       {...(effectiveSlug === undefined ? {} : { defaultBusinessSlug: effectiveSlug })}

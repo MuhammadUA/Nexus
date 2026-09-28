@@ -27,6 +27,21 @@ export interface NavSection {
   readonly items: readonly NavItem[];
 }
 
+/**
+ * One entry of the secondary navigation that the host supplies itself.
+ *
+ * `ADMIN_NAV` covers the nested modules of the seven sidebar destinations, but the V1.2
+ * operational surfaces (Agent Jobs, Channel Accounts, AI, Automations, Imports, Access —
+ * spec §73.2) are not all in it: Agent Jobs and AI are new routes, and two of the six are not
+ * business-scoped. The host resolves them — existence, and the permission of the route each one
+ * declares — and passes the surviving ones here. The shell never decides visibility itself, and
+ * never renders an entry whose route the viewer may not open.
+ */
+export interface SecondaryNavItem {
+  readonly label: string;
+  readonly href: string;
+}
+
 export interface BusinessOption {
   readonly id: string;
   readonly slug: string;
@@ -53,6 +68,13 @@ export interface AppShellProps {
   readonly businesses?: readonly BusinessOption[];
   readonly onSelectBusiness?: (businessId: string) => void;
   readonly onNavigate: (route: string) => void;
+  /**
+   * Extra secondary destinations, already resolved and permission-filtered by the host.
+   *
+   * Appended to the active destination's own tabs, deduplicated by href, so a surface that is
+   * both a nested module and an operational entry (Automations, Imports) appears once.
+   */
+  readonly secondaryNav?: readonly SecondaryNavItem[];
   readonly topbar?: ReactNode;
   readonly children: ReactNode;
   readonly userLabel?: string;
@@ -102,6 +124,7 @@ export function AppShell({
   businesses,
   onSelectBusiness,
   onNavigate,
+  secondaryNav,
   topbar,
   children,
   userLabel,
@@ -165,6 +188,32 @@ export function AppShell({
     .sort((a, b) => b.href.length - a.href.length)[0];
 
   const secondary = activeItem?.children.filter((child) => child.href !== activeItem.href) ?? [];
+
+  /**
+   * The strip actually rendered: the active destination's own tabs, then the host's operational
+   * surfaces, deduplicated by href.
+   *
+   * Deduplication matters because the two sources overlap by design: Automations and the Import
+   * Builder are nested modules *and* operational entries, and rendering them twice would put two
+   * links to one screen in one strip. The nested module wins, because it is the one the section's
+   * own IA names.
+   */
+  const strip: readonly { readonly label: string; readonly href: string }[] = [
+    ...secondary.map((child) => ({ label: child.item.label, href: child.href })),
+    ...(secondaryNav ?? []),
+  ].filter((entry, index, all) => all.findIndex((other) => other.href === entry.href) === index);
+
+  /**
+   * The one current destination, by longest matching prefix.
+   *
+   * Longest-prefix rather than "has this prefix": `/b/zemnas/setup` is a prefix of
+   * `/b/zemnas/setup/icps`, so a naive check would mark two tabs current at once and the strip
+   * would stop telling the operator where they are. Exact matches and sub-routes both resolve,
+   * so a tab stays current while the operator is inside the screen it names.
+   */
+  const currentHref = strip
+    .filter((entry) => activeRoute === entry.href || activeRoute.startsWith(`${entry.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <div className="nx-app">
@@ -280,29 +329,42 @@ export function AppShell({
         {/**
          * Secondary navigation.
          *
-         * The final Figma Admin IA is two-level: seven sidebar destinations, with the nested modules
-         * reached as a tab strip inside their parent (Business Setup -> ICPs / Sequences / Knowledge
-         * / Signals). Without this strip those screens would be reachable only by typing a URL.
+         * The final Figma Admin IA is two-level: seven sidebar destinations, with the nested
+         * modules reached as a strip inside their parent (Business Setup -> ICPs / Sequences /
+         * Knowledge / Signals), plus the V1.2 operational surfaces (Agent Jobs, Channel Accounts,
+         * AI, Automations, Imports, Access — §73.2). Without this strip those screens would be
+         * reachable only by typing a URL.
+         *
+         * These are **links**, so they are a `<nav>` of anchors with `aria-current="page"`, not a
+         * `tablist`: a tab that navigates and has no tabpanel is the wrong pattern for assistive
+         * technology (and the V1.1 defect — two links rendering as `Outreach IdentitiesMy Access`
+         * — was a presentation bug in a strip that was already semantically fine). Anchors are
+         * keyboard reachable, carry the global focus ring, and can be opened in a new tab.
          */}
-        {secondary.length > 0 && (
-          <div className="nx-subnav" role="tablist" aria-label={`${activeItem?.item.label ?? 'Section'} sections`}>
-            {secondary.map(({ item, href }) => (
-              <a
-                key={`${item.label}-${href}`}
-                role="tab"
-                className="nx-subnav__item"
-                aria-selected={activeRoute === href}
-                href={href}
-                onClick={(event) => {
-                  if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-                  event.preventDefault();
-                  onNavigate(href);
-                }}
-              >
-                {item.label}
-              </a>
-            ))}
-          </div>
+        {strip.length > 0 && (
+          <nav
+            className="nx-subnav"
+            aria-label={`${activeItem?.item.label ?? 'Business'} sections`}
+          >
+            {strip.map((entry) => {
+              const current = entry.href === currentHref;
+              return (
+                <a
+                  key={entry.href}
+                  className="nx-subnav__item"
+                  aria-current={current ? 'page' : undefined}
+                  href={entry.href}
+                  onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+                    event.preventDefault();
+                    onNavigate(entry.href);
+                  }}
+                >
+                  {entry.label}
+                </a>
+              );
+            })}
+          </nav>
         )}
 
         <main className="nx-content" id="nx-content">

@@ -895,8 +895,12 @@ body {
  * Team & Accounts -> Permissions / Outreach Identities / My Access), but no rule for either class
  * was ever written. An unstyled `<div>` of unstyled anchors renders as one run of inline text, so on
  * `/team` the two links appeared as `Outreach IdentitiesMy Access` — no gap, no separation, and easy
- * to mistake for a caption rather than navigation. The markup and its `role="tablist"`/`role="tab"`
- * semantics were correct the whole time; only the presentation was missing.
+ * to mistake for a caption rather than navigation.
+ *
+ * V1.2 also changed the markup: the strip is a `<nav>` of links carrying `aria-current="page"`
+ * rather than a `tablist` of `role="tab"` anchors. A tab that navigates and has no panel is the
+ * wrong pattern, and the current destination is now expressed with the attribute links actually
+ * use — which also gives keyboard users the global focus ring on a real control.
  *
  * The strip is deliberately more prominent than `.nx-tab`: these are peer destinations of the
  * section, so each one is a filled control rather than an underlined word. That is a presentation
@@ -926,6 +930,10 @@ body {
   font-weight: var(--nx-font-weight-medium);
   text-decoration: none;
   white-space: nowrap;
+  transition:
+    border-color var(--nx-motion-fast) var(--nx-motion-ease),
+    background var(--nx-motion-fast) var(--nx-motion-ease),
+    color var(--nx-motion-fast) var(--nx-motion-ease);
 }
 
 .nx-subnav__item:hover {
@@ -933,11 +941,28 @@ body {
   color: var(--nx-text-primary);
 }
 
+/*
+ * The current destination.
+ *
+ * `aria-current="page"` is what the anchor actually sets; `aria-selected` is kept as a selector
+ * so a host that still renders the earlier tab markup is not left unstyled.
+ *
+ * The inset underline is deliberate: the fill, the border and the weight all change, and the
+ * underline is a second cue that does not depend on colour — the strip must say where the
+ * operator is even in a monochrome rendering (spec §75.2).
+ */
+.nx-subnav__item[aria-current='page'],
 .nx-subnav__item[aria-selected='true'] {
   border-color: var(--nx-accent-cyan-border);
   background: var(--nx-accent-cyan-fill);
   color: var(--nx-accent-cyan-fg);
   font-weight: var(--nx-font-weight-semibold);
+  box-shadow: inset 0 -2px 0 var(--nx-accent-cyan-fg);
+}
+
+/* Keyboard focus: the global ring, plus the current-destination cue, so both stay visible. */
+.nx-subnav__item:focus-visible {
+  box-shadow: var(--nx-focus-ring), inset 0 -2px 0 currentColor;
 }
 
 /* --------------------------------------------------------------- states -- */
