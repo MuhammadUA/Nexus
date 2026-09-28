@@ -295,6 +295,29 @@ Carried forward honestly rather than papered over:
    database has no leads. It proves the screens, the deterministic search links and
    the absence of a manual complete action; it does not prove a full enrichment
    round trip, which the PGlite suites do.
+9. **Two of the seven AI tasks are implemented but not yet invoked from a product
+   flow.** `ICP_QUALIFICATION` and `REPLY_CLASSIFICATION` both exist as first-class
+   tasks — versioned prompt (`icp_qualify`, `reply_classify`), strict schema, input
+   hashing, cache lookup, ledger row with tokens and cost — and are callable through
+   the same `runAiTask` the other five use, so the pipeline and cache correctness
+   apply to them unchanged. What is missing is the call site and its persistence:
+   * `ICP_QUALIFICATION` should run as the `QUALIFY_LEAD` job the chaining table
+     names (`QUALIFY_LEAD:<lead_id>`, master spec §36) and write the decided ICP to
+     `lead_icp_matches` through the audited `set_primary_icp`. Until then the fit and
+     intent the Lead screens show come from the deterministic `lead_icp_matches`
+     rows the ingest pipeline writes, and the Brief's confidence is the derived
+     figure — no qualification score is invented. A hand-created `QUALIFY_LEAD` job
+     fails with the typed `no_processor_for_job_type`, which is visible in the queue
+     rather than silently stuck, and automatic chaining never creates one.
+   * `REPLY_CLASSIFICATION` should run from the reply-capture path and write the
+     proposed outcome and reason to `conversation_outcomes` and an `interactions`
+     row (master spec §64.5), leaving the verbatim inbound text untouched. Until
+     then reply capture is exactly V1.1 behaviour — the exact text verbatim, the
+     operator's outcome, DNC and sequence pausing intact, which the DNC and reply
+     suites still assert.
+
+   Both are additive: no schema change is needed for either, because the target
+   tables already exist and the runner already records the attempt.
 
 ## 14. Deployment actions for ChatGPT
 
@@ -371,4 +394,11 @@ curl -s $NEXUS_ORIGIN/api/v1/mcp                   # tool list
 stage a paste, confirm the structured commit, confirm the `raw_staging` row is gone
 (`select count(*) from public.raw_staging where lead_id = '<id>'` is 0), and confirm
 the job reached `COMPLETE` only after that.
+
+**8. Two follow-ups that are deliberately not in this branch** (limitations §13.9,
+both additive and schema-free): invoke `ICP_QUALIFICATION` from the `QUALIFY_LEAD`
+job and write the decision through `set_primary_icp`, and invoke
+`REPLY_CLASSIFICATION` from the reply-capture path into `conversation_outcomes` and
+`interactions`. The prompts, schemas and ledger rows already exist, so each is a
+call site plus its persistence, not new plumbing.
 
