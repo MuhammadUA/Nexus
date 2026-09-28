@@ -36,7 +36,9 @@ import {
 } from '@nexus/ui';
 
 import * as api from './api';
-import { clearSession, openInActiveTab } from './chrome-actions';
+import { companionScope, shellBusinesses } from './binding-scope';
+import { clearSession, openInActiveTab, openSearchInNewTab } from './chrome-actions';
+import { enrichmentAccent, enrichmentLabel, intelligenceLabel, needsFindLinkedIn } from './enrichment-view';
 import type {
   BrowserBinding,
   CompanionBusiness,
@@ -49,7 +51,7 @@ import type {
   IdentityConflict,
   SearchResult,
 } from './types';
-import { useListState } from './use-list-state';
+import { useListState, type ListState } from './use-list-state';
 
 type Screen = 'list' | 'focus' | 'reply' | 'reactivate';
 
@@ -93,6 +95,39 @@ export function SidePanel(): ReactElement {
 
   const businessId = listState.state.businessId;
   const identityId = listState.state.identityId;
+
+  /**
+   * The bind scope for the chosen channel account.
+   *
+   * spec §36 / §61: the business selector offers only the businesses the selected
+   * account may send from. `companionScope` is pure and is the same function the web
+   * test suite exercises, so the recalculation can be asserted without a browser.
+   */
+  const scope = useMemo(
+    () =>
+      companionScope({
+        businesses,
+        identities,
+        identityId,
+        businessId,
+        preferredBusinessId: binding?.defaultBusinessId ?? null,
+      }),
+    [binding, businessId, businesses, identities, identityId],
+  );
+
+  /**
+   * What the shell's business selector shows.
+   *
+   * Same rule as the bind selector; the one difference is the unknown-account case —
+   * a binding that names an account the server no longer offers has no scope to apply,
+   * and hiding every business would take the panel down for an operator whose data is
+   * still theirs to read. `shellBusinesses` falls back to the accessible list there,
+   * and the footer says so.
+   */
+  const shellBusinessList = useMemo(
+    () => shellBusinesses(businesses, identities, identityId),
+    [businesses, identities, identityId],
+  );
 
   const refresh = useCallback(
     async (targetModule: CompanionModule = module) => {
@@ -158,18 +193,47 @@ export function SidePanel(): ReactElement {
     })();
   }, [businessId]);
 
-  // Default the selectors from the binding / first available option.
+  /**
+   * Defaults and recalculates the selectors.
+   *
+   * One effect rather than two, because the two selectors are no longer independent:
+   * the identity decides which businesses exist, so the identity is resolved first and
+   * the business selection is then validated against it. A selection the newly chosen
+   * account cannot reach is replaced — by the stored binding's business when that is
+   * eligible, otherwise by the first eligible one, otherwise cleared — and the ICP is
+   * cleared with it, because an ICP belongs to a business.
+   *
+   * The patch is only written when something actually differs, which is what keeps
+   * this from looping through `chrome.storage.local`.
+   */
   useEffect(() => {
     if (!listState.ready) return;
-    if (businessId.length === 0) {
-      const fallback = binding?.defaultBusinessId ?? businesses[0]?.id ?? '';
-      if (fallback.length > 0) listState.update({ businessId: fallback });
-      return;
+
+    const nextIdentityId =
+      identityId.length > 0 ? identityId : (binding?.identityId ?? identities[0]?.id ?? '');
+    if (nextIdentityId.length === 0) return;
+
+    const patch: { [K in 'identityId' | 'businessId' | 'icpId']?: ListState[K] } = {};
+    if (nextIdentityId !== identityId) patch.identityId = nextIdentityId;
+
+    // An account the server does not list has no scope to apply: the business
+    // selection is left alone rather than silently emptied.
+    const known = identities.some((candidate) => candidate.id === nextIdentityId);
+    if (known) {
+      const next = companionScope({
+        businesses,
+        identities,
+        identityId: nextIdentityId,
+        businessId,
+        preferredBusinessId: binding?.defaultBusinessId ?? null,
+      });
+      if (next.businessId !== businessId) {
+        patch.businessId = next.businessId;
+        patch.icpId = '';
+      }
     }
-    if (identityId.length === 0) {
-      const fallback = binding?.identityId ?? identities[0]?.id ?? '';
-      if (fallback.length > 0) listState.update({ identityId: fallback });
-    }
+
+    if (Object.keys(patch).length > 0) listState.update(patch);
   }, [binding, businessId, businesses, identities, identityId, listState]);
 
   // Reload the active list when its inputs change.
@@ -212,6 +276,22 @@ export function SidePanel(): ReactElement {
     const outcome = await openInActiveTab(url);
     if (outcome === 'invalid') {
       setError('That is not a LinkedIn profile URL, so it was not opened.');
+    }
+  }, []);
+
+  /**
+   * Opens the generated "Find LinkedIn" search for a lead with no profile URL yet.
+   *
+   * Always a *new* tab: the search is a detour, and the operator's LinkedIn tab is
+   * where the result will be pasted back from. The URL comes from the server
+   * (`searchLinks` in `@nexus/core`) and is re-validated here before anything is
+   * navigated, because a URL that reached the panel is still input.
+   */
+  const findLinkedIn = useCallback(async (url: string | null) => {
+    if (url === null || url.length === 0) return;
+    const outcome = await openSearchInNewTab(url);
+    if (outcome === 'invalid') {
+      setError('That search link was not a Google search URL, so it was not opened.');
     }
   }, []);
 
@@ -328,7 +408,7 @@ export function SidePanel(): ReactElement {
         setModule(next);
         setScreen('list');
       }}
-      businesses={businesses.map((business) => ({ value: business.id, label: business.name }))}
+      businesses={shellBusinessList.map((business) => ({ value: business.id, label: business.name }))}
       businessId={businessId}
       onBusinessChange={(id) => listState.update({ businessId: id, icpId: '' })}
       icps={[{ value: '', label: 'All ICPs' }, ...icps.map((icp) => ({ value: icp.id, label: icp.name }))]}
@@ -350,6 +430,18 @@ export function SidePanel(): ReactElement {
       }
       footer={
         <Stack size="sm">
+          {/*
+            The empty-scope state is explained rather than rendered as an empty
+            selector: an operator seeing no businesses needs to know whether the
+            account is unassigned or they are missing a grant.
+          */}
+          {shellBusinessList.length === 0 && businessId.length === 0 && (
+            <Alert accent="amber" role="status">
+              {scope.message.length > 0
+                ? scope.message
+                : 'No business is available for the selected channel account.'}
+            </Alert>
+          )}
           {concurrency !== null && concurrency.action !== 'allow' && (
             <Alert accent={concurrency.action === 'block' ? 'red' : 'amber'} role="alert">
               {concurrency.reason}
@@ -384,7 +476,7 @@ export function SidePanel(): ReactElement {
     >
       {topLevel === 'add' ? (
         <AddToCrm
-          businesses={businesses}
+          businesses={shellBusinessList}
           icps={icps}
           businessId={businessId}
           icpId={listState.state.icpId}
@@ -404,6 +496,7 @@ export function SidePanel(): ReactElement {
           identityId={identityId}
           busy={busy}
           onOpenLinkedIn={() => void openLinkedIn(detail.lead.linkedinUrl)}
+          onFindLinkedIn={(url) => void findLinkedIn(url)}
           onMarkConnection={(withNote) =>
             void run(
               () => api.markConnectionSent({ leadId: detail.lead.id, identityId, withNote }),
@@ -462,12 +555,14 @@ export function SidePanel(): ReactElement {
             }
           }}
           onOpen={(leadId) => void openLead(leadId, 'focus')}
+          onFindLinkedIn={(url) => void findLinkedIn(url)}
         />
       ) : module === 'today' ? (
         <TodayPanel
           items={todayItems}
           selectedIndex={selectedIndex}
           onOpen={(leadId) => void openLead(leadId, 'focus')}
+          onFindLinkedIn={(url) => void findLinkedIn(url)}
         />
       ) : (
         <LeadsPanel
@@ -475,6 +570,7 @@ export function SidePanel(): ReactElement {
           activeLeadId={activeLeadId}
           busy={busy}
           onOpen={(leadId) => void openLead(leadId, 'focus')}
+          onFindLinkedIn={(url) => void findLinkedIn(url)}
         />
       )}
     </CompanionShell>
@@ -499,9 +595,52 @@ function BindPanel({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [identityId, setIdentityId] = useState(identities[0]?.id ?? '');
-  const [defaultBusinessId, setDefaultBusinessId] = useState(businesses[0]?.id ?? '');
+  const [defaultBusinessId, setDefaultBusinessId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  /**
+   * The account drives the business list (spec §36 / §61).
+   *
+   * `identities` carries, per account, exactly the businesses the server will accept a
+   * bind for, so the selector can only offer a bindable pair and the Bind control knows
+   * — before the request — when there is nothing to bind. Switching the account
+   * recalculates this: an eligible selection is kept, an ineligible one is replaced or
+   * cleared.
+   */
+  const scope = useMemo(
+    () =>
+      companionScope({
+        businesses,
+        identities,
+        identityId,
+        businessId: defaultBusinessId,
+      }),
+    [businesses, defaultBusinessId, identities, identityId],
+  );
+
+  // Keeps the controlled select in step with the recalculation.
+  useEffect(() => {
+    if (scope.businessId !== defaultBusinessId) setDefaultBusinessId(scope.businessId);
+  }, [defaultBusinessId, scope.businessId]);
+
+  /**
+   * The account list arrives *after* sign-in, so the selection is reconciled when it does.
+   *
+   * Without this the panel stayed on "no channel account" — and, because the Bind control is
+   * now disabled when nothing is eligible, an operator who had just signed in could not get
+   * past the screen at all. An account that disappears is replaced for the same reason.
+   */
+  useEffect(() => {
+    if (identityId.length === 0) {
+      const first = identities[0]?.id ?? '';
+      if (first.length > 0) setIdentityId(first);
+      return;
+    }
+    if (!identities.some((identity) => identity.id === identityId)) {
+      setIdentityId(identities[0]?.id ?? '');
+    }
+  }, [identities, identityId]);
   /**
    * Set when the API refused the bind because another browser profile holds the identity.
    *
@@ -522,7 +661,9 @@ function BindPanel({
       const result = await api.bindBrowser({
         installId: String(stored['nexus.installId'] ?? ''),
         identityId,
-        defaultBusinessId: defaultBusinessId.length === 0 ? null : defaultBusinessId,
+        // Taken from the recalculated scope rather than from state, so the request can
+        // never carry a selection the current account invalidated.
+        defaultBusinessId: scope.businessId.length === 0 ? null : scope.businessId,
         ...(transfer ? { transfer: true } : {}),
       });
       if (!result.ok) {
@@ -582,31 +723,41 @@ function BindPanel({
             </>
           ) : (
             <>
-              <Field label="LinkedIn identity" htmlFor="c-identity" required>
+              <Field label="Channel account" htmlFor="c-identity" required>
                 <Select
                   id="c-identity"
                   value={identityId}
                   onChange={setIdentityId}
-                  placeholder={identities.length === 0 ? 'No identity assigned to you' : undefined}
+                  placeholder={identities.length === 0 ? 'No channel account assigned to you' : undefined}
                   options={identities.map((identity) => ({
                     value: identity.id,
                     label: `${identity.displayName} (${identity.status})`,
                   }))}
                 />
               </Field>
-              <Field label="Default business" htmlFor="c-business">
+              <Field
+                label="Default business"
+                htmlFor="c-business"
+                hint="Only the businesses this channel account may send from are listed."
+              >
                 <Select
                   id="c-business"
-                  value={defaultBusinessId}
+                  value={scope.businessId}
                   onChange={setDefaultBusinessId}
-                  placeholder="Choose a business"
-                  options={businesses.map((business) => ({ value: business.id, label: business.name }))}
+                  disabled={scope.eligible.length === 0}
+                  placeholder={scope.eligible.length === 0 ? 'No business available' : undefined}
+                  options={scope.eligible.map((business) => ({ value: business.id, label: business.name }))}
                 />
               </Field>
-              <p className="nx-hint">
-                Visible businesses are the ones your account can access intersected with this
-                identity&apos;s business access.
-              </p>
+              {/*
+                The specific reason, not a generic permission message: the operator has
+                to know whether the account is unassigned, or they are missing a grant.
+              */}
+              {!scope.canBind && (
+                <Alert accent="amber" role="status">
+                  {scope.message}
+                </Alert>
+              )}
             </>
           )}
 
@@ -654,6 +805,12 @@ function BindPanel({
             variant="primary"
             block
             busy={busy}
+            /*
+              Disabled when there is nothing bindable — with the reason above it, not a
+              generic permission sentence. Signing in is always available, because the
+              scope is only known once the account is known.
+            */
+            disabled={session !== null && !scope.canBind}
             onClick={() => {
               void (async () => {
                 setBusy(true);
@@ -673,7 +830,11 @@ function BindPanel({
                   }
 
                   if (identityId.length === 0) {
-                    setError('Choose the identity this browser profile uses.');
+                    setError('Choose the channel account this browser profile uses.');
+                    return;
+                  }
+                  if (!scope.canBind) {
+                    setError(scope.message);
                     return;
                   }
                 } finally {
@@ -703,11 +864,13 @@ function LeadsPanel({
   activeLeadId,
   busy,
   onOpen,
+  onFindLinkedIn,
 }: {
   readonly leads: readonly CompanionLead[];
   readonly activeLeadId: string | null;
   readonly busy: boolean;
   readonly onOpen: (leadId: string) => void;
+  readonly onFindLinkedIn: (url: string) => void;
 }): ReactElement {
   if (busy && leads.length === 0) return <span className="nx-hint">Loading leads…</span>;
   if (leads.length === 0) {
@@ -739,23 +902,85 @@ function LeadsPanel({
                 <LeadStatusChip state={lead.status} />
                 {lead.isDnc && <Chip accent="red">DNC</Chip>}
                 {lead.needsProfile && <Chip accent="cyan">needs profile</Chip>}
+                <EnrichmentChip status={lead.enrichmentStatus} intelligence={lead.intelligence} />
               </>
             }
             onClick={() => onOpen(lead.id)}
           />
+          {/* Outside the row's button: an interactive element nested in a button is
+              neither valid HTML nor reliably clickable. */}
+          <FindLinkedInAction lead={lead} onFindLinkedIn={onFindLinkedIn} />
         </li>
       ))}
     </ul>
   );
 }
 
+/**
+ * The V1.2 enrichment indicator: pipeline state plus the intelligence percentage.
+ *
+ * Both values are the server's (`public.lead_enrichment`); the panel only labels them.
+ */
+function EnrichmentChip({
+  status,
+  intelligence,
+}: {
+  readonly status: string;
+  readonly intelligence: number;
+}): ReactElement {
+  return (
+    <>
+      <Chip accent={enrichmentAccent(status)} title="Enrichment state">
+        {enrichmentLabel(status)}
+      </Chip>
+      <Chip accent="indigo" title="Intelligence completeness">
+        {intelligenceLabel(intelligence)}
+      </Chip>
+    </>
+  );
+}
+
+/**
+ * "Find LinkedIn" for a lead that has no profile URL yet.
+ *
+ * A lead captured minimally (name, company, location, source) lands in
+ * `NEEDS_PROFILE`, and this is the next step the operator takes: a deterministic
+ * Google search built by the server from exactly those fields. Nothing is rendered
+ * when the server had too little to search for.
+ */
+function FindLinkedInAction({
+  lead,
+  onFindLinkedIn,
+}: {
+  readonly lead: {
+    readonly needsProfile?: boolean;
+    readonly linkedinUrl?: string | null;
+    readonly enrichmentStatus?: string;
+    readonly findLinkedInUrl?: string | null;
+  };
+  readonly onFindLinkedIn: (url: string) => void;
+}): ReactElement | null {
+  const url = lead.findLinkedInUrl ?? null;
+  if (!needsFindLinkedIn(lead) || url === null) return null;
+
+  return (
+    <Row>
+      <Button variant="ghost" size="sm" onClick={() => onFindLinkedIn(url)}>
+        Find LinkedIn
+      </Button>
+    </Row>
+  );
+}
+
 function TodayPanel({
   items,
   onOpen,
+  onFindLinkedIn,
 }: {
   readonly items: readonly CompanionTodayItem[];
   readonly selectedIndex: number;
   readonly onOpen: (leadId: string) => void;
+  readonly onFindLinkedIn: (url: string) => void;
 }): ReactElement {
   if (items.length === 0) {
     return (
@@ -784,9 +1009,17 @@ function TodayPanel({
               <>
                 <Chip accent={item.isOverdue ? 'red' : 'amber'}>{item.category.replace(/_/g, ' ')}</Chip>
                 <DueChip dueAt={item.dueAt} overdue={item.isOverdue} />
+                <EnrichmentChip status={item.enrichmentStatus} intelligence={item.intelligence} />
               </>
             }
             onClick={() => onOpen(item.leadId)}
+          />
+          <FindLinkedInAction
+            lead={{
+              enrichmentStatus: item.enrichmentStatus,
+              findLinkedInUrl: item.findLinkedInUrl,
+            }}
+            onFindLinkedIn={onFindLinkedIn}
           />
         </li>
       ))}
@@ -799,11 +1032,13 @@ function SearchPanel({
   busy,
   onSearch,
   onOpen,
+  onFindLinkedIn,
 }: {
   readonly results: readonly SearchResult[];
   readonly busy: boolean;
   readonly onSearch: (query: string) => Promise<void>;
   readonly onOpen: (leadId: string) => void;
+  readonly onFindLinkedIn: (url: string) => void;
 }): ReactElement {
   const [query, setQuery] = useState('');
 
@@ -843,9 +1078,14 @@ function SearchPanel({
                     {result.nextActionAt !== null && (
                       <span className="nx-hint">next {result.nextActionAt.slice(0, 10)}</span>
                     )}
+                    <EnrichmentChip status={result.enrichmentStatus} intelligence={result.intelligence} />
                   </>
                 }
                 onClick={() => onOpen(result.leadId)}
+              />
+              <FindLinkedInAction
+                lead={{ linkedinUrl: null, enrichmentStatus: result.enrichmentStatus, findLinkedInUrl: result.findLinkedInUrl }}
+                onFindLinkedIn={onFindLinkedIn}
               />
             </li>
           ))}
@@ -881,6 +1121,22 @@ function AddToCrm({
   const [autoMatch, setAutoMatch] = useState(icpId.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  /**
+   * The V1.2 minimal-lead fields (spec `minimalLeadInputSchema`).
+   *
+   * A lead is accepted the moment anything is known about it, so these are the whole
+   * payload for the second capture shape: person name plus company and location, with
+   * an optional title/headline/snippet. Nothing is invented for a field left empty —
+   * the server records what it has and puts the lead in `NEEDS_PROFILE`, which is what
+   * makes "Find LinkedIn" available for it afterwards.
+   */
+  const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [location, setLocation] = useState('');
+  const [source, setSource] = useState('companion');
+  const [jobTitle, setJobTitle] = useState('');
+  const [headline, setHeadline] = useState('');
+  const [snippet, setSnippet] = useState('');
   /** What the content script could read, shown back so the operator sees it before submitting. */
   const [extracted, setExtracted] = useState<{
     readonly headline: string | null;
@@ -888,9 +1144,16 @@ function AddToCrm({
     readonly company: string | null;
   } | null>(null);
 
+  const hasProfileUrl = url.trim().length > 0;
+  const canSubmit = hasProfileUrl || fullName.trim().length > 0;
+
   return (
     <Stack size="sm">
-      <Field label="LinkedIn profile URL" htmlFor="add-url" required>
+      <Field
+        label="LinkedIn profile URL"
+        htmlFor="add-url"
+        hint="Optional in V1.2: a lead can be added from a name alone."
+      >
         <TextInput id="add-url" value={url} onChange={setUrl} type="url" />
       </Field>
 
@@ -966,7 +1229,6 @@ function AddToCrm({
       <Field
         label="Copied profile content"
         htmlFor="add-content"
-        required
         hint="Paste the full profile text. It is stored as source evidence, never executed."
       >
         <TextArea id="add-content" value={content} onChange={setContent} tall />
@@ -1002,6 +1264,38 @@ function AddToCrm({
         is updated instead. Partial records are marked Needs profile.
       </p>
 
+      {/*
+        The minimal-lead fields. A capture with only a name (and whatever else the
+        operator happens to know) is a legitimate lead in V1.2, so this section is
+        always available rather than hidden behind a mode switch.
+      */}
+      <div className="nx-overline">Or add a minimal lead</div>
+      <Field label="Person name" htmlFor="add-name" hint="Required when there is no profile URL.">
+        <TextInput id="add-name" value={fullName} onChange={setFullName} />
+      </Field>
+      <Row>
+        <Field label="Company" htmlFor="add-company">
+          <TextInput id="add-company" value={companyName} onChange={setCompanyName} />
+        </Field>
+        <Field label="Location" htmlFor="add-location">
+          <TextInput id="add-location" value={location} onChange={setLocation} />
+        </Field>
+      </Row>
+      <Row>
+        <Field label="Job title (optional)" htmlFor="add-title">
+          <TextInput id="add-title" value={jobTitle} onChange={setJobTitle} />
+        </Field>
+        <Field label="Source" htmlFor="add-source" hint="Where this lead was found.">
+          <TextInput id="add-source" value={source} onChange={setSource} />
+        </Field>
+      </Row>
+      <Field label="Headline (optional)" htmlFor="add-headline">
+        <TextInput id="add-headline" value={headline} onChange={setHeadline} />
+      </Field>
+      <Field label="Snippet (optional)" htmlFor="add-snippet" hint="Kept as the source evidence for this capture.">
+        <TextArea id="add-snippet" value={snippet} onChange={setSnippet} />
+      </Field>
+
       {error !== null && (
         <Alert accent="red" role="alert">
           {error}
@@ -1012,20 +1306,40 @@ function AddToCrm({
         variant="primary"
         block
         busy={busy || working}
+        disabled={!canSubmit}
+        title={canSubmit ? undefined : 'Enter a LinkedIn profile URL or at least the person name.'}
         onClick={() => {
           void (async () => {
+            if (!canSubmit) {
+              setError('Enter a LinkedIn profile URL, or at least the person name, so nothing has to be invented.');
+              return;
+            }
             setWorking(true);
             setError(null);
             try {
+              /**
+               * One payload, whichever shape the operator filled in.
+               *
+               * The idempotency key is derived from what actually identifies the capture
+               * — the profile URL, or the name/company pair — so retrying the same
+               * capture is a replay and a different one is a new ingestion.
+               */
+              const identity = hasProfileUrl ? url.trim() : `${fullName.trim()}|${companyName.trim()}`;
               const result = await api.addToCrm({
-                linkedinUrl: url,
+                linkedinUrl: hasProfileUrl ? url : undefined,
                 pastedContent: content,
                 businessId,
                 icpId: autoMatch ? null : icpId,
                 autoMatch,
                 identityId,
-                // Idempotency: retrying the same capture must not create a second lead.
-                idempotencyKey: `companion:${url}:${String(content.length)}`,
+                fullName: fullName.trim().length === 0 ? undefined : fullName.trim(),
+                companyName: companyName.trim().length === 0 ? undefined : companyName.trim(),
+                location: location.trim().length === 0 ? undefined : location.trim(),
+                source: source.trim().length === 0 ? undefined : source.trim(),
+                jobTitle: jobTitle.trim().length === 0 ? undefined : jobTitle.trim(),
+                headline: headline.trim().length === 0 ? undefined : headline.trim(),
+                snippet: snippet.trim().length === 0 ? undefined : snippet.trim(),
+                idempotencyKey: `companion:${identity}:${String(content.length)}:${String(snippet.length)}`.slice(0, 200),
               });
               if (!result.ok) {
                 setError(result.error);
@@ -1052,6 +1366,7 @@ function ActionFocus({
   identityId,
   busy,
   onOpenLinkedIn,
+  onFindLinkedIn,
   onMarkConnection,
   onMarkMessageSent,
   onSnooze,
@@ -1063,6 +1378,7 @@ function ActionFocus({
   readonly identityId: string;
   readonly busy: boolean;
   readonly onOpenLinkedIn: () => void;
+  readonly onFindLinkedIn: (url: string) => void;
   readonly onMarkConnection: (withNote: boolean) => void;
   readonly onMarkMessageSent: () => void;
   readonly onSnooze: (until: string) => void;
@@ -1092,6 +1408,12 @@ function ActionFocus({
         {lead.jobTitle === null ? '' : ` · ${lead.jobTitle}`}
       </div>
 
+      {/* The enrichment indicator on the record the operator is about to act on. */}
+      <Row between>
+        <span className="nx-hint">Enrichment</span>
+        <EnrichmentChip status={lead.enrichmentStatus} intelligence={lead.intelligence} />
+      </Row>
+
       {lead.isDnc && (
         <Alert accent="red" role="alert">
           Do Not Contact. Suppressed on every sender identity — do not contact from another account.
@@ -1103,6 +1425,10 @@ function ActionFocus({
           Open LinkedIn profile
         </Button>
       )}
+
+      {/* The minimal-lead fallback: this lead has no profile URL yet, so the next step
+          is the deterministic search the server generated for it. */}
+      <FindLinkedInAction lead={lead} onFindLinkedIn={onFindLinkedIn} />
 
       {/* Sender identity and CRM owner are separate dimensions
           (spec `identity_model.outreach_identity.rule`), so the sender is shown

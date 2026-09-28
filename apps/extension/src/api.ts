@@ -249,16 +249,49 @@ export function search(query: string): Promise<ApiResult<{ results: readonly Sea
 
 /* ---------------------------------------------------------------- writes -- */
 
+/**
+ * Adds a lead.
+ *
+ * Two shapes, one endpoint (spec `lead_sources` / `minimalLeadInputSchema`):
+ *
+ *  * a **profile capture** — `linkedinUrl` plus whatever was copied;
+ *  * a **minimal lead** — `fullName` with an optional company, location, source, title,
+ *    headline and snippet. No URL and no pasted body are required, and nothing is
+ *    invented for a field the operator did not supply: the server records what it has
+ *    and puts the lead in `NEEDS_PROFILE`.
+ *
+ * `findLinkedInUrl` in the response is the deterministic Google search the server built
+ * from those fields, so the panel can offer "Find LinkedIn" for a lead that has no
+ * profile URL yet.
+ */
 export function addToCrm(input: {
-  readonly linkedinUrl: string;
-  readonly pastedContent: string;
   readonly businessId: string;
-  readonly icpId: string | null;
-  readonly autoMatch: boolean;
+  readonly idempotencyKey: string;
+  readonly linkedinUrl?: string;
+  readonly pastedContent?: string;
+  readonly icpId?: string | null;
+  readonly autoMatch?: boolean;
   readonly ownerUserId?: string | null;
   readonly identityId?: string | null;
-  readonly idempotencyKey: string;
-}): Promise<ApiResult<{ leadId: string; created: boolean; needsProfile: boolean }>> {
+  readonly fullName?: string;
+  readonly companyName?: string;
+  readonly location?: string;
+  readonly source?: string;
+  readonly sourceUrl?: string;
+  readonly jobTitle?: string;
+  readonly headline?: string;
+  readonly snippet?: string;
+  readonly companyDomain?: string;
+}): Promise<
+  ApiResult<{
+    leadId: string;
+    created: boolean;
+    needsProfile: boolean;
+    deduped?: boolean;
+    enrichmentStatus?: string;
+    findLinkedInUrl?: string | null;
+  }>
+> {
   return request('/companion/add', { method: 'POST', body: input });
 }
 

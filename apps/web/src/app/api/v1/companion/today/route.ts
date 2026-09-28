@@ -2,10 +2,14 @@
  * GET /api/v1/companion/today — the panel's Today queue.
  *
  * Delegates to the same `get_today_queue` projection the web My Day screen uses, so
- * the two surfaces can never disagree about what is due.
+ * the two surfaces can never disagree about what is due. Each item additionally
+ * carries the V1.2 enrichment indicator (spec §36), read from
+ * `public.lead_enrichment` rather than recomputed, so "what is due" and "how much do
+ * we know about them" come from one place each.
  */
 import { getTodayQueue, TODAY_CATEGORIES, type TodayCategory } from '@/lib/repo/today';
 import { describeDbError } from '@/lib/repo/common';
+import { companionEnrichmentFor, findLinkedInSearchUrl } from '@/lib/repo/companion';
 
 import { authorizeUser, jsonError, jsonOk } from '../../_lib/http';
 
@@ -66,5 +70,26 @@ export async function GET(request: Request): Promise<Response> {
     throw error;
   }
 
-  return jsonOk({ items });
+  // A custom task may have no lead; only the leads that appear are looked up, so the
+  // extra read is bounded by the page rather than by the queue.
+  const leadIds = items
+    .map((item) => item.leadId)
+    .filter((leadId): leadId is string => typeof leadId === 'string' && leadId.length > 0);
+  const enrichment = await companionEnrichmentFor(auth.context.actor, leadIds);
+
+  return jsonOk({
+    items: items.map((item) => {
+      const indicator = item.leadId === null ? undefined : enrichment.get(item.leadId);
+      return {
+        ...item,
+        enrichmentStatus: indicator?.status ?? 'MINIMAL',
+        intelligence: indicator?.intelligence ?? 0,
+        missingFields: indicator?.missingFields ?? [],
+        findLinkedInUrl: findLinkedInSearchUrl({
+          fullName: item.personName,
+          companyName: item.companyName,
+        }),
+      };
+    }),
+  });
 }

@@ -11,6 +11,8 @@
  */
 import 'server-only';
 
+import { ENRICHMENT_STATES, searchLinks, type EnrichmentState } from '@nexus/core';
+
 import { withActor, type Actor, type Viewer } from '../actor';
 import { withServiceRole } from '../actor';
 import type { Db, Row } from '../sql';
@@ -19,6 +21,7 @@ import {
   asIso,
   asNumber,
   asString,
+  asStringArray,
   asStringOrNull,
   describeDbError,
   read,
@@ -71,11 +74,36 @@ export interface CompanionIcpRow {
   readonly name: string;
 }
 
-/** Businesses a user can reach, intersected with an identity's access. */
-export async function companionBusinesses(actor: Actor): Promise<readonly CompanionBusinessRow[]> {
+/**
+ * Businesses a user can reach, optionally narrowed to the ones the chosen channel
+ * account may actually send from.
+ *
+ * spec `roles_and_permissions.extension_visibility_rule`: the Companion's business
+ * selector is the actor's business access INTERSECT the identity's business access —
+ * never a union. With `identityId` supplied the intersection is computed by
+ * `public.companion_visible_business_ids`, the same helper the identity payload uses,
+ * so the two selectors cannot disagree. Without it the function keeps its previous
+ * behaviour (every business the actor can reach) for callers that only need the
+ * actor's own scope.
+ */
+export async function companionBusinesses(
+  actor: Actor,
+  identityId?: string | null,
+): Promise<readonly CompanionBusinessRow[]> {
   return read(actor, async (sql) => {
+    const scoped = typeof identityId === 'string' && identityId.length > 0;
     const result = await sql.query<Row>(
-      `select id, key, name from public.businesses where deleted_at is null order by name`,
+      scoped
+        ? `select b.id, b.key, b.name
+             from public.businesses b
+            where b.deleted_at is null
+              and b.id in (select v from public.companion_visible_business_ids($1) as t(v))
+            order by b.name`
+        : `select b.id, b.key, b.name
+             from public.businesses b
+            where b.deleted_at is null
+            order by b.name`,
+      scoped ? [identityId] : [],
     );
     return result.rows.map((row: Row) => ({
       id: asString(row.id),
@@ -91,6 +119,13 @@ export async function companionBusinesses(actor: Actor): Promise<readonly Compan
  *
  * Returns each usable identity together with the businesses that survive the
  * intersection, so the panel's two selectors can never offer an impossible pair.
+ *
+ * The per-identity business list comes from `public.companion_visible_business_ids`
+ * rather than an inline join: that helper is the one place the admin case is
+ * expressed (a global administrator holds no `user_business_access` row and sees
+ * every business the account is available to), and deriving it twice is how the two
+ * answers drifted apart in production. Binding authority is *not* implied by this
+ * list — see `companionIneligibleReason`.
  */
 export async function companionIdentities(
   actor: Actor,
@@ -101,13 +136,8 @@ export async function companionIdentities(
       `select i.id, i.display_name, i.platform, i.status,
               coalesce(
                 array(
-                  select a.business_id
-                    from public.outreach_identity_business_access a
-                   where a.outreach_identity_id = i.id
-                     and exists (
-                       select 1 from public.user_business_access u
-                        where u.user_id = $1 and u.business_id = a.business_id
-                     )
+                  select v
+                    from public.companion_visible_business_ids(i.id) as t(v)
                 ),
                 array[]::uuid[]
               ) as business_ids
@@ -141,6 +171,90 @@ export async function companionIcps(actor: Actor, businessId: string): Promise<r
     );
     return result.rows.map((row: Row) => ({ id: asString(row.id), name: asString(row.name) }));
   });
+}
+
+/* --------------------------------------------------------- binding scope -- */
+
+/**
+ * Why a (channel account, business) pair is or is not bindable.
+ *
+ * Mirrors `public.companion_ineligible_reason`, which is the single source of the
+ * rule: the database decides, the panel explains. Every value is non-disclosing —
+ * an unknown business and an existing business the account cannot reach both
+ * answer `no_account_access`, so a crafted probe learns nothing about the tenant.
+ */
+export const COMPANION_SCOPE_REASONS = [
+  'no_account_access',
+  'no_user_grant',
+  'identity_not_usable',
+] as const;
+
+export type CompanionScopeReason = (typeof COMPANION_SCOPE_REASONS)[number];
+
+export interface CompanionScopeOutcome {
+  readonly ok: boolean;
+  /** `ok` when bindable, otherwise the specific refusal. */
+  readonly reason: 'ok' | CompanionScopeReason;
+  /** Operator-facing sentence, specific to the reason. */
+  readonly message: string;
+}
+
+/**
+ * Operator-facing sentence per refusal.
+ *
+ * Deliberately specific rather than one generic permission message: "you cannot do
+ * that" is unactionable, while "this account is not assigned to that business" tells
+ * the operator to assign the account, and "ask an administrator for access" tells
+ * them who can help. None of the sentences reveal whether the business exists.
+ */
+export function companionScopeMessage(reason: CompanionScopeReason): string {
+  switch (reason) {
+    case 'no_account_access':
+      return 'This channel account is not available to that business. Ask an administrator to assign the account to it.';
+    case 'no_user_grant':
+      return 'You do not have access to that business yet. Ask an administrator to grant it to you.';
+    case 'identity_not_usable':
+    default:
+      return 'This channel account cannot be used by you. Choose another account, or ask an administrator to assign it.';
+  }
+}
+
+/** Narrows an arbitrary database value onto the closed reason vocabulary. */
+function normalizeScopeReason(value: unknown): 'ok' | CompanionScopeReason {
+  if (value === 'ok') return 'ok';
+  return COMPANION_SCOPE_REASONS.find((entry) => entry === value) ?? 'identity_not_usable';
+}
+
+/** Reads the reason code for one pair through the helper, inside a transaction. */
+async function scopeReasonUsing(
+  sql: Db,
+  identityId: string,
+  businessId: string | null,
+): Promise<'ok' | CompanionScopeReason> {
+  const result = await sql.query<{ reason: unknown }>(
+    `select public.companion_ineligible_reason($1, $2) as reason`,
+    [identityId, businessId],
+  );
+  return normalizeScopeReason(result.rows[0]?.reason);
+}
+
+/**
+ * Whether this actor may bind the pair, as its own read.
+ *
+ * A `null` business is allowed: "no default business yet" is a legitimate binding
+ * state, and the identity is still validated. The authoritative check runs inside
+ * the bind transaction (see `bindBrowserSession`); this exists for callers that need
+ * to explain the refusal before offering the action.
+ */
+export async function companionBindingScope(
+  actor: Actor,
+  identityId: string,
+  businessId: string | null,
+): Promise<CompanionScopeOutcome> {
+  const reason = await read(actor, async (sql) => scopeReasonUsing(sql, identityId, businessId));
+  return reason === 'ok'
+    ? { ok: true, reason: 'ok', message: '' }
+    : { ok: false, reason, message: companionScopeMessage(reason) };
 }
 
 /* --------------------------------------------------------------- binding -- */
@@ -224,12 +338,37 @@ export interface BindInput {
 export async function bindBrowserSession(
   viewer: Viewer,
   input: BindInput,
-): Promise<{ ok: boolean; binding?: BrowserBindingRow; error?: string; revokedSessionIds?: readonly string[] }> {
+): Promise<{
+  ok: boolean;
+  binding?: BrowserBindingRow;
+  error?: string;
+  /** The specific refusal when the pair is not bindable; absent for other failures. */
+  reason?: 'ok' | CompanionScopeReason;
+  revokedSessionIds?: readonly string[];
+}> {
   if (viewer.userId === null) return { ok: false, error: 'Sign in to Nexus.' };
   const userId = viewer.userId;
 
   try {
     return await withActor(viewer.actor, async (sql) => {
+      /**
+       * The pair is validated *first*, inside the same transaction as the write.
+       *
+       * This is the authorization the panel's selector is only a view of. A crafted
+       * request therefore meets the same rule the UI does: a global administrator
+       * still needs the account to be available to the business, and a non-admin
+       * still needs an explicit grant on it. `public.companion_ineligible_reason` is
+       * the single source of the rule, and the `browser_sessions` trigger applies it
+       * to every write that names these two columns.
+       *
+       * Before the transfer below, deliberately: revoking another operator's session
+       * and then refusing the bind would leave the account released by nobody.
+       */
+      const reason = await scopeReasonUsing(sql, input.identityId, input.defaultBusinessId);
+      if (reason !== 'ok') {
+        return { ok: false, reason, error: companionScopeMessage(reason) };
+      }
+
       /**
        * When the caller has consented to a transfer, the previous holder is released in the *same*
        * transaction as the write that takes its place.
@@ -610,6 +749,108 @@ export async function companionLeadDetail(
   });
 }
 
+/* ------------------------------------------------------------ enrichment -- */
+
+/**
+ * The V1.2 enrichment indicator for one lead.
+ *
+ * spec companion §36: every Companion list shows where the lead sits in the
+ * enrichment pipeline and how complete its intelligence is. `intelligence` is
+ * `public.lead_enrichment.completeness_score` verbatim — the score is *never*
+ * derived here, because a second derivation would disagree with the pipeline that
+ * owns it and with the AI context built from it.
+ */
+export interface CompanionEnrichment {
+  readonly status: EnrichmentState;
+  /** `completeness_score`, 0–100. Never recomputed. */
+  readonly intelligence: number;
+  readonly missingFields: readonly string[];
+}
+
+/** The documented fallback: a lead with no enrichment row is MINIMAL at 0%. */
+const MINIMAL_ENRICHMENT: CompanionEnrichment = {
+  status: 'MINIMAL',
+  intelligence: 0,
+  missingFields: [],
+};
+
+function toEnrichmentState(value: unknown): EnrichmentState {
+  return ENRICHMENT_STATES.find((state) => state === value) ?? 'MINIMAL';
+}
+
+/**
+ * Enrichment rows for a batch of leads, keyed by lead id.
+ *
+ * `lead_enrichment` is left-joined by the caller's own list query in spirit, but the
+ * Companion's list queries are paged through another repository, so the rows are
+ * fetched here for exactly the ids on the page and merged. A lead with no row is
+ * reported as `MINIMAL` / 0 — never omitted, because a missing indicator reads as
+ * "nothing to do" rather than "not enriched yet".
+ */
+export async function companionEnrichmentFor(
+  actor: Actor,
+  leadIds: readonly string[],
+): Promise<ReadonlyMap<string, CompanionEnrichment>> {
+  const ids = [...new Set(leadIds.filter((id) => typeof id === 'string' && id.length > 0))];
+  if (ids.length === 0) return new Map();
+
+  return read(actor, async (sql) => {
+    const result = await sql.query<Row>(
+      `select lead_id, status, completeness_score, missing_fields
+         from public.lead_enrichment
+        where lead_id = any($1::uuid[])`,
+      [ids],
+    );
+
+    const byLead = new Map<string, CompanionEnrichment>();
+    for (const row of result.rows) {
+      byLead.set(asString(row.lead_id), {
+        status: toEnrichmentState(row.status),
+        intelligence: asNumber(row.completeness_score),
+        missingFields: asStringArray(row.missing_fields),
+      });
+    }
+    for (const id of ids) {
+      if (!byLead.has(id)) byLead.set(id, MINIMAL_ENRICHMENT);
+    }
+    return byLead;
+  });
+}
+
+/** The enrichment indicator for one lead, with the documented default. */
+export async function companionEnrichment(
+  actor: Actor,
+  leadId: string,
+): Promise<CompanionEnrichment> {
+  const map = await companionEnrichmentFor(actor, [leadId]);
+  return map.get(leadId) ?? MINIMAL_ENRICHMENT;
+}
+
+/* --------------------------------------------------------- search links -- */
+
+/**
+ * The deterministic "Find LinkedIn" Google URL for a lead.
+ *
+ * The query shapes live in `@nexus/core` (`searchLinks`), shared with the enrichment
+ * pipeline, and are *not* rebuilt here: two implementations of a search URL is how
+ * the operator ends up with a link that does not find the person the CRM is showing.
+ * Returns null when there is not enough information for a meaningful search.
+ */
+export function findLinkedInSearchUrl(input: {
+  readonly fullName: string | null;
+  readonly companyName: string | null;
+  readonly location?: string | null;
+  readonly linkedinUrl?: string | null;
+}): string | null {
+  const link = searchLinks({
+    fullName: input.fullName,
+    companyName: input.companyName,
+    location: input.location ?? null,
+    linkedinUrl: input.linkedinUrl ?? null,
+  }).find((entry) => entry.key === 'find_linkedin');
+  return link?.url ?? null;
+}
+
 /* ----------------------------------------------------------------- search -- */
 
 export interface CompanionSearchRow {
@@ -622,6 +863,10 @@ export interface CompanionSearchRow {
   readonly lastActivityAt: string | null;
   readonly nextActionAt: string | null;
   readonly nextActionType: string | null;
+  /** V1.2 enrichment indicator (spec §36). */
+  readonly enrichment: CompanionEnrichment;
+  /** Deterministic Google fallback when the lead has no profile URL yet. */
+  readonly findLinkedInUrl: string | null;
 }
 
 /**
@@ -639,11 +884,16 @@ export async function companionSearch(actor: Actor, query: string, limit = 25): 
     const result = await sql.query<Row>(
       `select l.id as lead_id, l.business_id, b.name as business_name,
               p.full_name as person_name, c.name as company_name, l.status,
-              l.last_activity_at, l.next_action_at, l.next_action_type
+              l.last_activity_at, l.next_action_at, l.next_action_type,
+              p.location as person_location, l.source_url,
+              coalesce(e.status, 'MINIMAL') as enrichment_status,
+              coalesce(e.completeness_score, 0) as completeness_score,
+              coalesce(e.missing_fields, array[]::text[]) as missing_fields
          from public.leads l
          join public.people p on p.id = l.person_id
          join public.businesses b on b.id = l.business_id
          left join public.companies c on c.id = l.company_id
+         left join public.lead_enrichment e on e.lead_id = l.id
         where l.deleted_at is null
           and (
             p.full_name ilike $1
@@ -656,17 +906,33 @@ export async function companionSearch(actor: Actor, query: string, limit = 25): 
       [`%${trimmed}%`, limit],
     );
 
-    return result.rows.map((row: Row) => ({
-      leadId: asString(row.lead_id),
-      businessId: asString(row.business_id),
-      businessName: asString(row.business_name),
-      personName: asString(row.person_name),
-      companyName: asStringOrNull(row.company_name),
-      status: asString(row.status, 'new'),
-      lastActivityAt: asIso(row.last_activity_at),
-      nextActionAt: asIso(row.next_action_at),
-      nextActionType: asStringOrNull(row.next_action_type),
-    }));
+    return result.rows.map((row: Row) => {
+      const personName = asString(row.person_name);
+      const companyName = asStringOrNull(row.company_name);
+      const linkedinUrl = asStringOrNull(row.source_url);
+      return {
+        leadId: asString(row.lead_id),
+        businessId: asString(row.business_id),
+        businessName: asString(row.business_name),
+        personName,
+        companyName,
+        status: asString(row.status, 'new'),
+        lastActivityAt: asIso(row.last_activity_at),
+        nextActionAt: asIso(row.next_action_at),
+        nextActionType: asStringOrNull(row.next_action_type),
+        enrichment: {
+          status: toEnrichmentState(row.enrichment_status),
+          intelligence: asNumber(row.completeness_score),
+          missingFields: asStringArray(row.missing_fields),
+        },
+        findLinkedInUrl: findLinkedInSearchUrl({
+          fullName: personName,
+          companyName,
+          location: asStringOrNull(row.person_location),
+          linkedinUrl,
+        }),
+      };
+    });
   });
 }
 

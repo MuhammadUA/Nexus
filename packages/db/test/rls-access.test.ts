@@ -20,6 +20,7 @@ import {
   rejected,
   type Harness,
 } from './harness';
+import type { Db } from '../src/client';
 
 let h: Harness;
 
@@ -524,6 +525,183 @@ describe('rls: api client boundary and auditing', () => {
           ),
         '42501',
       );
+    });
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * 0035 — Companion binding scope.
+ *
+ * The Companion's business selector and the bind write must agree about which
+ * (account, business) pairs are possible. `companion_visible_business_ids` answers the
+ * first question and `companion_ineligible_reason` the second; the trigger applies the
+ * second to every signed-in write. These cases pin the branches that the previous
+ * intersection could not express, above all the global administrator who holds no
+ * `user_business_access` row.
+ * ------------------------------------------------------------------------- */
+
+/** The reason code for one pair, evaluated as `userId`. */
+async function scopeReason(
+  sql: Db,
+  userId: string,
+  identityId: string,
+  businessId: string | null,
+): Promise<string> {
+  await actAs(sql, userId);
+  const result = await sql.query<{ reason: string }>(
+    'select public.companion_ineligible_reason($1, $2) as reason',
+    [identityId, businessId],
+  );
+  return result.rows[0]?.reason ?? '';
+}
+
+/** The businesses the visibility helper offers for one account, as `userId`. */
+async function visibleFor(
+  sql: Db,
+  userId: string,
+  identityId: string,
+): Promise<readonly string[]> {
+  await actAs(sql, userId);
+  const result = await sql.query<{ ids: string[] }>(
+    'select coalesce(array_agg(v order by v), array[]::uuid[]) as ids from public.companion_visible_business_ids($1) as t(v)',
+    [identityId],
+  );
+  return result.rows[0]?.ids ?? [];
+}
+
+describe('rls: companion binding scope (0035)', () => {
+  it('a global admin sees the account businesses without a user grant; a user needs one', async () => {
+    await h.asAdmin(async (sql) => {
+      // A business no user holds a grant on. The admin holds none either — which is the
+      // point: `user_business_access` is empty for it.
+      const business = await sql.query<{ id: string }>(
+        `insert into public.businesses (key, name, status, created_by)
+         values ('scope-no-grant', 'Scope No Grant Co', 'active', $1)
+         returning id`,
+        [FIXTURE_IDS.admin],
+      );
+      const businessId = business.rows[0]?.id ?? '';
+      expect(businessId).not.toBe('');
+
+      await sql.query(
+        `insert into public.outreach_identity_business_access (outreach_identity_id, business_id)
+         values ($1, $2)`,
+        [FIXTURE_IDS.identityUnassigned, businessId],
+      );
+
+      // The regression: the intersection alone returned nothing for an administrator.
+      expect(await visibleFor(sql, FIXTURE_IDS.admin, FIXTURE_IDS.identityUnassigned)).toContain(
+        businessId,
+      );
+      // And a user with no grant on it still sees nothing — visibility is not widened.
+      expect(await visibleFor(sql, FIXTURE_IDS.userNoData, FIXTURE_IDS.identityUnassigned)).toEqual(
+        [],
+      );
+    });
+  });
+
+  it('answers bindable, no_account_access, no_user_grant and identity_not_usable', async () => {
+    await h.asAdmin(async (sql) => {
+      // `identityA1` belongs to businessA. Give it businessC, which no user has a grant
+      // on, so "no account access" and "no user grant" are two different answers.
+      await sql.query(
+        `insert into public.outreach_identity_business_access (outreach_identity_id, business_id)
+         values ($1, $2) on conflict do nothing`,
+        [FIXTURE_IDS.identityA1, FIXTURE_IDS.businessC],
+      );
+
+      // 1. global admin + account access
+      expect(await scopeReason(sql, FIXTURE_IDS.admin, FIXTURE_IDS.identityA1, FIXTURE_IDS.businessA)).toBe('ok');
+      // 2. global admin + no account access (identityA1 is not available to businessB)
+      expect(await scopeReason(sql, FIXTURE_IDS.admin, FIXTURE_IDS.identityA1, FIXTURE_IDS.businessB)).toBe(
+        'no_account_access',
+      );
+      // 3. user grant + account access
+      expect(await scopeReason(sql, FIXTURE_IDS.user1, FIXTURE_IDS.identityA1, FIXTURE_IDS.businessA)).toBe('ok');
+      // 4. user grant + no account access
+      expect(await scopeReason(sql, FIXTURE_IDS.user1, FIXTURE_IDS.identityA1, FIXTURE_IDS.businessB)).toBe(
+        'no_account_access',
+      );
+      // 5. account access without a user grant
+      expect(await scopeReason(sql, FIXTURE_IDS.user1, FIXTURE_IDS.identityA1, FIXTURE_IDS.businessC)).toBe(
+        'no_user_grant',
+      );
+      // 6. an identity the actor may not use at all
+      expect(await scopeReason(sql, FIXTURE_IDS.user1, FIXTURE_IDS.identityB1, FIXTURE_IDS.businessB)).toBe(
+        'identity_not_usable',
+      );
+      // 7. an unknown business answers exactly like an unreachable one, and a NULL
+      //    business is bindable because there is no business scope to judge.
+      expect(
+        await scopeReason(sql, FIXTURE_IDS.user1, FIXTURE_IDS.identityA1, '99999999-0000-4000-8000-0000000000ff'),
+      ).toBe('no_account_access');
+      expect(await scopeReason(sql, FIXTURE_IDS.user1, FIXTURE_IDS.identityA1, null)).toBe('ok');
+    });
+  });
+
+  it('refuses a user-written session for a pair that is not bindable', async () => {
+    await h.asAdmin(async (sql) => {
+      await sql.query(
+        `insert into public.outreach_identity_business_access (outreach_identity_id, business_id)
+         values ($1, $2) on conflict do nothing`,
+        [FIXTURE_IDS.identityA1, FIXTURE_IDS.businessC],
+      );
+
+      // user1 manages identityA1 and the identity is available to businessC, but user1
+      // holds no grant on it: the 0017 policy and trigger would both allow this write.
+      const refusal = await rejected(
+        sql,
+        () =>
+          actAs(sql, FIXTURE_IDS.user1).then(() =>
+            sql.query(
+              `insert into public.browser_sessions
+                 (user_id, browser_fingerprint_or_install_id, outreach_identity_id, default_business_id, status)
+               values ($1, 'scope-refused-install', $2, $3, 'active')`,
+              [FIXTURE_IDS.user1, FIXTURE_IDS.identityA1, FIXTURE_IDS.businessC],
+            ),
+          ),
+        '42501',
+      );
+      expect(refusal.message).toContain('no_user_grant');
+
+      // The pair the same user is granted still binds, so the guard is not simply denying.
+      await actAs(sql, FIXTURE_IDS.user1);
+      const acceptedRow = await accepted(sql, () =>
+        sql.query<{ id: string }>(
+          `insert into public.browser_sessions
+             (user_id, browser_fingerprint_or_install_id, outreach_identity_id, default_business_id, status)
+           values ($1, 'scope-accepted-install', $2, $3, 'active')
+           returning id`,
+          [FIXTURE_IDS.user1, FIXTURE_IDS.identityA1, FIXTURE_IDS.businessA],
+        ),
+      );
+      expect(acceptedRow.rows[0]?.id).toBeDefined();
+    });
+  });
+
+  it('does not apply the user-grant rule to a service-role writer', async () => {
+    // The trusted-writer path the application actually uses: the owner connection with
+    // row security off and the `service_role` claim, which is how bootstrap and the demo
+    // seed write. `current_user_id()` is NULL there, and the guard deliberately exempts it
+    // rather than trying to judge a grant for a writer that has no user identity.
+    await h.asSuperuser(async (sql) => {
+      await sql.query(
+        `insert into public.outreach_identity_business_access (outreach_identity_id, business_id)
+         values ($1, $2) on conflict do nothing`,
+        [FIXTURE_IDS.identityA1, FIXTURE_IDS.businessC],
+      );
+      await sql.exec(`select set_config('request.jwt.claims', '{"role":"service_role"}', true)`);
+
+      const inserted = await accepted(sql, () =>
+        sql.query<{ id: string }>(
+          `insert into public.browser_sessions
+             (user_id, browser_fingerprint_or_install_id, outreach_identity_id, default_business_id, status)
+           values ($1, 'scope-service-install', $2, $3, 'active')
+           returning id`,
+          [FIXTURE_IDS.user1, FIXTURE_IDS.identityA1, FIXTURE_IDS.businessC],
+        ),
+      );
+      expect(inserted.rows[0]?.id).toBeDefined();
     });
   });
 });

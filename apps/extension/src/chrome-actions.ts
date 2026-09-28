@@ -43,6 +43,47 @@ export function isExtensionPage(url: string | undefined): boolean {
 }
 
 /**
+ * Opens a generated search in a **new** tab.
+ *
+ * The "Find LinkedIn" fallback for a lead with no profile URL yet. A new tab rather
+ * than the active one, deliberately: the search is a detour, and the LinkedIn tab the
+ * operator is working in must stay where it is so the found profile can be captured
+ * into this same panel.
+ *
+ * The URL reaches the panel from the API, which is input like any other, so it is
+ * re-validated against a strict allow-list before anything is navigated. `searchLinks`
+ * in `@nexus/core` only ever produces `https://www.google.com/search?q=…`; anything
+ * else is refused rather than opened.
+ */
+export async function openSearchInNewTab(url: string): Promise<'created' | 'invalid'> {
+  const target = normaliseSearchUrl(url);
+  if (target === null) return 'invalid';
+  await chrome.tabs.create({ url: target });
+  return 'created';
+}
+
+/** Validates a generated search URL: HTTPS, Google, and a non-empty query. */
+export function normaliseSearchUrl(url: string): string | null {
+  if (typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (trimmed.length === 0 || trimmed.length > 2_048) return null;
+
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+
+  if (parsed.protocol !== 'https:') return null;
+  if (parsed.hostname !== 'google.com' && !parsed.hostname.endsWith('.google.com')) return null;
+  if (parsed.pathname !== '/search') return null;
+  if ((parsed.searchParams.get('q') ?? '').trim().length === 0) return null;
+
+  return parsed.toString();
+}
+
+/**
  * Validates the URL the panel is about to open.
  *
  * A profile URL reaches the panel from a content script (untrusted page context), from a paste,

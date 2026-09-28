@@ -1,4 +1,4 @@
-﻿/**
+/**
  * POST /api/v1/companion/bind — bind this browser profile to a sender identity.
  *
  * An identity can only be held by one active browser session, so binding one that another profile
@@ -11,7 +11,16 @@
  *      revoked, the new binding is created, and an audit entry records who asked and what was
  *      revoked.
  *
- * Revoking happens only on step 2. It is never a side effect of an ordinary bind.
+ * Before either is acted on, the (channel account, business) pair must be bindable: the account has
+ * to be available to the business, and a non-admin caller needs an explicit grant on it. That
+ * refusal carries its own reason code so the panel can explain the specific obstacle. It is
+ * answered *after* the two concurrency branches, on purpose: for a caller who also holds no claim
+ * on the identity, "this identity is held by another operator and you may not release it" is the
+ * verdict that matches what the operator asked for, and `transfer_not_permitted` must keep that
+ * meaning.
+ *
+ * Revoking happens only on step 2. It is never a side effect of an ordinary bind, and never a side
+ * effect of a refused pair.
  */
 import { z } from 'zod';
 
@@ -19,6 +28,7 @@ import { loadViewer } from '@/lib/actor';
 import { concurrencyPayload, identityConcurrencyFor } from '@/lib/companion-concurrency';
 import {
   bindBrowserSession,
+  companionBindingScope,
   recordIdentityTransfer,
 } from '@/lib/repo/companion';
 
@@ -47,6 +57,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsed.ok) return parsed.response;
 
   const viewer = await loadViewer(auth.context.actor);
+
   const answer = await identityConcurrencyFor({
     actor: auth.context.actor,
     viewer,
@@ -82,6 +93,34 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  /**
+   * The (account, business) pair, refused with its own specific reason.
+   *
+   * spec §36 / §61: the business selector offers only businesses the chosen channel
+   * account may send from, and the server must refuse the pair even when the panel is
+   * bypassed. A crafted request therefore answers `no_account_access`, `no_user_grant`
+   * or `identity_not_usable` — the specific obstacle, not a generic permission
+   * sentence.
+   *
+   * Deliberately **after** the two concurrency branches: when an identity is held by
+   * another operator, "this actor may not release it" (`transfer_not_permitted`) is the
+   * decision the operator acted on, and answering "this account cannot be used" would
+   * replace a precise refusal with a looser one. The pair condition and the transfer
+   * condition genuinely overlap for a caller who holds no management claim on the
+   * identity, and in that overlap the transfer verdict wins.
+   *
+   * `bindBrowserSession` re-checks the same helper inside the write transaction, so this
+   * answer is an explanation rather than the authorization.
+   */
+  const scope = await companionBindingScope(
+    auth.context.actor,
+    parsed.data.identityId,
+    parsed.data.defaultBusinessId,
+  );
+  if (!scope.ok) {
+    return jsonError(scope.message, 403, { reason: scope.reason });
+  }
+
   // The transfer and the bind happen in one transaction inside the repository, so there is no
   // window in which the identity is released but not yet taken. `transfer: true` is the consent.
   const result = await bindBrowserSession(viewer, {
@@ -89,6 +128,12 @@ export async function POST(request: Request): Promise<Response> {
     transfer: answer.decision.action !== 'allow' && wantsTransfer,
   });
   if (!result.ok || result.binding === undefined) {
+    // A refusal that carries a scope reason is a decision about this pair, not a
+    // failure: it keeps its own status and machine-readable reason so the panel can
+    // explain it (and offer nothing else) instead of reporting a generic save failure.
+    if (result.reason !== undefined && result.reason !== 'ok') {
+      return jsonError(result.error ?? 'That binding is not allowed.', 403, { reason: result.reason });
+    }
     return jsonError(result.error ?? 'The browser binding was not saved.', 400, { reason: 'bind_failed' });
   }
 

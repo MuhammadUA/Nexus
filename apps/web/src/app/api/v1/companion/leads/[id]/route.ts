@@ -1,13 +1,19 @@
-﻿/**
+/**
  * GET /api/v1/companion/leads/:id — the one canonical lead context.
  *
  * spec `companion_extension.shared_lead_detail`: "Leads/Today/Search all open the
  * same canonical lead context; no three independent detail implementations." This
  * endpoint is that context, and the panel's Leads, Today, Search, Connection Focus,
  * Follow-up Focus and Reply screens all render from it.
+ *
+ * It carries the V1.2 enrichment indicator as well (spec §36), read from
+ * `public.lead_enrichment` rather than recomputed, plus the deterministic
+ * "Find LinkedIn" URL for a lead that has no profile yet. That matters most here: after
+ * a minimal capture the panel lands on this screen, and the operator's next step is
+ * exactly that search.
  */
 import { getLead, getLeadTimeline } from '@/lib/repo/leads';
-import { companionLeadDetail } from '@/lib/repo/companion';
+import { companionEnrichment, companionLeadDetail, findLinkedInSearchUrl } from '@/lib/repo/companion';
 
 import { authorizeUser, jsonError, jsonOk } from '../../../_lib/http';
 
@@ -26,15 +32,18 @@ export async function GET(
   if (!UUID.test(id)) return jsonError('That lead could not be found.', 404);
 
   const actor = auth.context.actor;
-  const [lead, detail, timeline] = await Promise.all([
+  const [lead, detail, timeline, enrichment] = await Promise.all([
     getLead(actor, id),
     companionLeadDetail(actor, id),
     getLeadTimeline(actor, id, 12),
+    companionEnrichment(actor, id),
   ]);
 
   // RLS makes an inaccessible lead indistinguishable from a missing one, which is
   // the intended behaviour: confirming existence would itself be a disclosure.
   if (lead === null || detail === null) return jsonError('That lead could not be found.', 404);
+
+  const linkedinUrl = lead.linkedinUrl ?? lead.sourceUrl;
 
   return jsonOk({
     detail: {
@@ -46,10 +55,19 @@ export async function GET(
         status: lead.status,
         isDnc: lead.isDnc,
         needsProfile: lead.needsProfile,
-        linkedinUrl: lead.linkedinUrl ?? lead.sourceUrl,
+        linkedinUrl,
         identityName: lead.identityName,
         nextActionType: lead.nextActionType,
         nextActionAt: lead.nextActionAt,
+        enrichmentStatus: enrichment.status,
+        intelligence: enrichment.intelligence,
+        missingFields: enrichment.missingFields,
+        findLinkedInUrl: findLinkedInSearchUrl({
+          fullName: lead.personName,
+          companyName: lead.companyName,
+          location: lead.location ?? null,
+          linkedinUrl,
+        }),
       },
       currentMessage: detail.currentMessage,
       // Compact history only — spec `followup_focus`: "Do not show every message

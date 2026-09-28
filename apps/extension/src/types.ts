@@ -29,6 +29,14 @@ export interface CompanionIdentity {
   readonly displayName: string;
   readonly platform: string;
   readonly status: string;
+  /**
+   * The businesses this channel account may be bound to for the signed-in actor,
+   * computed by the server (`public.companion_visible_business_ids`).
+   *
+   * The panel never derives this itself: it is the same set the server validates a
+   * bind against, so the selector and the refusal can never disagree.
+   */
+  readonly businessIds: readonly string[];
 }
 
 /** The binding this browser profile has been assigned (spec U22). */
@@ -39,7 +47,21 @@ export interface BrowserBinding {
   readonly boundAt: string;
 }
 
-export interface CompanionLead {
+/**
+ * The V1.2 enrichment indicator (spec §36).
+ *
+ * `enrichmentStatus` and `intelligence` are read from `public.lead_enrichment`; the
+ * percentage is never recomputed in the panel, because a second derivation would
+ * disagree with the pipeline that owns the number. A lead with no enrichment row
+ * arrives as `MINIMAL` with 0.
+ */
+export interface CompanionEnrichment {
+  readonly enrichmentStatus: string;
+  readonly intelligence: number;
+  readonly missingFields: readonly string[];
+}
+
+export interface CompanionLead extends CompanionEnrichment {
   readonly id: string;
   readonly personName: string;
   readonly companyName: string | null;
@@ -51,9 +73,11 @@ export interface CompanionLead {
   readonly identityName: string | null;
   readonly nextActionType: string | null;
   readonly nextActionAt: string | null;
+  /** Deterministic Google fallback when the lead has no profile URL yet. */
+  readonly findLinkedInUrl: string | null;
 }
 
-export interface CompanionTodayItem {
+export interface CompanionTodayItem extends CompanionEnrichment {
   readonly leadId: string;
   readonly personName: string;
   readonly companyName: string | null;
@@ -64,6 +88,7 @@ export interface CompanionTodayItem {
   readonly messageInstanceId: string | null;
   readonly taskId: string | null;
   readonly leadState: string | null;
+  readonly findLinkedInUrl: string | null;
 }
 
 export interface CompanionLeadDetail {
@@ -92,7 +117,7 @@ export interface CompanionLeadDetail {
   };
 }
 
-export interface SearchResult {
+export interface SearchResult extends CompanionEnrichment {
   /** A Person may be a Lead in several businesses; each is a separate choice. */
   readonly leadId: string;
   readonly businessId: string;
@@ -103,6 +128,7 @@ export interface SearchResult {
   readonly lastActivityAt: string | null;
   readonly nextActionAt: string | null;
   readonly nextActionType: string | null;
+  readonly findLinkedInUrl: string | null;
 }
 
 export interface ApiFailure {
