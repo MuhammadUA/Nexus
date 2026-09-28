@@ -57,6 +57,13 @@ export const API_SCOPES = [
   'research:submit',
   'message:draft',
   'agent_run:finish',
+  // V1.2 agent jobs. `jobs:read` is a read scope; the other three mutate state and
+  // are listed in WRITE_SCOPES below. Without these entries the token-scope picker
+  // filters them out, so the V1.2 MCP tools would be unassignable to any client.
+  'jobs:read',
+  'jobs:create',
+  'jobs:claim',
+  'jobs:submit',
 ] as const;
 export type ApiScope = (typeof API_SCOPES)[number];
 
@@ -75,6 +82,9 @@ export const WRITE_SCOPES: readonly ApiScope[] = [
   'research:submit',
   'message:draft',
   'agent_run:finish',
+  'jobs:create',
+  'jobs:claim',
+  'jobs:submit',
 ];
 
 /* ------------------------------------------------------ permission keys - */

@@ -262,6 +262,38 @@ export const leadCreateSchema = z
   });
 export type LeadCreate = z.infer<typeof leadCreateSchema>;
 
+/* -------------------------------------------------------- minimal lead -- */
+
+/**
+ * The V1.2 minimal-lead payload: everything optional except what is needed to
+ * make a lead.
+ *
+ * Why a second lead shape at all: the AI-first redesign accepts a lead the moment
+ * *anything* is known about it — a name from a Reddit thread, a profile the
+ * Companion extension is already looking at, an agent's first observation — and
+ * lets the enrichment pipeline fill the rest afterwards. `leadCreateSchema`
+ * requires a business, an ICP and a source type; demanding those from an agent in
+ * the middle of a browsing session is what made leads get lost. Here only
+ * `full_name` is required, and the server derives source, ICP matching and
+ * enrichment state.
+ *
+ * Every field is bounded for the same reason the rest of this file is: the
+ * payload crosses the trust boundary from an agent or an extension page.
+ */
+export const minimalLeadInputSchema = z.object({
+  full_name: nonEmpty.max(200),
+  company_name: nonEmpty.max(300).optional(),
+  location: nonEmpty.max(200).optional(),
+  source: nonEmpty.max(120).optional(),
+  source_url: z.string().trim().max(2048).optional(),
+  job_title: nonEmpty.max(300).optional(),
+  headline: nonEmpty.max(1000).optional(),
+  snippet: z.string().trim().max(4000).optional(),
+  company_domain: z.string().trim().max(300).optional(),
+  linkedin_url: z.string().trim().max(2048).optional(),
+});
+export type MinimalLeadInput = z.infer<typeof minimalLeadInputSchema>;
+
 /* ------------------------------------------------- business context read */
 
 export const businessKeyOrId = z.union([uuid, z.string().trim().min(1).max(60)]);
@@ -520,6 +552,25 @@ export const MCP_TOOLS = [
   'nexus.submit_research',
   'nexus.submit_message_draft',
   'nexus.finish_agent_run',
+  /*
+   * V1.2 additions, appended after the spec's original list so every existing
+   * tool keeps its index. These cover the agent job queue (`jobs:*`), reading a
+   * lead's enrichment context before acting on it, and the AI-first ingestion
+   * writes that create or extend a lead incrementally instead of in one call.
+   */
+  'nexus.create_agent_job',
+  'nexus.list_agent_jobs',
+  'nexus.get_agent_job',
+  'nexus.claim_agent_job',
+  'nexus.heartbeat_agent_job',
+  'nexus.release_agent_job',
+  'nexus.submit_agent_job_result',
+  'nexus.fail_agent_job',
+  'nexus.get_lead_enrichment_context',
+  'nexus.submit_minimal_lead',
+  'nexus.submit_profile_data',
+  'nexus.submit_company_research',
+  'nexus.submit_source_metadata',
 ] as const;
 export type McpToolName = (typeof MCP_TOOLS)[number];
 
@@ -551,6 +602,19 @@ export const MCP_TOOL_SCOPES: Readonly<Record<McpToolName, string>> = {
   'nexus.submit_research': 'research:submit',
   'nexus.submit_message_draft': 'message:draft',
   'nexus.finish_agent_run': 'agent_run:finish',
+  'nexus.create_agent_job': 'jobs:create',
+  'nexus.list_agent_jobs': 'jobs:read',
+  'nexus.get_agent_job': 'jobs:read',
+  'nexus.claim_agent_job': 'jobs:claim',
+  'nexus.heartbeat_agent_job': 'jobs:claim',
+  'nexus.release_agent_job': 'jobs:claim',
+  'nexus.submit_agent_job_result': 'jobs:submit',
+  'nexus.fail_agent_job': 'jobs:submit',
+  'nexus.get_lead_enrichment_context': 'lead:read',
+  'nexus.submit_minimal_lead': 'lead:create',
+  'nexus.submit_profile_data': 'profile:capture',
+  'nexus.submit_company_research': 'jobs:submit',
+  'nexus.submit_source_metadata': 'evidence:add',
 };
 
 export type { LeadSourceType, ReplyOutcome, SignalKind, SignalPolarity };

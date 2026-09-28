@@ -371,3 +371,308 @@ export type OpportunityStage = (typeof OPPORTUNITY_STAGES)[number];
 
 export const RFP_STATES = ['discovered', 'reviewing', 'bidding', 'submitted', 'won', 'lost', 'ignored'] as const;
 export type RfpState = (typeof RFP_STATES)[number];
+
+/* ============================================= V1.2 (AI-first) vocabulary -- */
+
+/**
+ * The V1.2 AI-first redesign replaced the single "lead state" story with an
+ * explicit enrichment pipeline, an agent work queue and a fixed outreach channel
+ * set. Every one of those lists lives here, beside the V1.1 enums, so database
+ * CHECK constraints, Zod schemas, the MCP tool registry and UI labels all read
+ * the same source of truth and cannot drift apart.
+ *
+ * The V1.1 enums above are deliberately untouched. `LEAD_SOURCE_TYPES` still
+ * describes how a row was historically ingested; `LEGACY_SOURCE_TO_DISCOVERY`
+ * and `discoverySourceFromLegacy` below are the one-way bridge onto the V1.2
+ * `DISCOVERY_SOURCES` vocabulary.
+ */
+
+/* --------------------------------------------------- enrichment states --- */
+
+/** Where a lead sits in profile -> company research -> signals -> AI context. */
+export const ENRICHMENT_STATES = [
+  'MINIMAL',
+  'NEEDS_PROFILE',
+  'PROFILE_READY',
+  'COMPANY_RESEARCH_PENDING',
+  'AGENT_RESEARCH_PENDING',
+  'AI_PROCESSING',
+  'READY',
+  'NEEDS_REVIEW',
+  'FAILED',
+] as const;
+export type EnrichmentState = (typeof ENRICHMENT_STATES)[number];
+
+/* ---------------------------------------------------- discovery source --- */
+
+/**
+ * How a lead entered the CRM.
+ *
+ * Free-text sources (an import column, an MCP caller's `source`, a manual note)
+ * are normalised onto this list by `normalizeDiscoverySource`, so the column
+ * never accumulates a long tail of spellings.
+ */
+export const DISCOVERY_SOURCES = [
+  'linkedin',
+  'upwork',
+  'reddit',
+  'job_board',
+  'youtube',
+  'instagram',
+  'company_website',
+  'google',
+  'web',
+  'apollo',
+  'csv',
+  'paste',
+  'mcp',
+  'companion',
+  'manual',
+  'other',
+] as const;
+export type DiscoverySource = (typeof DISCOVERY_SOURCES)[number];
+
+/* -------------------------------------------------- outreach channels --- */
+
+/** The channels V1.2 can actually send through. */
+export const OUTREACH_CHANNELS = ['linkedin', 'email', 'instagram', 'upwork'] as const;
+export type OutreachChannel = (typeof OUTREACH_CHANNELS)[number];
+
+/* -------------------------------------------------------- agent jobs ---- */
+
+export const AGENT_JOB_TYPES = [
+  'RESEARCH_COMPANY',
+  'RESEARCH_PERSON',
+  'RESEARCH_SIGNALS',
+  'CAPTURE_PROFILE',
+  'ENRICH_PROFILE',
+  'QUALIFY_LEAD',
+  'BUILD_CONTEXT',
+  'DRAFT_OUTREACH',
+  'OTHER',
+] as const;
+export type AgentJobType = (typeof AGENT_JOB_TYPES)[number];
+
+export const AGENT_JOB_STATUSES = [
+  'OPEN',
+  'RUNNING',
+  'WAITING_AI',
+  'COMPLETE',
+  'FAILED',
+  'CANCELLED',
+] as const;
+export type AgentJobStatus = (typeof AGENT_JOB_STATUSES)[number];
+
+/** The same four-step scale as `TASK_PRIORITIES`, kept separate so the two can move apart. */
+export const AGENT_JOB_PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const;
+export type AgentJobPriority = (typeof AGENT_JOB_PRIORITIES)[number];
+
+/* ---------------------------------------------------------- AI tasks ---- */
+
+export const AI_TASK_TYPES = [
+  'PROFILE_EXTRACTION',
+  'COMPANY_EXTRACTION',
+  'SIGNAL_EXTRACTION',
+  'ICP_QUALIFICATION',
+  'CONTEXT_BUILD',
+  'MESSAGE_DRAFT',
+  'REPLY_CLASSIFICATION',
+] as const;
+export type AiTaskType = (typeof AI_TASK_TYPES)[number];
+
+/** Keys into the prompt library; one row per key, versioned in the database. */
+export const PROMPT_KEYS = [
+  'profile_extract',
+  'company_extract',
+  'signal_extract',
+  'icp_qualify',
+  'context_build',
+  'linkedin_initial',
+  'linkedin_followup',
+  'email_initial',
+  'email_followup',
+  'instagram_dm',
+  'upwork_proposal',
+  'reply_classify',
+] as const;
+export type PromptKey = (typeof PROMPT_KEYS)[number];
+
+/* ----------------------------------------------------- contact points --- */
+
+export const CONTACT_POINT_KINDS = [
+  'email',
+  'linkedin',
+  'instagram',
+  'upwork',
+  'phone',
+  'website',
+  'other',
+] as const;
+export type ContactPointKind = (typeof CONTACT_POINT_KINDS)[number];
+
+/* ---------------------------------------------------------- AI runs ----- */
+
+export const AI_RUN_STATUSES = ['PENDING', 'SUCCEEDED', 'FAILED', 'CACHED', 'SKIPPED'] as const;
+export type AiRunStatus = (typeof AI_RUN_STATUSES)[number];
+
+/* -------------------------------------------------- source <-> channel --- */
+
+/**
+ * Which outreach channels each discovery source is typically paired with — used
+ * for UI copy only, never to restrict.
+ *
+ * Every source maps to *all four* channels, and that is the truthful answer, not
+ * a shortcut: how a lead was discovered says nothing about how it may be
+ * contacted. A Reddit-sourced lead with a LinkedIn URL is a LinkedIn lead. The
+ * table exists so a screen can render channel chips without special-casing an
+ * empty value; outreach eligibility is decided by contact points, the lead's
+ * state and `outreachEligibility` in `permissions.ts`.
+ */
+export const CHANNELS_FOR_SOURCE: Readonly<Record<DiscoverySource, readonly OutreachChannel[]>> = {
+  linkedin: OUTREACH_CHANNELS,
+  upwork: OUTREACH_CHANNELS,
+  reddit: OUTREACH_CHANNELS,
+  job_board: OUTREACH_CHANNELS,
+  youtube: OUTREACH_CHANNELS,
+  instagram: OUTREACH_CHANNELS,
+  company_website: OUTREACH_CHANNELS,
+  google: OUTREACH_CHANNELS,
+  web: OUTREACH_CHANNELS,
+  apollo: OUTREACH_CHANNELS,
+  csv: OUTREACH_CHANNELS,
+  paste: OUTREACH_CHANNELS,
+  mcp: OUTREACH_CHANNELS,
+  companion: OUTREACH_CHANNELS,
+  manual: OUTREACH_CHANNELS,
+  other: OUTREACH_CHANNELS,
+};
+
+/* --------------------------------------------------- legacy source map --- */
+
+/**
+ * The V1.1 `LEAD_SOURCE_TYPES` values projected onto V1.2 `DISCOVERY_SOURCES`.
+ *
+ * `file_xlsx` collapses onto `csv` because V1.2 stores the artefact kind only in
+ * the evidence row; `external_ingest` is a transport, not a discovery surface,
+ * so it lands on `other`; `research_agent` work is public-web research.
+ */
+export const LEGACY_SOURCE_TO_DISCOVERY: Readonly<Record<LeadSourceType, DiscoverySource>> = {
+  manual_add: 'manual',
+  manual_companion: 'companion',
+  file_csv: 'csv',
+  file_xlsx: 'csv',
+  paste_list: 'paste',
+  google_search: 'google',
+  apollo_basic: 'apollo',
+  external_ingest: 'other',
+  mcp_agent: 'mcp',
+  research_agent: 'web',
+};
+
+const DISCOVERY_SOURCE_SET: ReadonlySet<string> = new Set<string>(DISCOVERY_SOURCES);
+const LEAD_SOURCE_TYPE_SET: ReadonlySet<string> = new Set<string>(LEAD_SOURCE_TYPES);
+const OUTREACH_CHANNEL_SET: ReadonlySet<string> = new Set<string>(OUTREACH_CHANNELS);
+
+/** Lower-cases and drops every non-alphanumeric run, so 'job_board' == 'Job Board' == 'jobboard'. */
+function squashSourceValue(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+/**
+ * Projects a V1.1 `LeadSourceType` value onto a V1.2 `DiscoverySource`.
+ *
+ * A value that is already a discovery source is returned unchanged, so this can
+ * be applied to a column that may hold either vocabulary during the migration.
+ * Anything unrecognised becomes `other` rather than throwing: an unknown source
+ * must never block a lead from being created.
+ */
+export function discoverySourceFromLegacy(value: string | null | undefined): DiscoverySource {
+  if (value === null || value === undefined) return 'other';
+  const raw = value.trim().toLowerCase();
+  if (raw.length === 0) return 'other';
+  if (DISCOVERY_SOURCE_SET.has(raw)) return raw as DiscoverySource;
+  if (LEAD_SOURCE_TYPE_SET.has(raw)) return LEGACY_SOURCE_TO_DISCOVERY[raw as LeadSourceType];
+  return 'other';
+}
+
+/**
+ * Normalises a free-text source (e.g. 'LinkedIn manual import', 'reddit') to a
+ * `DISCOVERY_SOURCE`, defaulting to 'other'. Case-insensitive; handles the
+ * legacy enum values too.
+ *
+ * Source never dictates channel: the result is used for reporting, filtering and
+ * UI copy, and must not be used to restrict which outreach channels a lead may
+ * be contacted on — see `CHANNELS_FOR_SOURCE`.
+ */
+export function normalizeDiscoverySource(value: string | null | undefined): DiscoverySource {
+  if (value === null || value === undefined) return 'other';
+  const raw = value.trim().toLowerCase();
+  if (raw.length === 0) return 'other';
+  if (DISCOVERY_SOURCE_SET.has(raw)) return raw as DiscoverySource;
+  if (LEAD_SOURCE_TYPE_SET.has(raw)) return LEGACY_SOURCE_TO_DISCOVERY[raw as LeadSourceType];
+
+  const squashed = squashSourceValue(raw);
+  if (squashed.length === 0) return 'other';
+  // Order matters: the more specific phrase wins, so 'manual companion' is a
+  // companion import and 'LinkedIn manual import' is a LinkedIn find.
+  if (squashed.includes('linkedin')) return 'linkedin';
+  if (squashed.includes('upwork')) return 'upwork';
+  if (squashed.includes('reddit')) return 'reddit';
+  if (squashed.includes('youtube')) return 'youtube';
+  if (squashed.includes('instagram')) return 'instagram';
+  if (
+    squashed.includes('jobboard') ||
+    squashed.includes('indeed') ||
+    squashed.includes('greenhouse') ||
+    squashed.includes('lever') ||
+    squashed.includes('workable') ||
+    squashed.includes('jobs')
+  ) {
+    return 'job_board';
+  }
+  if (squashed.includes('apollo')) return 'apollo';
+  if (squashed.includes('google')) return 'google';
+  if (squashed.includes('csv') || squashed.includes('xlsx') || squashed.includes('excel') || squashed.includes('spreadsheet')) {
+    return 'csv';
+  }
+  if (squashed.includes('paste')) return 'paste';
+  if (squashed.includes('companion') || squashed.includes('extension') || squashed.includes('chrome')) {
+    return 'companion';
+  }
+  if (squashed.includes('mcp')) return 'mcp';
+  if (squashed.includes('website') || squashed.includes('domain')) return 'company_website';
+  if (squashed.includes('web') || squashed.includes('research') || squashed.includes('search')) return 'web';
+  if (squashed.includes('manual') || squashed.includes('hand')) return 'manual';
+  return 'other';
+}
+
+/**
+ * Normalises a free-text outreach channel to an `OUTREACH_CHANNEL`.
+ *
+ * Returns `null` when the value is not one of the four V1.2 channels — a phone
+ * number or a Twitter handle is a real contact route, just not one this pipeline
+ * can send through, and inventing a channel for it would silently mis-route a
+ * message. LinkedIn-ish values ('LinkedIn Sales Navigator', 'li') resolve to
+ * 'linkedin' because that is the platform the operator was working in.
+ */
+export function normalizeOutreachChannel(value: string | null | undefined): OutreachChannel | null {
+  if (value === null || value === undefined) return null;
+  const raw = value.trim().toLowerCase();
+  if (raw.length === 0) return null;
+  if (OUTREACH_CHANNEL_SET.has(raw)) return raw as OutreachChannel;
+
+  const squashed = squashSourceValue(raw);
+  if (squashed.length === 0) return null;
+  if (squashed.includes('linkedin') || squashed === 'li' || squashed === 'ln') return 'linkedin';
+  if (squashed.includes('instagram') || squashed === 'ig' || squashed === 'insta') return 'instagram';
+  if (squashed.includes('upwork')) return 'upwork';
+  if (
+    squashed.includes('email') ||
+    squashed.includes('mail') ||
+    squashed.includes('gmail') ||
+    squashed.includes('outlook')
+  ) {
+    return 'email';
+  }
+  return null;
+}

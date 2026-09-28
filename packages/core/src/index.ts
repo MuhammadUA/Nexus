@@ -6,3 +6,5 @@ export * from './today-engine.js';
 export * from './messaging-rules.js';
 export * from './permissions.js';
 export * from './contracts.js';
+export * from './enrichment.js';
+export * from './agent-jobs.js';
