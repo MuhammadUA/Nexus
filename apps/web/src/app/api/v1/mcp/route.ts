@@ -17,7 +17,14 @@
  * row-level security applies to an agent exactly as it does to a person.
  */
 import { MCP_TOOLS, type McpToolName } from '@nexus/core';
-import { contentHash, sha256Hex } from '@nexus/core';
+import {
+  contentHash,
+  intelligenceCompleteness,
+  normalizeDiscoverySource,
+  OUTREACH_CHANNELS,
+  searchLinks,
+  sha256Hex,
+} from '@nexus/core';
 
 import { withActor } from '@/lib/actor';
 import type { Db } from '@/lib/sql';
@@ -519,6 +526,543 @@ const TOOL_HANDLERS: Readonly<
           ],
         );
         return { agent_run_id: requireWrittenRow(result, businessId, 'business') };
+      });
+    },
+  },
+
+  /* --------------------------------------------------------- V1.2 jobs --- */
+
+  'nexus.create_agent_job': {
+    scope: 'jobs:create',
+    run: async (credential, args, businessId) => {
+      if (businessId === null) throw new Error('business_id is required');
+      const jobType = stringArg(args, 'job_type');
+      if (jobType === null) throw new Error('job_type is required');
+
+      const capabilities = Array.isArray(args['required_capabilities'])
+        ? (args['required_capabilities'] as unknown[]).filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : null;
+
+      return withActor(credential.actor, async (sql) => {
+        await assertBusinessAcceptsNewWork(sql, businessId);
+
+        // The database decides deduplication, so two callers racing on the same
+        // dedupe key cannot both create a job.
+        const result = await sql.query<{ job_id: string; created: boolean }>(
+          `select * from public.nexus_create_agent_job(
+             $1, $2, $3, $4, $5, $6, $7, $8::text[], $9, $10, $11, $12
+           )`,
+          [
+            businessId,
+            jobType,
+            stringArg(args, 'lead_id'),
+            stringArg(args, 'person_id'),
+            stringArg(args, 'company_id'),
+            stringArg(args, 'priority') ?? 'normal',
+            stringArg(args, 'instructions'),
+            capabilities,
+            credential.kind === 'service' ? 'api_client' : 'user',
+            credential.kind === 'service' ? null : credential.actor.userId,
+            stringArg(args, 'dedupe_key'),
+            stringArg(args, 'reason'),
+          ],
+        );
+        const row = result.rows[0];
+        if (row === undefined) throw new Error('The job could not be created');
+        return { job_id: row.job_id, created: row.created };
+      });
+    },
+  },
+
+  'nexus.list_agent_jobs': {
+    scope: 'jobs:read',
+    run: async (credential, args, businessId) => {
+      if (businessId === null) throw new Error('business_id is required');
+      const status = stringArg(args, 'status');
+      const jobType = stringArg(args, 'job_type');
+      const leadId = stringArg(args, 'lead_id');
+      const limit = Math.min(numberArg(args, 'limit', 25), 100);
+      const offset = numberArg(args, 'offset', 0);
+
+      return withActor(credential.actor, async (sql) => {
+        const rows = await sql.query(
+          `select j.id, j.job_type, j.priority, j.status, j.lead_id, j.person_id, j.company_id,
+                  j.instructions, j.required_capabilities, j.attempt_count, j.max_attempts,
+                  j.claimed_by_agent, j.lease_expires_at, j.last_heartbeat_at, j.last_error_code,
+                  j.dedupe_key, j.reason, j.created_at, j.updated_at, j.completed_at,
+                  coalesce(p.full_name, c.name) as entity_label
+             from public.agent_jobs j
+             left join public.people p on p.id = j.person_id
+             left join public.companies c on c.id = j.company_id
+            where j.business_id = $1
+              and ($2::text is null or j.status = $2)
+              and ($3::text is null or j.job_type = $3)
+              and ($4::uuid is null or j.lead_id = $4)
+            order by case j.priority
+                       when 'urgent' then 0 when 'high' then 1 when 'normal' then 2 else 3
+                     end,
+                     j.created_at desc
+            limit $5 offset $6`,
+          [businessId, status, jobType, leadId, limit, offset],
+        );
+
+        const total = await sql.query<{ n: number }>(
+          `select count(*)::int as n from public.agent_jobs j
+            where j.business_id = $1
+              and ($2::text is null or j.status = $2)
+              and ($3::text is null or j.job_type = $3)
+              and ($4::uuid is null or j.lead_id = $4)`,
+          [businessId, status, jobType, leadId],
+        );
+
+        return { jobs: rows.rows, total: Number(total.rows[0]?.n ?? 0) };
+      });
+    },
+  },
+
+  'nexus.get_agent_job': {
+    scope: 'jobs:read',
+    run: async (credential, args, businessId) => {
+      if (businessId === null) throw new Error('business_id is required');
+      const jobId = stringArg(args, 'job_id');
+      if (jobId === null) throw new Error('job_id is required');
+
+      return withActor(credential.actor, async (sql) => {
+        const job = await sql.query(
+          `select j.id, j.business_id, j.lead_id, j.person_id, j.company_id, j.job_type, j.priority,
+                  j.status, j.instructions, j.required_capabilities, j.created_by_type, j.created_by_id,
+                  j.claimed_by_agent, j.claimed_at, j.lease_expires_at, j.last_heartbeat_at,
+                  j.attempt_count, j.max_attempts, j.last_error_code, j.dedupe_key, j.reason,
+                  j.result_ai_run_id, j.created_at, j.updated_at, j.completed_at,
+                  coalesce(p.full_name, c.name) as entity_label
+             from public.agent_jobs j
+             left join public.people p on p.id = j.person_id
+             left join public.companies c on c.id = j.company_id
+            where j.id = $1 and j.business_id = $2`,
+          [jobId, businessId],
+        );
+        const row = job.rows[0];
+        if (row === undefined) throw new Error('Unknown agent job');
+
+        const events = await sql.query(
+          `select event_type, actor_type, agent_name, note, payload, created_at
+             from public.agent_job_events
+            where job_id = $1
+            order by created_at desc
+            limit 50`,
+          [jobId],
+        );
+
+        return { job: row, events: events.rows };
+      });
+    },
+  },
+
+  'nexus.claim_agent_job': {
+    scope: 'jobs:claim',
+    run: async (credential, args, businessId) => {
+      if (businessId === null) throw new Error('business_id is required');
+      const agent = stringArg(args, 'agent');
+      if (agent === null) throw new Error('agent is required');
+
+      const capabilities = Array.isArray(args['capabilities'])
+        ? (args['capabilities'] as unknown[]).filter((value): value is string => typeof value === 'string')
+        : [];
+
+      return withActor(credential.actor, async (sql) => {
+        // No result is a normal answer: an agent polling an empty queue must be able
+        // to tell "nothing to do" from "the call failed".
+        const result = await sql.query(
+          `select * from public.nexus_claim_agent_job($1, $2, $3::text[], $4, $5)`,
+          [businessId, agent, capabilities, stringArg(args, 'job_id'), numberArg(args, 'lease_seconds', 900)],
+        );
+        return { job: result.rows[0] ?? null };
+      });
+    },
+  },
+
+  'nexus.heartbeat_agent_job': {
+    scope: 'jobs:claim',
+    run: async (credential, args) => {
+      const jobId = stringArg(args, 'job_id');
+      const agent = stringArg(args, 'agent');
+      if (jobId === null || agent === null) throw new Error('job_id and agent are required');
+
+      return withActor(credential.actor, async (sql) => {
+        const result = await sql.query(
+          `select * from public.nexus_heartbeat_agent_job($1, $2, $3)`,
+          [jobId, agent, numberArg(args, 'lease_seconds', 900)],
+        );
+        const row = result.rows[0];
+        if (row === undefined) throw new Error('The lease on that job is not held by this agent');
+        return row;
+      });
+    },
+  },
+
+  'nexus.release_agent_job': {
+    scope: 'jobs:claim',
+    run: async (credential, args) => {
+      const jobId = stringArg(args, 'job_id');
+      const agent = stringArg(args, 'agent');
+      if (jobId === null || agent === null) throw new Error('job_id and agent are required');
+
+      await withActor(credential.actor, async (sql) => {
+        await sql.query(`select public.nexus_release_agent_job($1, $2, $3)`, [
+          jobId,
+          agent,
+          stringArg(args, 'reason'),
+        ]);
+      });
+      return { job_id: jobId, released: true };
+    },
+  },
+
+  'nexus.fail_agent_job': {
+    scope: 'jobs:submit',
+    run: async (credential, args) => {
+      const jobId = stringArg(args, 'job_id');
+      const agent = stringArg(args, 'agent');
+      const errorCode = stringArg(args, 'error_code');
+      if (jobId === null || agent === null || errorCode === null) {
+        throw new Error('job_id, agent and error_code are required');
+      }
+
+      return withActor(credential.actor, async (sql) => {
+        const result = await sql.query<{ id: string; status: string; attempt_count: number }>(
+          `select * from public.nexus_fail_agent_job($1, $2, $3, $4, $5)`,
+          [jobId, agent, errorCode, stringArg(args, 'message'), args['retryable'] !== false],
+        );
+        const row = result.rows[0];
+        if (row === undefined) throw new Error('Unknown agent job');
+        return { job_id: row.id, status: row.status, attempt_count: row.attempt_count };
+      });
+    },
+  },
+
+  'nexus.submit_agent_job_result': {
+    scope: 'jobs:submit',
+    run: async (credential, args) => {
+      const jobId = stringArg(args, 'job_id');
+      const agent = stringArg(args, 'agent');
+      const payload = stringArg(args, 'payload');
+      if (jobId === null || agent === null || payload === null) {
+        throw new Error('job_id, agent and payload are required');
+      }
+
+      // The hash is derived here, never taken from the caller: the stored hash must
+      // describe the bytes that were actually staged.
+      const hash = contentHash({ jobId, agent, payload });
+
+      return withActor(credential.actor, async (sql) => {
+        const result = await sql.query<{ job_id: string; status: string; raw_staging_id: string }>(
+          `select * from public.nexus_submit_agent_job_result($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            jobId,
+            agent,
+            payload,
+            hash,
+            stringArg(args, 'kind') ?? 'company_research',
+            stringArg(args, 'source_type') ?? 'web',
+            stringArg(args, 'source_url'),
+          ],
+        );
+        const row = result.rows[0];
+        if (row === undefined) throw new Error('Unknown agent job');
+        // `WAITING_AI`, deliberately: submitting evidence is not completing a job.
+        return { job_id: row.job_id, status: row.status, raw_staging_id: row.raw_staging_id };
+      });
+    },
+  },
+
+  'nexus.submit_company_research': {
+    scope: 'jobs:submit',
+    run: async (credential, args) => {
+      const jobId = stringArg(args, 'job_id');
+      const agent = stringArg(args, 'agent');
+      const payload = stringArg(args, 'payload');
+      if (jobId === null || agent === null || payload === null) {
+        throw new Error('job_id, agent and payload are required');
+      }
+
+      // Discovery of the extraction pipeline is deferred: `lib/ai/extract` imports
+      // the provider stack, and this transport must stay loadable on a deployment
+      // with no AI key configured.
+      const { commitCompanyResearch } = await import('@/lib/ai/extract');
+      const { loadViewer } = await import('@/lib/actor');
+      const viewer = await loadViewer(credential.actor);
+
+      const outcome = await commitCompanyResearch(viewer, {
+        jobId,
+        agent,
+        payload,
+        sourceType: stringArg(args, 'source_type') ?? 'web',
+        sourceUrl: stringArg(args, 'source_url'),
+      });
+
+      if (!outcome.ok) {
+        // The raw body is still staged for a retry; the caller is told which code to
+        // act on rather than being told the job succeeded.
+        throw new Error(`${outcome.errorCode}: ${outcome.error}`);
+      }
+
+      return {
+        job_id: jobId,
+        company_id: outcome.companyId,
+        signals: outcome.signals,
+        raw_deleted: outcome.rawDeleted,
+      };
+    },
+  },
+
+  /* ------------------------------------------------ V1.2 lead intelligence - */
+
+  'nexus.get_lead_enrichment_context': {
+    scope: 'lead:read',
+    run: async (credential, args, businessId) => {
+      if (businessId === null) throw new Error('business_id is required');
+      const leadId = stringArg(args, 'lead_id');
+      if (leadId === null) throw new Error('lead_id is required');
+
+      return withActor(credential.actor, async (sql) => {
+        const lead = await sql.query<{
+          id: string;
+          business_id: string;
+          person_id: string;
+          company_id: string | null;
+          status: string;
+          source_type: string | null;
+          source_url: string | null;
+          needs_profile: boolean;
+        }>(
+          `select id, business_id, person_id, company_id, status, source_type, source_url, needs_profile
+             from public.leads
+            where id = $1 and business_id = $2 and deleted_at is null`,
+          [leadId, businessId],
+        );
+        const row = lead.rows[0];
+        if (row === undefined) throw new Error('Unknown lead');
+
+        const facts = await sql.query<{
+          full_name: string;
+          job_title: string | null;
+          headline: string | null;
+          location: string | null;
+          linkedin_url: string | null;
+          company_name: string | null;
+          company_domain: string | null;
+          company_description: string | null;
+          signal_count: number;
+          contact_count: number;
+          has_context_pack: boolean;
+          has_company_research: boolean;
+          enrichment_status: string | null;
+          completeness_score: number | null;
+          missing_fields: string[] | null;
+        }>(
+          `select p.full_name, p.job_title, p.headline, p.location, p.linkedin_url,
+                  c.name as company_name, c.normalized_domain as company_domain,
+                  c.description as company_description,
+                  (select count(*)::int from public.signals s
+                    where s.is_active and (s.lead_id = l.id or s.person_id = l.person_id
+                          or s.company_id = l.company_id)) as signal_count,
+                  (select count(*)::int from public.person_contact_points cp
+                    where cp.person_id = l.person_id and cp.deleted_at is null) as contact_count,
+                  exists (select 1 from public.ai_context_packs a where a.lead_id = l.id) as has_context_pack,
+                  exists (select 1 from public.research_snapshots r where r.company_id = l.company_id) as has_company_research,
+                  e.status as enrichment_status,
+                  e.completeness_score,
+                  e.missing_fields
+             from public.leads l
+             join public.people p on p.id = l.person_id
+             left join public.companies c on c.id = l.company_id
+             left join public.lead_enrichment e on e.lead_id = l.id
+            where l.id = $1`,
+          [leadId],
+        );
+        const f = facts.rows[0];
+        if (f === undefined) throw new Error('Unknown lead');
+
+        // The score is computed here, deterministically, from permanent facts.
+        const completeness = intelligenceCompleteness({
+          fullName: f.full_name,
+          companyName: f.company_name,
+          location: f.location,
+          jobTitle: f.job_title,
+          linkedinUrl: f.linkedin_url,
+          companyWebsite: f.company_domain,
+          companyResearch: f.has_company_research,
+          signalCount: Number(f.signal_count ?? 0),
+          hasAiContext: f.has_context_pack,
+          contactCount: Number(f.contact_count ?? 0),
+        });
+
+        return {
+          lead_id: leadId,
+          enrichment: {
+            status: f.enrichment_status ?? 'MINIMAL',
+            completeness_score: completeness.score,
+            missing_fields: completeness.missing,
+            components: completeness.components,
+            stored_score: f.completeness_score,
+          },
+          person: { full_name: f.full_name, job_title: f.job_title, headline: f.headline, location: f.location, linkedin_url: f.linkedin_url },
+          company: { name: f.company_name, domain: f.company_domain, description: f.company_description },
+          available_channels: OUTREACH_CHANNELS,
+          // Zero-token, deterministic — the agent can hand these straight to a browser.
+          search_links: searchLinks({
+            fullName: f.full_name,
+            companyName: f.company_name,
+            location: f.location,
+            companyDomain: f.company_domain,
+            linkedinUrl: f.linkedin_url,
+          }),
+        };
+      });
+    },
+  },
+
+  'nexus.submit_minimal_lead': {
+    scope: 'lead:create',
+    run: async (credential, args, businessId, envelope) => {
+      if (businessId === null) throw new Error('business_id is required');
+      const idempotencyKey = envelope.idempotencyKey;
+      if (idempotencyKey === undefined) throw new Error('idempotency_key is required for ingestion tools');
+
+      const fullName = stringArg(args, 'full_name');
+      if (fullName === null) throw new Error('full_name is required');
+
+      // A minimal lead carries a name, a company and a source and nothing invented.
+      // Everything else is absent on purpose and is filled later by enrichment.
+      const discoverySource = normalizeDiscoverySource(stringArg(args, 'source'));
+      const payload = {
+        full_name: fullName,
+        company_name: stringArg(args, 'company_name'),
+        location: stringArg(args, 'location'),
+        job_title: stringArg(args, 'job_title'),
+        headline: stringArg(args, 'headline'),
+        linkedin_url: stringArg(args, 'linkedin_url'),
+        source_url: stringArg(args, 'source_url'),
+        notes: stringArg(args, 'snippet'),
+      };
+
+      const outcome = await submitIngest(credential.actor, {
+        sourceClient: 'mcp',
+        businessId,
+        payloadType: 'candidate',
+        payload,
+        idempotencyKey,
+        observedAt: new Date().toISOString(),
+        businessKeyOrId: businessId,
+      });
+
+      return {
+        lead_id: outcome.leadId ?? null,
+        person_id: outcome.personId ?? null,
+        company_id: outcome.companyId ?? null,
+        idempotent: outcome.idempotent,
+        discovery_source: discoverySource,
+        enrichment_status: 'NEEDS_PROFILE',
+        // The caller is handed the deterministic searches immediately: finding the
+        // profile is the next human step and it must not cost a model call.
+        search_links: searchLinks({
+          fullName,
+          companyName: stringArg(args, 'company_name'),
+          location: stringArg(args, 'location'),
+          companyDomain: stringArg(args, 'company_domain'),
+          linkedinUrl: stringArg(args, 'linkedin_url'),
+        }),
+      };
+    },
+  },
+
+  'nexus.submit_profile_data': {
+    scope: 'profile:capture',
+    run: async (credential, args) => {
+      const leadId = stringArg(args, 'lead_id');
+      const linkedinUrl = stringArg(args, 'linkedin_url');
+      const pastedContent = stringArg(args, 'pasted_content');
+      if (leadId === null || linkedinUrl === null || pastedContent === null) {
+        throw new Error('lead_id, linkedin_url and pasted_content are required');
+      }
+
+      const { enrichProfileFromPaste } = await import('@/lib/ai/extract');
+      const { loadViewer } = await import('@/lib/actor');
+      const viewer = await loadViewer(credential.actor);
+
+      const outcome = await enrichProfileFromPaste(viewer, {
+        leadId,
+        linkedinUrl,
+        pastedContent,
+        sourceType: stringArg(args, 'source_type') ?? 'linkedin',
+        sourceUrl: stringArg(args, 'source_url') ?? linkedinUrl,
+      });
+
+      if (!outcome.ok) {
+        // The pasted body is deliberately absent from the answer and from the error.
+        throw new Error(`${outcome.errorCode}: ${outcome.error}`);
+      }
+
+      return {
+        lead_id: outcome.leadId,
+        person_id: outcome.personId,
+        company_id: outcome.companyId,
+        applied: outcome.applied,
+        review: outcome.review,
+        raw_deleted: outcome.rawDeleted,
+      };
+    },
+  },
+
+  'nexus.submit_source_metadata': {
+    scope: 'evidence:add',
+    run: async (credential, args, businessId) => {
+      if (businessId === null) throw new Error('business_id is required');
+      const source = stringArg(args, 'source') ?? 'other';
+      const summary = stringArg(args, 'summary');
+      if (summary === null) throw new Error('summary is required');
+
+      return withActor(credential.actor, async (sql) => {
+        await assertBusinessAcceptsNewWork(sql, businessId);
+
+        // Metadata and a structured summary only. A raw body is staged separately,
+        // extracted, and deleted — storing it here would make it permanent by
+        // accident, which is exactly what the V1.2 raw policy forbids.
+        const metadata = {
+          summary,
+          collector_agent: stringArg(args, 'collector_agent'),
+          observed_at: stringArg(args, 'observed_at'),
+        };
+        const hash =
+          stringArg(args, 'content_hash') ??
+          contentHash({ source, summary, observedAt: stringArg(args, 'observed_at') ?? '' });
+
+        const result = await sql.query<{ id: string }>(
+          `insert into public.source_evidence
+             (business_id, person_id, company_id, lead_id, source, source_url, raw_text_or_json,
+              content_hash, raw_content_hash, collector_agent, agent_job_id, observed_at, confidence,
+              raw_deleted_at, extracted_at)
+           values ($1, $2, $3, $4, $5, $6, $7::text, $8, $8, $9, $10, now(), $11, now(), now())
+           on conflict (business_id, content_hash) do nothing
+           returning id`,
+          [
+            businessId,
+            stringArg(args, 'person_id'),
+            stringArg(args, 'company_id'),
+            stringArg(args, 'lead_id'),
+            source,
+            stringArg(args, 'source_url'),
+            JSON.stringify(metadata),
+            hash,
+            stringArg(args, 'collector_agent'),
+            stringArg(args, 'agent_job_id'),
+            numberArg(args, 'confidence', 0.6),
+          ],
+        );
+
+        return { evidence_id: result.rows[0]?.id ?? null, deduplicated: result.rows[0] === undefined };
       });
     },
   },

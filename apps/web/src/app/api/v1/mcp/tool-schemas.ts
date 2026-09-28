@@ -21,7 +21,15 @@
  */
 import { z } from 'zod';
 
-import { MCP_TOOLS, REPLY_OUTCOMES, SIGNAL_KINDS, SIGNAL_POLARITIES } from '@nexus/core';
+import {
+  AGENT_JOB_STATUSES,
+  AGENT_JOB_TYPES,
+  DISCOVERY_SOURCES,
+  MCP_TOOLS,
+  REPLY_OUTCOMES,
+  SIGNAL_KINDS,
+  SIGNAL_POLARITIES,
+} from '@nexus/core';
 import type { McpToolName } from '@nexus/core';
 
 const uuid = z.string().uuid();
@@ -191,6 +199,134 @@ export const MCP_TOOL_SCHEMAS: Readonly<Record<McpToolName, z.ZodTypeAny>> = {
     result: z.record(z.string(), z.unknown()).optional(),
     stats: z.record(z.string(), z.unknown()).optional(),
   }),
+
+  /* ------------------------------------------------------------- V1.2 --- */
+
+  // The agent job queue. `list`/`get` are reads; every other tool mutates, and each
+  // mutation lands in `agent_job_events` so a queue that changed overnight can be
+  // explained afterwards. `agent` is a caller-supplied name rather than a secret:
+  // the credential is the token, the name is how the lease is attributed.
+  // Creating a job is what makes the queue useful to ChatGPT as well as to OpenCode
+  // (spec §20: "create research jobs"). It is scope-separated from claiming, so a
+  // planning client can enqueue work without being able to take it.
+  'nexus.create_agent_job': loose({
+    job_type: z.enum(AGENT_JOB_TYPES),
+    lead_id: uuid.nullable().optional(),
+    person_id: uuid.nullable().optional(),
+    company_id: uuid.nullable().optional(),
+    priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+    instructions: text(4000).nullable().optional(),
+    required_capabilities: z.array(text(60)).max(20).optional(),
+    // The dedupe key is how automatic chaining avoids creating a second identical
+    // job; a caller that omits it accepts that duplicates are its own problem.
+    dedupe_key: text(200).nullable().optional(),
+    reason: text(500).nullable().optional(),
+  }),
+
+  'nexus.list_agent_jobs': loose({
+    status: z.enum(AGENT_JOB_STATUSES).optional(),
+    job_type: z.enum(AGENT_JOB_TYPES).optional(),
+    lead_id: uuid.optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    offset: z.number().int().min(0).max(10_000).optional(),
+  }),
+
+  'nexus.get_agent_job': loose({
+    job_id: uuid,
+  }),
+
+  'nexus.claim_agent_job': loose({
+    agent: text(120),
+    // The capabilities the agent actually has. A job whose `required_capabilities`
+    // are not a subset of these is never handed to it.
+    capabilities: z.array(text(60)).max(20).optional(),
+    job_id: uuid.optional(),
+    lease_seconds: z.number().int().min(30).max(7200).optional(),
+  }),
+
+  'nexus.heartbeat_agent_job': loose({
+    job_id: uuid,
+    agent: text(120),
+    lease_seconds: z.number().int().min(30).max(7200).optional(),
+  }),
+
+  'nexus.release_agent_job': loose({
+    job_id: uuid,
+    agent: text(120),
+    reason: text(500).optional(),
+  }),
+
+  'nexus.submit_agent_job_result': loose({
+    job_id: uuid,
+    agent: text(120),
+    // The evidence. Capped well below the staging ceiling on purpose: a result is
+    // one research answer, not a corpus.
+    payload: text(200_000),
+    kind: z.enum(['company_research', 'signal_research', 'source_metadata', 'profile_paste']).optional(),
+    source_type: z.enum(DISCOVERY_SOURCES).optional(),
+    source_url: text(2048).nullable().optional(),
+  }),
+
+  'nexus.fail_agent_job': loose({
+    job_id: uuid,
+    agent: text(120),
+    error_code: text(120),
+    message: text(500).nullable().optional(),
+    retryable: z.boolean().optional(),
+  }),
+
+  // Lead intelligence. The score is computed deterministically server-side; a caller
+  // cannot send one in.
+  'nexus.get_lead_enrichment_context': loose({
+    lead_id: uuid,
+  }),
+
+  'nexus.submit_minimal_lead': loose({
+    full_name: text(200),
+    company_name: text(300).optional(),
+    location: text(200).optional(),
+    source: z.enum(DISCOVERY_SOURCES).optional(),
+    source_url: text(2048).optional(),
+    job_title: text(300).optional(),
+    headline: text(1000).optional(),
+    snippet: text(4000).optional(),
+    company_domain: text(300).optional(),
+    linkedin_url: text(2048).optional(),
+  }),
+
+  'nexus.submit_profile_data': loose({
+    lead_id: uuid,
+    linkedin_url: text(2048),
+    pasted_content: text(400_000),
+    source_type: z.enum(DISCOVERY_SOURCES).optional(),
+    source_url: text(2048).nullable().optional(),
+  }),
+
+  'nexus.submit_company_research': loose({
+    job_id: uuid,
+    agent: text(120),
+    payload: text(200_000),
+    source_type: z.enum(DISCOVERY_SOURCES).optional(),
+    source_url: text(2048).nullable().optional(),
+  }),
+
+  'nexus.submit_source_metadata': loose({
+    person_id: uuid.nullable().optional(),
+    company_id: uuid.nullable().optional(),
+    lead_id: uuid.nullable().optional(),
+    source: z.enum(DISCOVERY_SOURCES),
+    source_url: text(2048).nullable().optional(),
+    // Metadata only: the raw body belongs in staging and is deleted after
+    // extraction, so this tool records what was observed, not what it said.
+    summary: text(8000),
+    // Optional: the gateway derives the hash from what it stores when the caller
+    // does not supply one, so a stored hash always describes the stored bytes.
+    content_hash: text(200).optional(),
+    collector_agent: text(120).optional(),
+    agent_job_id: uuid.nullable().optional(),
+    observed_at: text(40).optional(),
+    confidence: z.number().min(0).max(1).optional(),
+  }),
 };
 
 /**
@@ -220,6 +356,23 @@ export const MCP_TOOLS_REQUIRING_IDEMPOTENCY: Readonly<Record<McpToolName, boole
   'nexus.submit_research': true,
   'nexus.submit_message_draft': true,
   'nexus.finish_agent_run': true,
+  // V1.2. The two reads change nothing; every job mutation needs a key because a
+  // retried `nexus.claim_agent_job` after a timeout must not consume a second
+  // attempt, and a retried `submit_agent_job_result` must not stage the evidence
+  // twice. `get_lead_enrichment_context` is a pure read and is exempt.
+  'nexus.list_agent_jobs': false,
+  'nexus.get_agent_job': false,
+  'nexus.get_lead_enrichment_context': false,
+  'nexus.create_agent_job': true,
+  'nexus.claim_agent_job': true,
+  'nexus.heartbeat_agent_job': true,
+  'nexus.release_agent_job': true,
+  'nexus.submit_agent_job_result': true,
+  'nexus.fail_agent_job': true,
+  'nexus.submit_minimal_lead': true,
+  'nexus.submit_profile_data': true,
+  'nexus.submit_company_research': true,
+  'nexus.submit_source_metadata': true,
 };
 
 /** A short human description, so `tools/list` is usable without reading the schemas. */
@@ -242,6 +395,19 @@ const DESCRIPTIONS: Readonly<Record<McpToolName, string>> = {
   'nexus.submit_research': 'Attach a research snapshot to a lead.',
   'nexus.submit_message_draft': 'Submit a message draft as a new immutable version.',
   'nexus.finish_agent_run': 'Record the completion of an agent run.',
+  'nexus.list_agent_jobs': 'List durable agent jobs for a business, newest priority first.',
+  'nexus.get_agent_job': 'Read one agent job, its lease state and its attempt count.',
+  'nexus.claim_agent_job': 'Atomically claim one open agent job and start its lease.',
+  'nexus.heartbeat_agent_job': 'Extend the lease on a job this agent holds.',
+  'nexus.release_agent_job': 'Return a held job to the queue without reporting a failure.',
+  'nexus.submit_agent_job_result': 'Submit research evidence; the job moves to WAITING_AI.',
+  'nexus.fail_agent_job': 'Report a typed failure; the job is retried or marked failed.',
+  'nexus.get_lead_enrichment_context': 'Read a lead’s enrichment state, completeness and search links.',
+  'nexus.create_agent_job': 'Create a durable agent job for a business, deduplicated by its key.',
+  'nexus.submit_minimal_lead': 'Create a lead from a name, company and source only.',
+  'nexus.submit_profile_data': 'Enrich a lead from a pasted profile; the raw body is deleted after extraction.',
+  'nexus.submit_company_research': 'Submit company research evidence for a claimed job.',
+  'nexus.submit_source_metadata': 'Record source metadata and a structured summary — never a raw body.',
 };
 
 /**
