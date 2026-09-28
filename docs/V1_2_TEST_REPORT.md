@@ -24,7 +24,7 @@ the extension suite seeds a fresh demo database in the worktree.
 | `pnpm install --frozen-lockfile` | pass (3.2s) |
 | `pnpm run typecheck` | pass (every package, no errors) |
 | `pnpm run lint` | pass (`--max-warnings 0` per package) |
-| `pnpm run test` | pass — 42 files, 730 tests (154 core + 110 db + 9 extension + 457 web) |
+| `pnpm run test` | pass — 42 files, 731 tests (154 core + 110 db + 9 extension + 458 web) |
 | `pnpm run db:verify` | pass — 36 migrations, 71 tables, 198 policies, 111 triggers, 129 functions, 220 indexes |
 | `pnpm run build` | pass (Next.js production build, all V1.2 routes present) |
 | `pnpm --filter @nexus/extension run build` | pass (`manifest valid, no credentials in the bundle`) |
@@ -93,13 +93,13 @@ them.
 | --- | --- | --- | --- |
 | `@nexus/core` | 6 | 154 | pass |
 | `@nexus/db` | 8 | 110 | pass |
-| `@nexus/web` | 27 | 457 | pass |
+| `@nexus/web` | 27 | 458 | pass |
 | `@nexus/extension` (unit) | 1 | 9 | pass |
-| **Total** | **42** | **730** | **pass** |
+| **Total** | **42** | **731** | **pass** |
 
 The V1.2 additions inside those totals: 66 core tests (37 deterministic enrichment
 and search links, 29 job chaining and qualification prerequisites), 24 database tests
-(7 raw lifecycle, 17 agent jobs), and 164 web tests (17 MCP agent tools, 22 AI
+(7 raw lifecycle, 17 agent jobs), and 165 web tests (17 MCP agent tools, 22 AI
 pipeline, 16 qualification and reply classification, 13 enrichment repo, 59 Lead UI,
 18 Agent Jobs UI, 17 metrics, 18 channel vocabulary) — plus the Companion binding
 suite grown from 6 to 31 and `rls-access` from 28 to 31.
@@ -234,7 +234,7 @@ The whole gate is green, run in the integration tree after the AI call sites lan
 pnpm install --frozen-lockfile                     pass
 pnpm run typecheck                                 pass
 pnpm run lint                                      pass
-pnpm run test                                      42 files / 730 tests pass
+pnpm run test                                      42 files / 731 tests pass
 pnpm run db:verify                                 36 migrations, verification passed
 pnpm run build                                     pass
 pnpm --filter @nexus/extension run build           pass

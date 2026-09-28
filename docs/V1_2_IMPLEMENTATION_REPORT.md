@@ -215,7 +215,7 @@ and the extension suite seeds a fresh demo database in `apps/web/.data`.
 pnpm install --frozen-lockfile                     pass (3.2s)
 pnpm run typecheck                                 pass — every package, no errors
 pnpm run lint                                      pass — --max-warnings 0 per package
-pnpm run test                                      pass — 42 files, 730 tests
+pnpm run test                                      pass — 42 files, 731 tests
 pnpm run db:verify                                 pass — 36 migrations, 71 tables,
                                                    198 policies, 111 triggers,
                                                    129 functions, 220 indexes
@@ -225,7 +225,7 @@ pnpm --filter @nexus/web run e2e                   pass — 15 tests
 pnpm --filter @nexus/extension run e2e             pass — 38 tests
 ```
 
-Per suite: `@nexus/core` 154, `@nexus/db` 110, `@nexus/web` 457, `@nexus/extension`
+Per suite: `@nexus/core` 154, `@nexus/db` 110, `@nexus/web` 458, `@nexus/extension`
 (unit) 9. The extension E2E baseline on `integration/final` was 36 passed / 2 skipped;
 it is now 38 passed / 0 failed, with the two previously skipped cases covered by the
 account-scoped bind work. Full detail: `docs/V1_2_TEST_REPORT.md`.
