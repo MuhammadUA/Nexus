@@ -33,6 +33,8 @@ export type TodayBucket = 'today' | 'upcoming' | 'done';
 export interface TodayItem {
   readonly leadId: string;
   readonly businessId: string;
+  /** RLS-resolved owner key used to build the one canonical lead-detail route. */
+  readonly businessSlug: string;
   readonly personId: string;
   readonly personName: string;
   readonly companyName: string | null;
@@ -70,14 +72,7 @@ export function todayCounts(items: readonly TodayItem[]): Readonly<Record<TodayC
  * the same destination through this one function.
  */
 export function focusHref(item: TodayItem): string {
-  if (item.taskId !== null) return `/leads/${item.leadId}?task=${item.taskId}`;
-  if (item.category === 'connections') return `/leads/${item.leadId}?focus=connection`;
-  if (item.stepOrder !== null && item.stepOrder >= 2) {
-    return `/leads/${item.leadId}?focus=followup&step=${String(item.stepOrder)}`;
-  }
-  if (item.category === 'accepted_message1') return `/leads/${item.leadId}?focus=message1`;
-  if (item.category === 'overdue') return `/leads/${item.leadId}?focus=overdue`;
-  return `/leads/${item.leadId}`;
+  return `/b/${encodeURIComponent(item.businessSlug)}/leads/${encodeURIComponent(item.leadId)}`;
 }
 
 /**

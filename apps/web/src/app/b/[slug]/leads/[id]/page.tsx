@@ -135,7 +135,16 @@ export default async function LeadDetailPage({
   const context = await loadViewerContext();
   const business = resolveBusiness(context, slug);
   if (business === null) notFound();
-  requireRouteAccess(context, { route: '/b/:businessSlug/leads/:leadId', businessId: business.id });
+  // My Day and My Leads resolve to this one canonical URL for every role. Administrators and
+  // managers enter under the business lead-detail requirement; operators enter under the existing
+  // user-detail requirement. The page still performs the RLS-scoped lead read below, so naming a
+  // permitted business never makes another owner's lead visible.
+  requireRouteAccess(context, {
+    route: context.permissions.has('lead.view_all')
+      ? '/b/:businessSlug/leads/:leadId'
+      : '/my-leads/:leadId',
+    businessId: business.id,
+  });
 
   const lead = await getLead(context.viewer.actor, id);
   // A lead in another business is invisible through RLS, so it reads as missing.

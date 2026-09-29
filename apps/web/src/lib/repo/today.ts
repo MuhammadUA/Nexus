@@ -43,6 +43,7 @@ function mapItem(row: Row): TodayItem {
   return {
     leadId: asString(row.item_lead_id),
     businessId: asString(row.item_business_id),
+    businessSlug: asString(row.business_key),
     personId: asString(row.item_person_id),
     personName: asString(row.person_name, 'Unknown'),
     companyName: asStringOrNull(row.company_name),
@@ -82,7 +83,9 @@ export async function getTodayQueue(
 
   return read(actor, async (sql) => {
     const result = await sql.query<Row>(
-      `select * from public.get_today_queue($1, $2, $3, $4::text[], $5)`,
+      `select queue.*, business.key as business_key
+         from public.get_today_queue($1, $2, $3, $4::text[], $5) queue
+         join public.businesses business on business.id = queue.item_business_id`,
       [
         userId,
         query.businessId,

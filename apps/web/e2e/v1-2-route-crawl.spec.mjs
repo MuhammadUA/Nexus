@@ -22,6 +22,8 @@ import {
   ADMIN,
   BUSINESS,
   INCOMPLETE_LEAD,
+  MANAGER,
+  MY_DAY_LEADS,
   RESTRICTED,
   bodyText,
   describeConsole,
@@ -140,6 +142,36 @@ async function subnavDestinations(page) {
 /* ------------------------------------------------------------------ admin -- */
 
 test.describe('admin crawl (grantless administrator)', () => {
+  test('My Day rows, Upcoming Open, and Work next use live canonical lead routes', async () => {
+    const failures = watchFailures(shared.page);
+
+    await openScreen(shared.page, '/my-day');
+    const todayRow = shared.page.locator('tr', { hasText: MY_DAY_LEADS.adminToday.name });
+    await expect(todayRow, 'the admin My Day fixture is missing').toHaveCount(1);
+    await todayRow.getByRole('button', { name: 'Open' }).click();
+    await shared.page.waitForURL((url) => url.pathname === `/b/${BUSINESS.key}/leads/${MY_DAY_LEADS.adminToday.id}`);
+    await assertScreenIsUsable(shared.page, 'admin My Day row');
+
+    await openScreen(shared.page, '/my-day');
+    await shared.page.getByRole('button', { name: 'Work next' }).click();
+    await shared.page.waitForURL((url) => /^\/b\/[^/]+\/leads\/[^/]+$/.test(url.pathname));
+    expect(new URL(shared.page.url()).pathname, 'Work next used the wrong business slug').toBe(
+      `/b/${BUSINESS.key}/leads/${MY_DAY_LEADS.adminToday.id}`,
+    );
+    await assertScreenIsUsable(shared.page, 'admin Work next');
+
+    await openScreen(shared.page, '/my-day/upcoming');
+    const upcomingRow = shared.page.locator('tr', { hasText: MY_DAY_LEADS.adminUpcoming.name });
+    const upcomingOpen = upcomingRow.getByRole('link', { name: 'Open' });
+    expect(await upcomingOpen.getAttribute('href')).toBe(
+      `/b/${BUSINESS.key}/leads/${MY_DAY_LEADS.adminUpcoming.id}`,
+    );
+    await clickThrough(shared.page, { link: upcomingOpen, label: 'My Day Upcoming Open' });
+    await assertScreenIsUsable(shared.page, 'admin My Day Upcoming row');
+
+    expect(failures, `responses with a failure status:\n  ${failures.join('\n  ')}`).toEqual([]);
+  });
+
   test('the sidebar offers the administration, and every entry opens', async () => {
     const failures = watchFailures(shared.page);
     await openScreen(shared.page, `/b/${BUSINESS.key}/overview`);
@@ -467,6 +499,46 @@ test.describe('admin crawl (grantless administrator)', () => {
     // assertions inside them would still pass.
     expect(clickedDestinations.length, 'no destination was clicked in this run').toBeGreaterThan(30);
   });
+});
+
+test.describe('role-scoped My Day routes', () => {
+  const cases = [
+    {
+      label: 'manager',
+      credentials: MANAGER,
+      visible: MY_DAY_LEADS.managerAllowed,
+      hidden: MY_DAY_LEADS.managerHidden,
+    },
+    {
+      label: 'user',
+      credentials: RESTRICTED,
+      visible: MY_DAY_LEADS.userAllowed,
+      hidden: MY_DAY_LEADS.userHidden,
+    },
+  ];
+
+  for (const roleCase of cases) {
+    test(`${roleCase.label} sees and opens only an accessible lead`, async ({ browser }) => {
+      const page = await browser.newPage();
+      const failures = watchFailures(page);
+      await signIn(page, roleCase.credentials);
+      await openScreen(page, '/my-day');
+
+      const body = await bodyText(page);
+      expect(body).toContain(roleCase.visible.name);
+      expect(body).not.toContain(roleCase.hidden.name);
+
+      const row = page.locator('tr', { hasText: roleCase.visible.name });
+      await row.getByRole('button', { name: 'Open' }).click();
+      await page.waitForURL(
+        (url) => url.pathname === `/b/${BUSINESS.key}/leads/${roleCase.visible.id}`,
+        { timeout: 30_000 },
+      );
+      await assertScreenIsUsable(page, `${roleCase.label} My Day row`);
+      expect(failures, `responses with a failure status:\n  ${failures.join('\n  ')}`).toEqual([]);
+      await page.close();
+    });
+  }
 });
 
 /* ------------------------------------------------------- restricted user -- */

@@ -125,6 +125,14 @@ export const RESTRICTED = Object.freeze({
   role: 'user',
 });
 
+/** A manager scoped to the fixture business, with no access to the second business. */
+export const MANAGER = Object.freeze({
+  email: 'manager@nexus.e2e',
+  password: 'nexus-e2e-manager-password',
+  fullName: 'Nexus E2E Manager',
+  role: 'manager',
+});
+
 /** The business every business-scoped screen is opened for. `DEMO_BUSINESSES[0]` from `@nexus/db/seed`. */
 export const BUSINESS = Object.freeze({
   id: 'a0000000-0000-4000-8000-000000000001',
@@ -137,6 +145,16 @@ export const INCOMPLETE_LEAD = Object.freeze({
   id: '13000000-0000-4000-8000-000000000007',
   personName: 'Lisa Weber',
   companyName: 'Frame House',
+});
+
+/** Queue rows seeded specifically for the My Day route checks. */
+export const MY_DAY_LEADS = Object.freeze({
+  adminToday: Object.freeze({ id: '2b000000-0000-4000-8000-000000000001', name: 'Admin Today Route' }),
+  adminUpcoming: Object.freeze({ id: '2b000000-0000-4000-8000-000000000002', name: 'Admin Upcoming Route' }),
+  managerAllowed: Object.freeze({ id: '2b000000-0000-4000-8000-000000000003', name: 'Manager Allowed Route' }),
+  managerHidden: Object.freeze({ id: '2b000000-0000-4000-8000-000000000004', name: 'Manager Hidden Route' }),
+  userAllowed: Object.freeze({ id: '2b000000-0000-4000-8000-000000000005', name: 'User Allowed Route' }),
+  userHidden: Object.freeze({ id: '2b000000-0000-4000-8000-000000000006', name: 'User Hidden Route' }),
 });
 
 /**
@@ -217,7 +235,7 @@ export async function provisionDataDir() {
    * child succeed against its own view while its writes never reach the file the server reads —
    * which is exactly how the account appeared "created" and then was missing from `public.users`.
    */
-  const restricted = await runCreateTestUser();
+  const restricted = await runCreateTestUser(RESTRICTED);
   if (!restricted.ok) {
     throw new Error(
       'provisioning failed: scripts/create-test-user.ts did not create the restricted operator.\n' +
@@ -225,6 +243,17 @@ export async function provisionDataDir() {
         `  exit     ${String(restricted.code)}\n` +
         `  stdout   ${restricted.stdout.trim()}\n` +
         `  stderr   ${restricted.stderr.trim()}`,
+    );
+  }
+
+  const manager = await runCreateTestUser(MANAGER);
+  if (!manager.ok) {
+    throw new Error(
+      'provisioning failed: scripts/create-test-user.ts did not create the manager.\n' +
+        `  command  ${manager.command}\n` +
+        `  exit     ${String(manager.code)}\n` +
+        `  stdout   ${manager.stdout.trim()}\n` +
+        `  stderr   ${manager.stderr.trim()}`,
     );
   }
 
@@ -278,6 +307,94 @@ export async function provisionDataDir() {
       throw new Error(
         `the restricted operator ${RESTRICTED.email} could not be granted access to ${BUSINESS.key}; ` +
           'the account is missing from public.users',
+      );
+    }
+
+    const managerGrant = await db.query(
+      `insert into public.user_business_access
+         (user_id, business_id, access_level, can_manage_leads, can_use_lead_sources,
+          can_use_profile_queue, can_delete_leads)
+       select u.id, $2, 'manager', true, true, true, true
+         from public.users u
+        where lower(u.email) = lower($1)
+       on conflict (user_id, business_id) do update
+         set access_level = excluded.access_level,
+             can_manage_leads = excluded.can_manage_leads,
+             can_use_lead_sources = excluded.can_use_lead_sources,
+             can_use_profile_queue = excluded.can_use_profile_queue,
+             can_delete_leads = excluded.can_delete_leads
+       returning user_id`,
+      [MANAGER.email, BUSINESS.id],
+    );
+    if (managerGrant.rows.length === 0) {
+      throw new Error(`the manager ${MANAGER.email} could not be granted access to ${BUSINESS.key}`);
+    }
+
+    const queueOwners = await db.query(
+      `select id, lower(email) as email
+         from public.users
+        where lower(email) = any($1::text[])`,
+      [[ADMIN.email, MANAGER.email, RESTRICTED.email]],
+    );
+    const ownerByEmail = new Map(queueOwners.rows.map((row) => [String(row.email), String(row.id)]));
+    const adminId = ownerByEmail.get(ADMIN.email);
+    const managerId = ownerByEmail.get(MANAGER.email);
+    const restrictedId = ownerByEmail.get(RESTRICTED.email);
+    if (adminId === undefined || managerId === undefined || restrictedId === undefined) {
+      throw new Error('one or more My Day E2E accounts are missing after credential provisioning');
+    }
+
+    const queueFixtures = [
+      {
+        ...MY_DAY_LEADS.adminToday,
+        personId: '2a000000-0000-4000-8000-000000000001',
+        businessId: BUSINESS.id,
+        ownerId: adminId,
+        due: 'now() - interval \'1 minute\'',
+      },
+      {
+        ...MY_DAY_LEADS.adminUpcoming,
+        personId: '2a000000-0000-4000-8000-000000000002',
+        businessId: BUSINESS.id,
+        ownerId: adminId,
+        due: 'now() + interval \'1 day\'',
+      },
+      {
+        ...MY_DAY_LEADS.managerAllowed,
+        personId: '2a000000-0000-4000-8000-000000000003',
+        businessId: BUSINESS.id,
+        ownerId: managerId,
+        due: 'now() - interval \'1 minute\'',
+      },
+      {
+        ...MY_DAY_LEADS.managerHidden,
+        personId: '2a000000-0000-4000-8000-000000000004',
+        businessId: 'a0000000-0000-4000-8000-000000000002',
+        ownerId: managerId,
+        due: 'now() - interval \'1 minute\'',
+      },
+      {
+        ...MY_DAY_LEADS.userAllowed,
+        personId: '2a000000-0000-4000-8000-000000000005',
+        businessId: BUSINESS.id,
+        ownerId: restrictedId,
+        due: 'now() - interval \'1 minute\'',
+      },
+      {
+        ...MY_DAY_LEADS.userHidden,
+        personId: '2a000000-0000-4000-8000-000000000006',
+        businessId: 'a0000000-0000-4000-8000-000000000002',
+        ownerId: restrictedId,
+        due: 'now() - interval \'1 minute\'',
+      },
+    ];
+    for (const fixture of queueFixtures) {
+      await db.query('insert into public.people (id, full_name) values ($1, $2)', [fixture.personId, fixture.name]);
+      await db.query(
+        `insert into public.leads
+           (id, business_id, person_id, owner_user_id, status, source_type, next_action_type, next_action_at, created_by)
+         values ($1, $2, $3, $4, 'ready', 'manual_add', 'connection', ${fixture.due}, $4)`,
+        [fixture.id, fixture.businessId, fixture.personId, fixture.ownerId],
       );
     }
 
@@ -421,15 +538,15 @@ async function runBootstrapAdmin() {
  * Same shape as `runBootstrapAdmin` and for the same reasons: the credential format lives in the
  * application, and `cwd` is what pins the embedded database the script opens.
  */
-async function runCreateTestUser() {
+async function runCreateTestUser(credentials) {
   const script = path.join(APP_DIR, 'scripts', 'create-test-user.ts');
   const args = [
     '--experimental-strip-types',
     script,
-    RESTRICTED.email,
-    RESTRICTED.password,
-    RESTRICTED.fullName,
-    RESTRICTED.role,
+    credentials.email,
+    credentials.password,
+    credentials.fullName,
+    credentials.role,
   ];
   const command = [process.execPath, ...args].join(' ');
 
@@ -845,4 +962,3 @@ export function useSignedInPage() {
     },
   };
 }
-

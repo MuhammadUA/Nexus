@@ -131,7 +131,13 @@ function isRedirectOnly(route: string): boolean {
 
 const GUARD_CALLS = ['requireRouteAccess(', 'canAccessRoute(', 'routeAccessDecision(', 'authorizeAction('];
 
-/** Destination sources: links, client navigation, redirects and revalidations. */
+/**
+ * Destination sources: links, client navigation, redirects, revalidations and route builders.
+ *
+ * The returned-string patterns are load-bearing. A helper used as `href={focusHref(item)}` has no
+ * inline path for a JSX-only scan to see; its `return `/...`` statement is the destination. The
+ * assigned-value patterns cover builders that first name a template and return it later.
+ */
 function destinationsIn(file: string): readonly string[] {
   const source = withoutComments(readFileSync(file, 'utf8'));
   const patterns = [
@@ -146,6 +152,11 @@ function destinationsIn(file: string): readonly string[] {
     /router\.push\(`([^`]*)`/g,
     /redirect\(`([^`]*)`/g,
     /revalidatePath\(`([^`]*)`/g,
+    // Helper-generated and route-builder destinations.
+    /return\s+(?:"|')(\/[^"'#?]*)/g,
+    /return\s+`([^`]*)`/g,
+    /(?:href|path|route|url)\w*\s*=\s*(?:"|')(\/[^"'#?]*)/gi,
+    /(?:href|path|route|url)\w*\s*=\s*`([^`]*)`/gi,
   ];
   const found: string[] = [];
   for (const pattern of patterns) {
